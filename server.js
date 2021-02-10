@@ -5,6 +5,8 @@ const app = express();
 const bodyParser = require("body-parser");
 const exphbs = require("express-handlebars");
 
+const { makeRandomUsername } = require("./utils");
+
 // application setup
 app.use(express.static("public"));
 
