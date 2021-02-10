@@ -1,11 +1,26 @@
 // import required dependencies
+require('dotenv').config();
 const express = require("express");
 const app = express();
 
 const bodyParser = require("body-parser");
 const exphbs = require("express-handlebars");
+const mysql = require('mysql2');
 
 const { makeRandomUsername } = require("./utils");
+
+//connect to db
+const connection = mysql.createConnection({
+	host: process.env.HOST,
+	database: process.env.DATABASE,
+	password: process.env.PASSWORD,
+	user: process.env.DB_USER,
+	insecureAuth: true
+});
+
+connection.connect((err) => {
+	if (err) throw err;
+});
 
 // application setup
 app.use(express.static("public"));
@@ -28,4 +43,6 @@ app.get("/", (req, res) => {
 });
 
 // start application
-app.listen(8080);
+app.listen(8080, () => {
+	console.log("server go vroom")
+});
