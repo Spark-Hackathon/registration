@@ -5,7 +5,7 @@ const makeRandomUsername = () => {
     return uniquerNamesGenerator({
     	disctionaries: [adjectives, colors, animales],
     	style: 'lowerCase'
-    })
+    });
 }
 
 module.exports = {
