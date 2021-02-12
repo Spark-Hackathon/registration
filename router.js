@@ -54,7 +54,7 @@ const camper_schema = Joi.object({
 	grade: Joi.number().min(10).max(18).required(),
 	gender: Joi.string().min(1).max(255),
 	type: Joi.number().min(0).max(5).required(), //change for the type object
-	race_ethinicity: Joi.string().max(255),
+	race_ethnicity: Joi.string().max(255),
 	hopes_dreams: Joi.string().min(50).required(),
 	tshirt_size: Joi.string().min(1).max(20).required(),
 	borrow_laptop: Joi.number().max(1).required(),
@@ -77,7 +77,7 @@ router.post("/camperRegisterQueueing", (req, res) => {
 		// add them to the camper database, then enrollment based on their weeks
 		connection.query("INSERT INTO camper (first_name, last_name, email, dob, school, grade, gender, type, race_ethnicity, " + 
 			"hopes_dreams, tshirt_size, borrow_laptop, guardian_name, guardian_email, participated) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-			[item.first_name, item.last_name, item.email, item.dob, item.school, item.grade, item.gender, item.type, item.race_ethnicity, 
+			[item.first_name, item.last_name, item.email, item.dob, item.school, item.grade, item.gender, item.type, item.race_ethncity, 
 			item.hopes_dreams, item.tshirt_size, item.borrow_laptop, item.guardian_name, item.guardian_email, item.participated], (err) => {
 				if (err) console.log(err);
 			});
