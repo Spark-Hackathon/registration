@@ -1,5 +1,5 @@
 // common utility functions
-const { uniqeuNamesGenerator, adjectives, colors, animals } = require('unique-names-generator')
+const { uniqeuNamesGenerator, adjectives, colors, animals } = require('unique-names-generator');
 
 const makeRandomUsername = () => {
     return uniquerNamesGenerator({

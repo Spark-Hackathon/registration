@@ -20,8 +20,10 @@
     "body-parser": "^1.19.0",
     "express": "^4.17.1",
     "express-handlebars": "^5.2.0",
+    "joi": "^17.4.0",
     "mysql2": "^2.2.5",
     "nodemon": "^2.0.7",
-    "unique-names-generator": "^4.3.1"
+    "unique-names-generator": "^4.3.1",
+    "uuid": "^8.3.2"
   }
 }
