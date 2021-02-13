@@ -41,6 +41,7 @@ CREATE TABLE enrollment (
 	signup_time DATETIME NOT NULL,
 	enrollment_code VARCHAR(255) NOT NULL,
 	person_loc TINYINT(1) NOT NULL,
+	approved TINYINT(1) NOT NULL,
 	FOREIGN KEY (`camper_id`) REFERENCES camper (`id`),
 	FOREIGN KEY (`week_id`) REFERENCES week (`id`)
 );
