@@ -72,3 +72,7 @@ CREATE TABLE questions (
 	FOREIGN KEY (`camper_id`) REFERENCES camper (`id`),
 	FOREIGN KEY (`question_meta_id`) REFERENCES question_meta (`id`)
 );
+
+CREATE TABLE system_settings (
+	admin_code CHAR(36)
+);
