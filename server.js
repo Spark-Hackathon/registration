@@ -6,7 +6,7 @@ const app = express();
 const bodyParser = require("body-parser");
 const exphbs = require("express-handlebars");
 
-const { makeRandomUsername } = require("./utils");
+const { getDate } = require("./utils");
 const router = require("./router");
 
 // application setup
@@ -23,7 +23,14 @@ app.set("views", `${__dirname}/views`);
 // application routes
 app.get("/", (req, res) => {
     res.render("index", {
-        "title": `Spark Camp '${new Date().getFullYear().toString().substr(-2)}`
+        "title": `Spark Camp ${getDate()}`
+    });
+});
+
+app.get("/apply/camper", (req, res) => {
+    res.render("apply", {
+        "title": `Camper Application for Spark Camp ${getDate()}`,
+        "year": getDate()
     });
 });
 
