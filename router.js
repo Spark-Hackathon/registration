@@ -211,6 +211,41 @@ async function prospectSignup(user_data) {
 	});
 }
 
+function quicksort(array, low, high) {
+	if (low < high) {
+		let pivot = partition(array, low, high);
+		array = pivot[1];
+		array = quicksort(array, low, pivot[0] - 1);
+		array = quicksort(array, pivot[0] + 1, high);
+	}
+	return array;
+}
+
+function partition(array, low, high) {
+	let pivot = low;
+	let i = high + 1;
+	for (let j = high; j > low; j--) {
+		if (array[j][0] > array[pivot][0] && i != j) {
+			i--;
+			let week_buffer = array[i][0];
+			let camper_buffer = array[i][1];
+			array[i][0] = array[j][0];
+			array[i][1] = array[j][1];
+			array[j][0] = week_buffer;
+			array[j][1] = camper_buffer;
+		}
+	}
+	if (i >= 0) {
+		let week_buffer = array[i - 1][0];
+		let camper_buffer = array[i - 1][1];
+		array[i - 1][0] = array[pivot][0];
+		array[i - 1][1] = array[pivot][1];
+		array[pivot][0] = week_buffer;
+		array[pivot][1] = camper_buffer;
+	}
+	return [i - 1, array];
+}
+
 router.get("/pull-current-applicants/:code", async (req, res) => {
 	connection.query("SELECT value_str FROM system_settings WHERE name='admin_code'", async (err, code) => {
 		if (err) console.log(err);
@@ -222,6 +257,13 @@ router.get("/pull-current-applicants/:code", async (req, res) => {
 					campers: []
 				};
 				let id = [];
+				let camper_pos = [];
+				for (ids in camper_ids) {
+					camper_pos[ids] = [];
+					camper_pos[ids][0] = camper_ids[ids].week_id
+					camper_pos[ids][1] = camper_ids[ids].camper_id;
+				}
+				camper_pos = quicksort(camper_pos, 0, camper_pos.length - 1);
 
 				function allCampers() {
 					return new Promise((resolve, reject) => {
@@ -243,9 +285,10 @@ router.get("/pull-current-applicants/:code", async (req, res) => {
 						});
 					});
 				}
+				let each_week_rolling = [];
 				for (let each_id = 0; each_id < camper_ids.length; each_id++) {
-					id[0] = camper_ids[each_id].camper_id;
-					id[1] = camper_ids[each_id].week_id;
+					id[0] = camper_pos[each_id][1];
+					id[1] = camper_pos[each_id][0];
 					obj.campers.push(await allCampers());
 					try {
 						if (each_id == camper_ids.length - 1) {
