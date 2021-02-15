@@ -246,12 +246,12 @@ function partition(array, low, high) {
 	return [i - 1, array];
 }
 
-router.get("/pull-current-applicants/:code", async (req, res) => {
+router.post("/pull-current-campers", async (req, res) => {
 	connection.query("SELECT value_str FROM system_settings WHERE name='admin_code'", async (err, code) => {
 		if (err) console.log(err);
-		if (req.params.code == code[0].value_str) {
+		if (req.body.code == code[0].value_str) {
 			//throw all currently pending campers - run through and see which ones are still waiting in enrollment
-			connection.query("SELECT camper_id, week_id FROM enrollment WHERE approved=0", async (err, camper_ids) => {
+			connection.query("SELECT camper_id, week_id FROM enrollment WHERE approved=?", req.body['applicants-or-registered'], async (err, camper_ids) => {
 				if (err) console.log(err);
 				let obj = {
 					campers: []
@@ -299,8 +299,37 @@ router.get("/pull-current-applicants/:code", async (req, res) => {
 					}
 				}
 			});
+		} else {
+			res.sendStatus(404);
 		}
 	});
+});
+
+const application_schema = Joi.object({
+	code: Joi.string().length(36).required(),
+	camper_id: Joi.number().required(),
+	week_name: Joi.string().required()
+});
+
+router.post("/accept-camper-application", (req, res) => {
+	if (application_schema.validate(req.body)) {
+		connection.query("SELECT value_str FROM system_settings WHERE name='admin_code'", async (err, code) => {
+			if (err) console.log(err);
+			if (req.body.code == code[0].value_str) {
+				connection.query("SELECT id FROM week WHERE title=?", req.body.week_name, (err, week_id) => {
+					if (err) console.log(err);
+					connection.query("UPDATE enrollment SET approved=1 WHERE camper_id=? AND week_id=?", [req.body.camper_id, week_id[0].id], (err) => {
+						if (err) console.log(err);
+						res.end();
+					});
+				});
+			}
+		});
+	} else {
+		res.render("error", {
+			title: "Uh oh"
+		});
+	}
 });
 
 module.exports = router;
