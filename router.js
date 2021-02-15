@@ -50,12 +50,9 @@ async function weeks() {
 			});
 		});
 	}
-	week_meta = await pullWeeks();
-	try {
-		console.log(week_meta);
-	} catch (error) {
+	week_meta = await pullWeeks().catch((error) => {
 		console.log(error);
-	}
+	});
 }
 weeks();
 
@@ -96,7 +93,6 @@ const camper_schema = Joi.object({
 	}).required(),
 	guardian_phone: Joi.number().min(10).max(10).required(),
 	participated: Joi.number().max(1).required(),
-	attendance_method: Joi.number().max(1).required(),
 	weeks_coming: Joi.array().items(Joi.string().min(1).max(255).required())
 }).concat(basic_schema);
 
@@ -109,7 +105,6 @@ router.get("/open-weeks", (req, res) => {
 		inner.virtual_available = value.inclass_available;
 		week_data.push(inner);
 	};
-	console.log(week_data);
 	res.json(week_data);
 });
 
@@ -142,7 +137,7 @@ router.post("/camper-register-queueing", async (req, res) => {
 						let weeks = [],
 							count = 0;
 						for (week in item.weeks_coming) {
-							if (week_meta.has(item.weeks_coming[week])) {
+							if (week_meta.has(item.weeks_coming[week]) && item.weeks_coming[week] != 0) {
 								//make a new list of which weeks they're in, then add to enrollment based on that
 								weeks[count] = item.weeks_coming[week];
 								count++;
@@ -151,7 +146,7 @@ router.post("/camper-register-queueing", async (req, res) => {
 						async function enrollmentInsert(week) {
 							return new Promise((resolve, reject) => {
 								connection.query("INSERT INTO enrollment (camper_id, week_id, signup_time, enrollment_code, person_loc, approved) VALUES " +
-									"(?, ?, ?, ?, ?, ?)", [camper_id[0].id, week_meta.get(weeks[week]).id, new Date(), uuidv4(), item.attendance_method, 0], (err) => {
+									"(?, ?, ?, ?, ?, ?)", [camper_id[0].id, week_meta.get(weeks[week]).id, new Date(), uuidv4(), parseInt(item.weeks_coming[week], 10) - 1, 0], (err) => {
 										if (err) reject(err);
 										connection.query("SELECT id, question_text FROM question_meta WHERE week_id=?", week_meta.get(weeks[week]).id, (err, questions) => {
 											if (err) reject(err);
@@ -181,8 +176,7 @@ router.post("/camper-register-queueing", async (req, res) => {
 								}
 							}
 						}
-						if (req.body.prospect && re) {
-						}
+						if (req.body.prospect && re) {}
 					});
 				});
 		} catch (error) {
@@ -218,26 +212,48 @@ async function prospectSignup(user_data) {
 }
 
 router.get("/pull-current-applicants/:code", async (req, res) => {
-	let user_code = req.params.code;
-	connection.query("SELECT admin_code FROM system_settings", async (err, code) => {
+	connection.query("SELECT value_str FROM system_settings WHERE name='admin_code'", async (err, code) => {
 		if (err) console.log(err);
-		if (user_code.toString == code[0].admin_code) {
+		if (req.params.code == code[0].value_str) {
 			//throw all currently pending campers - run through and see which ones are still waiting in enrollment
-			connection.query("SELECT camper_id FROM enrollment WHERE approved=0", async (err, camper_ids) => {
+			connection.query("SELECT camper_id, week_id FROM enrollment WHERE approved=0", async (err, camper_ids) => {
 				if (err) console.log(err);
-				let id = 0;
+				let obj = {
+					campers: []
+				};
+				let id = [];
 
 				function allCampers() {
 					return new Promise((resolve, reject) => {
-						connection.query("SELECT * FROM camper WHERE id=?", id, (err, camper) => {
-							if (err) console.log(err);
-
+						//build up the week object
+						let inner = {};
+						connection.query("SELECT title FROM week WHERE id=?", id[1], (err, week_title) => {
+							if (err) reject(err);
+							inner.week = week_title[0].title;
+							connection.query("SELECT id, first_name, last_name, type, hopes_dreams, participated FROM camper WHERE id=?", id, (err, camper) => {
+								if (err) reject(err);
+								inner.camper_id = camper[0].id;
+								inner.first_name = camper[0].first_name;
+								inner.last_name = camper[0].last_name;
+								inner.type = camper[0].type;
+								inner.hopes_dreams = camper[0].hopes_dreams;
+								inner.participated = camper[0].participated == 1 ? "Participated before" : "Has not participated";
+								resolve(inner);
+							});
 						});
 					});
 				}
-				for (let camper = 0; camper < camper_ids.length; camper++) {
-					id = camper_ids[camper].camper_id;
-					await allCampers();
+				for (let each_id = 0; each_id < camper_ids.length; each_id++) {
+					id[0] = camper_ids[each_id].camper_id;
+					id[1] = camper_ids[each_id].week_id;
+					obj.campers.push(await allCampers());
+					try {
+						if (each_id == camper_ids.length - 1) {
+							res.json(obj);
+						}
+					} catch (error) {
+						console.log(error);
+					}
 				}
 			});
 		}
