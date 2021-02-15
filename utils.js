@@ -8,6 +8,9 @@ const makeRandomUsername = () => {
     });
 }
 
+const getDate = () => `'${new Date().getFullYear().toString().substr(-2)}`;
+
 module.exports = {
-    makeRandomUsername
+    makeRandomUsername,
+    getDate
 }
