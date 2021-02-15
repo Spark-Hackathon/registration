@@ -100,17 +100,31 @@ const camper_schema = Joi.object({
 	weeks_coming: Joi.array().items(Joi.string().min(1).max(255).required())
 }).concat(basic_schema);
 
-router.get("/openWeeks", (req, res) => {
-	let week_data = {};
+router.get("/open-weeks", (req, res) => {
+	let week_data = [];
 	for (let [key, value] of week_meta) {
-		week_data.specific_week = { title: key, info: { } };
-		week_data.specific_week.info.inclass_available = value.inclass_available;
-		week_data.specific_week.info.virtual_available = value.inclass_available;
+		let inner = {};
+		inner.title = key;
+		inner.inclass_available = value.inclass_available;
+		inner.virtual_available = value.inclass_available;
+		week_data.push(inner);
 	};
+	console.log(week_data);
 	res.json(week_data);
 });
 
-router.post("/camperRegisterQueueing", async (req, res) => {
+const referral_schema = Joi.object({
+	first_name: Joi.string().min(1).max(255).required(),
+	last_name: Joi.string().min(1).max(255).required(),
+	email: Joi.string().email({
+		minDomainSegments: 1,
+		tlds: {
+			allow: true
+		}
+	}).required()
+});
+
+router.post("/camper-register-queueing", async (req, res) => {
 	if (camper_schema.validate(req.body)) {
 		let item = req.body;
 		await prospectSignup(req.body);
@@ -144,7 +158,7 @@ router.post("/camperRegisterQueueing", async (req, res) => {
 											if (questions.length) resolve(questions);
 											resolve([]);
 										});
-									})
+									});
 							});
 						}
 						let questions = {};
@@ -159,12 +173,16 @@ router.post("/camperRegisterQueueing", async (req, res) => {
 											id: any_questions[question].id
 										}
 									}
+									if (week_db == weeks.length - 1) {
+										res.json(questions);
+									}
 								} catch (error) {
 									console.log(error);
 								}
 							}
 						}
-						res.json([questions]);
+						if (req.body.prospect && re) {
+						}
 					});
 				});
 		} catch (error) {
@@ -175,7 +193,7 @@ router.post("/camperRegisterQueueing", async (req, res) => {
 	}
 });
 
-router.post("/signupProspect", async (req, res) => {
+router.post("/signup-prospect", async (req, res) => {
 	if (pros_schema.validate(req.body)) {
 		await prospectSignup(req.body);
 		try {
@@ -199,7 +217,7 @@ async function prospectSignup(user_data) {
 	});
 }
 
-router.get("/pullCurrentApplicants/:code", async (req, res) => {
+router.get("/pull-current-applicants/:code", async (req, res) => {
 	let user_code = req.params.code;
 	connection.query("SELECT admin_code FROM system_settings", async (err, code) => {
 		if (err) console.log(err);
