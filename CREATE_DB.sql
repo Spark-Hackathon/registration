@@ -19,6 +19,7 @@ CREATE TABLE camper (
 	borrow_laptop TINYINT(1) NOT NULL,
 	guardian_name VARCHAR(255) NOT NULL,
 	guardian_email VARCHAR(255) NOT NULL,
+	guardian_phone INT NOT NULL,
 	participated TINYINT(1) NOT NULL,
 	PRIMARY KEY(id),
 	UNIQUE INDEX `unique_camper` (`first_name`, `last_name`, `email`)
