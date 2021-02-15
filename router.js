@@ -83,7 +83,7 @@ const camper_schema = Joi.object({
 	grade: Joi.number().min(10).max(18).required(),
 	gender: Joi.string().min(1).max(255).required(),
 	type: Joi.string().min(5).max(255).lowercase().required(), //change for the type object
-	race_ethnicity: Joi.string().max(255).required(),
+	race_ethnicity: Joi.string().required(),
 	hopes_dreams: Joi.string().min(50).required(),
 	tshirt_size: Joi.string().min(1).max(20).required(),
 	borrow_laptop: Joi.number().max(1).required(),
@@ -94,6 +94,7 @@ const camper_schema = Joi.object({
 			allow: true
 		}
 	}).required(),
+	guardian_phone: Joi.number().min(10).max(10).required(),
 	participated: Joi.number().max(1).required(),
 	attendance_method: Joi.number().max(1).required(),
 	weeks_coming: Joi.array().items(Joi.string().min(1).max(255).required())
@@ -117,7 +118,7 @@ router.post("/camperRegisterQueueing", async (req, res) => {
 			item.type = type_meta[item.type];
 			// add them to the camper database, then enrollment based on their weeks
 			connection.query("INSERT INTO camper (first_name, last_name, email, dob, school, grade, gender, type, race_ethnicity, " +
-				"hopes_dreams, tshirt_size, borrow_laptop, guardian_name, guardian_email, participated) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", [item.first_name, item.last_name, item.email, item.dob, item.school, item.grade, item.gender, item.type, item.race_ethncity,
+				"hopes_dreams, tshirt_size, borrow_laptop, guardian_name, guardian_email, guardian_phone, participated) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", [item.first_name, item.last_name, item.email, item.dob, item.school, item.grade, item.gender, item.type, item.race_ethncity,
 					item.hopes_dreams, item.tshirt_size, item.borrow_laptop, item.guardian_name, item.guardian_email, item.participated
 				], async (err, camper_id) => {
 					if (err) console.log(err);

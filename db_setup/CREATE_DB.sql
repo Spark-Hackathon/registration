@@ -19,6 +19,7 @@ CREATE TABLE camper (
 	borrow_laptop TINYINT(1) NOT NULL,
 	guardian_name VARCHAR(255) NOT NULL,
 	guardian_email VARCHAR(255) NOT NULL,
+	guardian_phone BIGINT NOT NULL,
 	participated TINYINT(1) NOT NULL,
 	PRIMARY KEY(id),
 	UNIQUE INDEX `unique_camper` (`first_name`, `last_name`, `email`)
@@ -74,5 +75,8 @@ CREATE TABLE questions (
 );
 
 CREATE TABLE system_settings (
-	admin_code CHAR(36)
+	name VARCHAR(255) NOT NULL,
+	value_int INT,
+	value_str VARCHAR(255),
+	UNIQUE KEY `system_value` (`name`)
 );
