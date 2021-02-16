@@ -23,6 +23,7 @@
     "express-handlebars": "^5.2.0",
     "joi": "^17.4.0",
     "mysql2": "^2.2.5",
+    "nodemailer": "^6.4.18",
     "nodemon": "^2.0.7",
     "unique-names-generator": "^4.3.1",
     "uuid": "^8.3.2"

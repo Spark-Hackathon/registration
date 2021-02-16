@@ -3,6 +3,8 @@ const express = require("express");
 const mysql = require("mysql2");
 const Joi = require("joi");
 
+const { transporter } = require("./utils");
+
 const type_meta = {
 	designer: 0,
 	artist: 1,
@@ -56,6 +58,17 @@ async function weeks() {
 }
 weeks();
 
+const send_mail = function(reply_from, reply_to, reply_subject, reply_text) {
+	transporter.sendMail({
+		from: reply_from,
+		to: reply_to,
+		subject: reply_subject,
+		text: reply_text
+	}, (err, info) => {
+		console.error(info);
+	});
+}
+
 router.use(bodyParser.urlencoded({
 	extended: false
 }));
@@ -100,6 +113,7 @@ router.get("/open-weeks", (req, res) => {
 	let week_data = [];
 	for (let [key, value] of week_meta) {
 		let inner = {};
+		inner.id = value.id;
 		inner.title = key;
 		inner.inclass_available = value.inclass_available;
 		inner.virtual_available = value.inclass_available;
@@ -246,7 +260,7 @@ function partition(array, low, high) {
 	return [i - 1, array];
 }
 
-router.post("/pull-current-campers", async (req, res) => {
+router.post("/pull-current-campers", async (req, res) => { //ADMIN
 	connection.query("SELECT value_str FROM system_settings WHERE name='admin_code'", async (err, code) => {
 		if (err) console.log(err);
 		if (req.body.code == code[0].value_str) {
@@ -311,7 +325,7 @@ const application_schema = Joi.object({
 	week_name: Joi.string().required()
 });
 
-router.post("/accept-camper-application", (req, res) => {
+router.post("/accept-camper-application", (req, res) => { //ADMIN
 	if (application_schema.validate(req.body)) {
 		connection.query("SELECT value_str FROM system_settings WHERE name='admin_code'", async (err, code) => {
 			if (err) console.log(err);
@@ -330,6 +344,10 @@ router.post("/accept-camper-application", (req, res) => {
 			title: "Uh oh"
 		});
 	}
+});
+
+router.post("/send-mail", (req, res) => { //ADMIN
+
 });
 
 module.exports = router;
