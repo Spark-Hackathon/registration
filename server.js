@@ -27,6 +27,8 @@ app.get("/", (req, res) => {
     });
 });
 
+app.post("/", (req, res) => res.json(req.body));
+
 app.get("/apply/camper", (req, res) => {
     res.render("apply", {
         "title": `Camper Application for Spark Camp ${getDate()}`,

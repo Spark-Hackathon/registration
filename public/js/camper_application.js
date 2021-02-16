@@ -5,19 +5,26 @@ const spans = "text-red-500 inline-block";
 const submitStyle = "w-full p-4 font-semibold bg-yellow-300 cursor-pointer hover:bg-yellow-500 hover:text-white transition duration-200 rounded-lg";
 const form = "lg:w-96 lg:mx-auto";
 
-let application = new Smartform("/camperRegisterQueueing", "POST");
+let application = new Smartform("/", "POST");
+
+let weekIds = [];
+
+const week_to_name = week => week.replace(/ /g, "-").toLowerCase();
 
 let firstName = new Field("input:text", "first_name")
     .require()
     .setLabel("Camper's First Name")
+    .value("Brehanu")
     .placeholder("ex. Tanjiro");
 let lastName = new Field("input:text", "last_name")
     .require()
     .setLabel("Camper's Last Name")
+    .value("Bugg")
     .placeholder("ex. Kamado");
 let email = new Field("input:email", "email")
     .require()
     .setLabel("Camper's Email Address")
+    .value("bbugg22@students.stab.org")
     .placeholder("kamado@tanjiro.com");
 let updates = new Field("select", "updates")
     .require()
@@ -26,17 +33,10 @@ let updates = new Field("select", "updates")
         [0, "No, thank you"],
         [1, "Yes, please"]
     ]);
-let attendanceMethod = new Field("select", "attendance_method")
-    .require()
-    .setLabel("Will you be joining us virtually or in-person?")
-    .addOptions([
-        [0, "Virtually (via Zoom)"],
-        [1, "In-person (at St. Anne's)"]
-    ]);
-let weeks = null;   /* @TO-DO */
 let dob = new Field("input:date", "dob")
     .require()
     .setLabel("Camper's Date of Birth")
+    .value("11/20/2003")
     .placeholder("01/01/2002");
 let schoolList = new Field("datalist", "school")
     .removeName()
@@ -137,16 +137,19 @@ let laptop = new Field("select", "borrow_laptop")
     ]);
 let parentName = new Field("input:text", "guardian_name")
     .require()
+    .value("Kim Wendel")
     .setLabel("Parent/Guardian Full Name")
     .placeholder("Jane Doe");
 let parentEmail = new Field("input:email", "guardian_email")
     .require()
+    .value("kimwendel@comcast.net")
     .setLabel("Parent/Guardian Email Address")
     .placeholder("jane@doe.com");
 let parentNumber = new Field("input:tel", "guardian_number")
     .require()
+    .value("4344660855")
     .setLabel("Parent/Guardian Phone Number")
-    .pattern("[0-9]{3}-[0-9]{3}-[0-9]{4}")
+    .pattern("[0-9]{3}[0-9]{3}[0-9]{4}")
     .placeholder("###-###-####");
 let participationStatus = new Field("select", "participated")
     .require()
@@ -168,7 +171,7 @@ let referName = new Field("input:text", "refer_name")
 let referEmail = new Field("input:email", "refer_email")
     .setLabel("Friend's Email Address")
     .placeholder("bob@smith.com");
-let submit = new Field("input:submit", "submit")
+let submit = new Field("input:submit", "")
     .value("Apply for Summer Spark")
     .class(submitStyle);
 
@@ -179,25 +182,50 @@ application
         firstName,
         lastName,
         email,
-        updates,
-        attendanceMethod,
-        dob,
-        schoolList,
-        school,
-        grade,
-        genderList,
-        gender,
-        type,
-        race,
-        hopes,
-        tShirtSize,
-        laptop,
-        parentName,
-        parentEmail,
-        parentNumber,
-        participationStatus,
-        referName,
-        referEmail,
-        submit
-    ])
-    .mountTo("#camper_application");
+        updates
+    ]);
+
+fetch("/open-weeks")
+    .then(results => results.json())
+    .then(weeks => {
+        for(let week of weeks) {
+            let { title: id, inclass_available: in_person, virtual_available: virtual } = week;
+            weekIds.push(id);
+
+            application.addFields([
+                new Field("select", week_to_name(id))
+                    .require()
+                    .setLabel(`Will you attend the ${id} week?`)
+                    .addOptions([
+                        [0, "No, I will not attend."],
+                        [1, "Yes, I will attend virtually (via Zoom)"],
+                        [2, "Yes, I will attend in-person (at St. Anne's)"]
+                    ])
+            ]);
+        }
+    })
+    .then(() => {
+        application
+            .addFields([
+                dob,
+                schoolList,
+                school,
+                grade,
+                genderList,
+                gender,
+                type,
+                race,
+                hopes,
+                tShirtSize,
+                laptop,
+                parentName,
+                parentEmail,
+                parentNumber,
+                participationStatus,
+                referName,
+                referEmail,
+                submit
+            ])
+            .mountTo("#camper_application");
+    })
+    .catch(err => console.error(err));

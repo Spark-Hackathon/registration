@@ -76,6 +76,16 @@ class Field {
         return this;
     }
 
+    multiple = () => {
+        this.field.prop("multiple", "true");
+        return this;
+    }
+
+    setSelectize = () => {
+        this.field.selectize({ maxItems: 3 });
+        return this;
+    }
+
     removeName = () => {
         this.field.removeAttr("name");
         return this;
