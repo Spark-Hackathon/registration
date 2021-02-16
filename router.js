@@ -3,6 +3,8 @@ const express = require("express");
 const mysql = require("mysql2");
 const Joi = require("joi");
 
+const { transporter } = require("./utils");
+
 const type_meta = {
 	designer: 0,
 	artist: 1,
@@ -50,14 +52,22 @@ async function weeks() {
 			});
 		});
 	}
-	week_meta = await pullWeeks();
-	try {
-		console.log(week_meta);
-	} catch (error) {
+	week_meta = await pullWeeks().catch((error) => {
 		console.log(error);
-	}
+	});
 }
 weeks();
+
+const send_mail = function(reply_from, reply_to, reply_subject, reply_text) {
+	transporter.sendMail({
+		from: reply_from,
+		to: reply_to,
+		subject: reply_subject,
+		text: reply_text
+	}, (err, info) => {
+		console.error(info);
+	});
+}
 
 router.use(bodyParser.urlencoded({
 	extended: false
@@ -96,7 +106,6 @@ const camper_schema = Joi.object({
 	}).required(),
 	guardian_phone: Joi.number().min(10).max(10).required(),
 	participated: Joi.number().max(1).required(),
-	attendance_method: Joi.number().max(1).required(),
 	weeks_coming: Joi.array().items(Joi.string().min(1).max(255).required())
 }).concat(basic_schema);
 
@@ -104,12 +113,12 @@ router.get("/open-weeks", (req, res) => {
 	let week_data = [];
 	for (let [key, value] of week_meta) {
 		let inner = {};
+		inner.id = value.id;
 		inner.title = key;
 		inner.inclass_available = value.inclass_available;
 		inner.virtual_available = value.inclass_available;
 		week_data.push(inner);
 	};
-	console.log(week_data);
 	res.json(week_data);
 });
 
@@ -142,7 +151,7 @@ router.post("/camper-register-queueing", async (req, res) => {
 						let weeks = [],
 							count = 0;
 						for (week in item.weeks_coming) {
-							if (week_meta.has(item.weeks_coming[week])) {
+							if (week_meta.has(item.weeks_coming[week]) && item.weeks_coming[week] != 0) {
 								//make a new list of which weeks they're in, then add to enrollment based on that
 								weeks[count] = item.weeks_coming[week];
 								count++;
@@ -151,7 +160,7 @@ router.post("/camper-register-queueing", async (req, res) => {
 						async function enrollmentInsert(week) {
 							return new Promise((resolve, reject) => {
 								connection.query("INSERT INTO enrollment (camper_id, week_id, signup_time, enrollment_code, person_loc, approved) VALUES " +
-									"(?, ?, ?, ?, ?, ?)", [camper_id[0].id, week_meta.get(weeks[week]).id, new Date(), uuidv4(), item.attendance_method, 0], (err) => {
+									"(?, ?, ?, ?, ?, ?)", [camper_id[0].id, week_meta.get(weeks[week]).id, new Date(), uuidv4(), parseInt(item.weeks_coming[week], 10) - 1, 0], (err) => {
 										if (err) reject(err);
 										connection.query("SELECT id, question_text FROM question_meta WHERE week_id=?", week_meta.get(weeks[week]).id, (err, questions) => {
 											if (err) reject(err);
@@ -181,8 +190,7 @@ router.post("/camper-register-queueing", async (req, res) => {
 								}
 							}
 						}
-						if (req.body.prospect && re) {
-						}
+						if (req.body.prospect && re) {}
 					});
 				});
 		} catch (error) {
@@ -217,31 +225,129 @@ async function prospectSignup(user_data) {
 	});
 }
 
-router.get("/pull-current-applicants/:code", async (req, res) => {
-	let user_code = req.params.code;
-	connection.query("SELECT admin_code FROM system_settings", async (err, code) => {
+function quicksort(array, low, high) {
+	if (low < high) {
+		let pivot = partition(array, low, high);
+		array = pivot[1];
+		array = quicksort(array, low, pivot[0] - 1);
+		array = quicksort(array, pivot[0] + 1, high);
+	}
+	return array;
+}
+
+function partition(array, low, high) {
+	let pivot = low;
+	let i = high + 1;
+	for (let j = high; j > low; j--) {
+		if (array[j][0] > array[pivot][0] && i != j) {
+			i--;
+			let week_buffer = array[i][0];
+			let camper_buffer = array[i][1];
+			array[i][0] = array[j][0];
+			array[i][1] = array[j][1];
+			array[j][0] = week_buffer;
+			array[j][1] = camper_buffer;
+		}
+	}
+	if (i >= 0) {
+		let week_buffer = array[i - 1][0];
+		let camper_buffer = array[i - 1][1];
+		array[i - 1][0] = array[pivot][0];
+		array[i - 1][1] = array[pivot][1];
+		array[pivot][0] = week_buffer;
+		array[pivot][1] = camper_buffer;
+	}
+	return [i - 1, array];
+}
+
+router.post("/pull-current-campers", async (req, res) => { //ADMIN
+	connection.query("SELECT value_str FROM system_settings WHERE name='admin_code'", async (err, code) => {
 		if (err) console.log(err);
-		if (user_code.toString == code[0].admin_code) {
+		if (req.body.code == code[0].value_str) {
 			//throw all currently pending campers - run through and see which ones are still waiting in enrollment
-			connection.query("SELECT camper_id FROM enrollment WHERE approved=0", async (err, camper_ids) => {
+			connection.query("SELECT camper_id, week_id FROM enrollment WHERE approved=?", req.body['applicants-or-registered'], async (err, camper_ids) => {
 				if (err) console.log(err);
-				let id = 0;
+				let obj = {
+					campers: []
+				};
+				let id = [];
+				let camper_pos = [];
+				for (ids in camper_ids) {
+					camper_pos[ids] = [];
+					camper_pos[ids][0] = camper_ids[ids].week_id
+					camper_pos[ids][1] = camper_ids[ids].camper_id;
+				}
+				camper_pos = quicksort(camper_pos, 0, camper_pos.length - 1);
 
 				function allCampers() {
 					return new Promise((resolve, reject) => {
-						connection.query("SELECT * FROM camper WHERE id=?", id, (err, camper) => {
-							if (err) console.log(err);
-
+						//build up the week object
+						let inner = {};
+						connection.query("SELECT title FROM week WHERE id=?", id[1], (err, week_title) => {
+							if (err) reject(err);
+							inner.week = week_title[0].title;
+							connection.query("SELECT id, first_name, last_name, type, hopes_dreams, participated FROM camper WHERE id=?", id, (err, camper) => {
+								if (err) reject(err);
+								inner.camper_id = camper[0].id;
+								inner.first_name = camper[0].first_name;
+								inner.last_name = camper[0].last_name;
+								inner.type = camper[0].type;
+								inner.hopes_dreams = camper[0].hopes_dreams;
+								inner.participated = camper[0].participated == 1 ? "Participated before" : "Has not participated";
+								resolve(inner);
+							});
 						});
 					});
 				}
-				for (let camper = 0; camper < camper_ids.length; camper++) {
-					id = camper_ids[camper].camper_id;
-					await allCampers();
+				let each_week_rolling = [];
+				for (let each_id = 0; each_id < camper_ids.length; each_id++) {
+					id[0] = camper_pos[each_id][1];
+					id[1] = camper_pos[each_id][0];
+					obj.campers.push(await allCampers());
+					try {
+						if (each_id == camper_ids.length - 1) {
+							res.json(obj);
+						}
+					} catch (error) {
+						console.log(error);
+					}
 				}
 			});
+		} else {
+			res.sendStatus(404);
 		}
 	});
+});
+
+const application_schema = Joi.object({
+	code: Joi.string().length(36).required(),
+	camper_id: Joi.number().required(),
+	week_name: Joi.string().required()
+});
+
+router.post("/accept-camper-application", (req, res) => { //ADMIN
+	if (application_schema.validate(req.body)) {
+		connection.query("SELECT value_str FROM system_settings WHERE name='admin_code'", async (err, code) => {
+			if (err) console.log(err);
+			if (req.body.code == code[0].value_str) {
+				connection.query("SELECT id FROM week WHERE title=?", req.body.week_name, (err, week_id) => {
+					if (err) console.log(err);
+					connection.query("UPDATE enrollment SET approved=1 WHERE camper_id=? AND week_id=?", [req.body.camper_id, week_id[0].id], (err) => {
+						if (err) console.log(err);
+						res.end();
+					});
+				});
+			}
+		});
+	} else {
+		res.render("error", {
+			title: "Uh oh"
+		});
+	}
+});
+
+router.post("/send-mail", (req, res) => { //ADMIN
+
 });
 
 module.exports = router;
