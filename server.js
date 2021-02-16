@@ -43,6 +43,12 @@ app.get("/apply/updates", (req, res) => {
     });
 });
 
+app.get("/about-us", (req, res) => {
+    res.render("about_us", {
+        "title": `About Us`
+    });
+});
+
 // start application
 app.listen(process.env.PORT, () => {
 	console.log("server go vroom");
