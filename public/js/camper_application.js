@@ -9,8 +9,6 @@ let application = new Smartform("/", "POST");
 
 let weekIds = [];
 
-const week_to_name = week => week.replace(/ /g, "-").toLowerCase();
-
 let firstName = new Field("input:text", "first_name")
     .require()
     .setLabel("Camper's First Name")
@@ -189,11 +187,11 @@ fetch("/open-weeks")
     .then(results => results.json())
     .then(weeks => {
         for(let week of weeks) {
-            let { title: id, inclass_available: in_person, virtual_available: virtual } = week;
+            let { id, inclass_available: in_person, virtual_available: virtual } = week;
             weekIds.push(id);
 
             application.addFields([
-                new Field("select", week_to_name(id))
+                new Field("select", id)
                     .require()
                     .setLabel(`Will you attend the ${id} week?`)
                     .addOptions([
