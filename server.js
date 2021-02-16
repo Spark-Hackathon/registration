@@ -36,6 +36,13 @@ app.get("/apply/camper", (req, res) => {
     });
 });
 
+app.get("/apply/updates", (req, res) => {
+    res.render("updates", {
+        "title": `Get Updates for Spark Camp ${getDate()}`,
+        "year": getDate()
+    });
+});
+
 // start application
 app.listen(process.env.PORT, () => {
 	console.log("server go vroom");
