@@ -49,13 +49,12 @@ CREATE TABLE enrollment (
 
 CREATE TABLE prospect (
 	camper_refer_id INT,
-	first_name VARCHAR(255) NOT NULL,
-	last_name VARCHAR(255) NOT NULL,
+	name VARCHAR(255) NOT NULL,
 	email VARCHAR(255) NOT NULL,
 	unique_retrieval VARCHAR(255) NOT NULL,
 	subscribed TINYINT(1) NOT NULL DEFAULT 1,
 	FOREIGN KEY (`camper_refer_id`) REFERENCES camper (`id`),
-	UNIQUE KEY `unique_prospect` (`first_name`, `last_name`, `email`)
+	UNIQUE KEY `unique_prospect` (`name`, `email`)
 );
 
 CREATE TABLE question_meta (

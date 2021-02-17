@@ -90,6 +90,14 @@ const basic_schema = Joi.object({
 
 //joi prospect schema
 const camper_schema = Joi.object({
+	first_name: Joi.string().min(1).max(255).required(),
+	last_name: Joi.string().min(1).max(255).required(),
+	email: Joi.string().email({
+		minDomainSegments: 1,
+		tlds: {
+			allow: true
+		}
+	}).required(),
 	dob: Joi.date().max("2015-01-01").required(),
 	school: Joi.string().min(1).max(255).required(),
 	grade: Joi.number().min(10).max(18).required(),
@@ -108,7 +116,7 @@ const camper_schema = Joi.object({
 	}).required(),
 	guardian_phone: Joi.number().min(10).max(10).required(),
 	participated: Joi.number().max(1).required(),
-}).concat(basic_schema);
+});
 
 router.get("/open-weeks", (req, res) => {
 	let week_data = [];
@@ -124,8 +132,7 @@ router.get("/open-weeks", (req, res) => {
 });
 
 const referral_schema = Joi.object({
-	first_name: Joi.string().min(1).max(255).required(),
-	last_name: Joi.string().min(1).max(255).required(),
+	name: Joi.string().min(1).max(255).required(),
 	email: Joi.string().email({
 		minDomainSegments: 1,
 		tlds: {
@@ -189,14 +196,32 @@ router.post("/camper-register-queueing", async (req, res) => {
 									question_position++;
 								}
 								if (weeks_db == weeks.length - 1) {
-									res.json(questions);
+									if (item.refer_name && item.refer_email) {
+										let user_data = {}
+										user_data.refer_id = camper_id[0].id;
+										user_data.name = item.refer_name;
+										user_data.email = item.refer_email;
+										if (referral_schema.validate(user_data)) {
+											await prospectSignup(user_data);
+											try {
+												res.json(questions);
+											} catch (error) {
+												res.render("error", {
+													title: "Uh oh"
+												});
+											}
+										} else {
+											res.render("error", {
+												title: "Uh oh"
+											});
+										}
+									}
 								}
 							} catch (error) {
 								console.log(error);
 							}
 						}
 					}
-					if (req.body.prospect && re) {}
 				});
 			});
 	} else {
@@ -221,10 +246,17 @@ router.post("/signup-prospect", async (req, res) => {
 async function prospectSignup(user_data) {
 	return new Promise((resolve, reject) => {
 		let unique_retrieval = uuidv4();
-		connection.query("INSERT INTO prospect (first_name, last_name, email, unique_retrieval, subscribed) VALUES (?, ?, ?, ?, ?)", [user_data.first_name, user_data.last_name, user_data.email, unique_retrieval, 1], (err) => {
-			if (err) reject(err); //chat with bre about error handle
-			resolve(false);
-		});
+		if (user_data.refer_id) {
+			connection.query("INSERT INTO prospect (camper_refer_id, name, email, unique_retrieval, subscribed) VALUES (?, ?, ?, ?, ?)", [user_data.refer_id, user_data.name, user_data.email, unique_retrieval, 1], (err) => {
+				if (err) reject(err); //chat with bre about error handle
+				resolve(false);
+			});
+		} else {
+			connection.query("INSERT INTO prospect (name, email, unique_retrieval, subscribed) VALUES (?, ?, ?, ?)", [user_data.id, user_data.name, user_data.email, unique_retrieval, 1], (err) => {
+				if (err) reject(err); //chat with bre about error handle
+				resolve(false);
+			});
+		}
 	});
 }
 
