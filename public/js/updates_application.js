@@ -9,18 +9,15 @@ let updates = new Smartform("/", "POST");
 
 let firstName = new Field("input:text", "first_name")
     .require()
-    .setLabel("Camper's First Name")
-    .value("Brehanu")
+    .setLabel("First Name")
     .placeholder("ex. Tanjiro");
 let lastName = new Field("input:text", "last_name")
     .require()
-    .setLabel("Camper's Last Name")
-    .value("Bugg")
+    .setLabel("Last Name")
     .placeholder("ex. Kamado");
 let email = new Field("input:email", "email")
     .require()
-    .setLabel("Camper's Email Address")
-    .value("bbugg22@students.stab.org")
+    .setLabel("Email Address")
     .placeholder("kamado@tanjiro.com");
 let submit = new Field("input:submit", "")
     .value("Apply for Summer Spark")

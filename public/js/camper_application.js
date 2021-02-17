@@ -12,17 +12,14 @@ let weekIds = [];
 let firstName = new Field("input:text", "first_name")
     .require()
     .setLabel("Camper's First Name")
-    .value("Brehanu")
     .placeholder("ex. Tanjiro");
 let lastName = new Field("input:text", "last_name")
     .require()
     .setLabel("Camper's Last Name")
-    .value("Bugg")
     .placeholder("ex. Kamado");
 let email = new Field("input:email", "email")
     .require()
     .setLabel("Camper's Email Address")
-    .value("bbugg22@students.stab.org")
     .placeholder("kamado@tanjiro.com");
 let updates = new Field("select", "updates")
     .require()
@@ -34,7 +31,6 @@ let updates = new Field("select", "updates")
 let dob = new Field("input:date", "dob")
     .require()
     .setLabel("Camper's Date of Birth")
-    .value("11/20/2003")
     .placeholder("01/01/2002");
 let schoolList = new Field("datalist", "school")
     .removeName()
@@ -135,17 +131,14 @@ let laptop = new Field("select", "borrow_laptop")
     ]);
 let parentName = new Field("input:text", "guardian_name")
     .require()
-    .value("Kim Wendel")
     .setLabel("Parent/Guardian Full Name")
     .placeholder("Jane Doe");
 let parentEmail = new Field("input:email", "guardian_email")
     .require()
-    .value("kimwendel@comcast.net")
     .setLabel("Parent/Guardian Email Address")
     .placeholder("jane@doe.com");
 let parentNumber = new Field("input:tel", "guardian_number")
     .require()
-    .value("4344660855")
     .setLabel("Parent/Guardian Phone Number")
     .pattern("[0-9]{3}[0-9]{3}[0-9]{4}")
     .placeholder("###-###-####");
