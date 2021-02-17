@@ -3,7 +3,9 @@ const express = require("express");
 const mysql = require("mysql2");
 const Joi = require("joi");
 
-const { transporter } = require("./utils");
+const {
+	transporter
+} = require("./utils");
 
 const type_meta = {
 	designer: 0,
@@ -88,6 +90,14 @@ const basic_schema = Joi.object({
 
 //joi prospect schema
 const camper_schema = Joi.object({
+	first_name: Joi.string().min(1).max(255).required(),
+	last_name: Joi.string().min(1).max(255).required(),
+	email: Joi.string().email({
+		minDomainSegments: 1,
+		tlds: {
+			allow: true
+		}
+	}).required(),
 	dob: Joi.date().max("2015-01-01").required(),
 	school: Joi.string().min(1).max(255).required(),
 	grade: Joi.number().min(10).max(18).required(),
@@ -106,8 +116,7 @@ const camper_schema = Joi.object({
 	}).required(),
 	guardian_phone: Joi.number().min(10).max(10).required(),
 	participated: Joi.number().max(1).required(),
-	weeks_coming: Joi.array().items(Joi.string().min(1).max(255).required())
-}).concat(basic_schema);
+});
 
 router.get("/open-weeks", (req, res) => {
 	let week_data = [];
@@ -123,8 +132,7 @@ router.get("/open-weeks", (req, res) => {
 });
 
 const referral_schema = Joi.object({
-	first_name: Joi.string().min(1).max(255).required(),
-	last_name: Joi.string().min(1).max(255).required(),
+	name: Joi.string().min(1).max(255).required(),
 	email: Joi.string().email({
 		minDomainSegments: 1,
 		tlds: {
@@ -136,66 +144,86 @@ const referral_schema = Joi.object({
 router.post("/camper-register-queueing", async (req, res) => {
 	if (camper_schema.validate(req.body)) {
 		let item = req.body;
-		await prospectSignup(req.body);
-		try {
-			item.type = type_meta[item.type];
-			// add them to the camper database, then enrollment based on their weeks
-			connection.query("INSERT INTO camper (first_name, last_name, email, dob, school, grade, gender, type, race_ethnicity, " +
-				"hopes_dreams, tshirt_size, borrow_laptop, guardian_name, guardian_email, guardian_phone, participated) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", [item.first_name, item.last_name, item.email, item.dob, item.school, item.grade, item.gender, item.type, item.race_ethncity,
-					item.hopes_dreams, item.tshirt_size, item.borrow_laptop, item.guardian_name, item.guardian_email, item.participated
-				], async (err, camper_id) => {
+		item.type = type_meta[item.type];
+		//reverse the data order
+		item.dob = item.dob.replace(/(..).(..).(....)/, "$3-$1-$2");
+		// add them to the camper database, then enrollment based on their weeks
+		connection.query("INSERT INTO camper (first_name, last_name, email, dob, school, grade, gender, type, race_ethnicity, " +
+			"hopes_dreams, tshirt_size, borrow_laptop, guardian_name, guardian_email, guardian_phone, participated) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", [item.first_name, item.last_name, item.email, item.dob, item.school, item.grade, item.gender, item.type, item.race_ethncity,
+				item.hopes, item.tshirt_size, item.borrow_laptop, item.guardian_name, item.guardian_email, item.guardian_number, item.participated
+			], async (err) => {
+				if (err) console.log(err);
+				connection.query("SELECT id FROM camper WHERE first_name=? AND last_name=? AND email=?", [item.first_name, item.last_name, item.email], async (err, camper_id) => {
 					if (err) console.log(err);
-					connection.query("SELECT id FROM camper WHERE first_name=? AND last_name=? AND email=?", [item.first_name, item.last_name, item.email], async (err, camper_id) => {
-						if (err) console.log(err);
-						//insert for each week they signed up for
-						let weeks = [],
-							count = 0;
-						for (week in item.weeks_coming) {
-							if (week_meta.has(item.weeks_coming[week]) && item.weeks_coming[week] != 0) {
-								//make a new list of which weeks they're in, then add to enrollment based on that
-								weeks[count] = item.weeks_coming[week];
+					//insert for each week they signed up for
+					let weeks = [],
+						count = 0;
+					week_meta.forEach((week, index) => {
+						for (pieces in item) {
+							if (parseInt(pieces, 10) == week.id && item[pieces.toString()] != 0) {
+								weeks[count] = [];
+								weeks[count][0] = pieces;
+								weeks[count][1] = item[pieces];
 								count++;
 							}
 						}
-						async function enrollmentInsert(week) {
-							return new Promise((resolve, reject) => {
-								connection.query("INSERT INTO enrollment (camper_id, week_id, signup_time, enrollment_code, person_loc, approved) VALUES " +
-									"(?, ?, ?, ?, ?, ?)", [camper_id[0].id, week_meta.get(weeks[week]).id, new Date(), uuidv4(), parseInt(item.weeks_coming[week], 10) - 1, 0], (err) => {
+					});
+					async function enrollmentInsert(week) {
+						return new Promise((resolve, reject) => {
+							connection.query("INSERT INTO enrollment (camper_id, week_id, signup_time, enrollment_code, person_loc, approved) VALUES " +
+								"(?, ?, ?, ?, ?, ?)", [camper_id[0].id, week[0], new Date(), uuidv4(), week[1] - 1, 0], (err) => {
+									if (err) reject(err);
+									connection.query("SELECT id, question_text FROM question_meta WHERE week_id=?", week[0][0], (err, questions) => {
 										if (err) reject(err);
-										connection.query("SELECT id, question_text FROM question_meta WHERE week_id=?", week_meta.get(weeks[week]).id, (err, questions) => {
-											if (err) reject(err);
-											if (questions.length) resolve(questions);
-											resolve([]);
-										});
+										if (questions.length) resolve(questions);
+										resolve([]);
 									});
-							});
-						}
-						let questions = {};
-						if (weeks.length) {
-							for (let weeks_db = 0; weeks_db < weeks.length; weeks_db++) {
-								let any_questions = await enrollmentInsert(weeks_db);
-								try {
-									//each week sends back questions for the specific person - need to build up an array
-									for (let question = 0; question < any_questions.length; question++) {
-										questions[question] = {
-											question_text: any_questions[question].question_text,
-											id: any_questions[question].id
+								});
+						});
+					}
+					let questions = {};
+					let question_position = 0;
+					if (weeks.length) {
+						for (let weeks_db = 0; weeks_db < weeks.length; weeks_db++) {
+							let any_questions = await enrollmentInsert(weeks[weeks_db]);
+							try {
+								//each week sends back questions for the specific person - need to build up an array
+								for (let question = 0; question < any_questions.length; question++) {
+									questions[question_position] = {
+										question_text: any_questions[question].question_text,
+										id: any_questions[question].id
+									}
+									question_position++;
+								}
+								if (weeks_db == weeks.length - 1) {
+									if (item.refer_name && item.refer_email) {
+										let user_data = {}
+										user_data.refer_id = camper_id[0].id;
+										user_data.name = item.refer_name;
+										user_data.email = item.refer_email;
+										if (referral_schema.validate(user_data)) {
+											await prospectSignup(user_data);
+											try {
+												res.json(questions);
+											} catch (error) {
+												res.render("error", {
+													title: "Uh oh"
+												});
+											}
+										} else {
+											res.render("error", {
+												title: "Uh oh"
+											});
 										}
 									}
-									if (week_db == weeks.length - 1) {
-										res.json(questions);
-									}
-								} catch (error) {
-									console.log(error);
 								}
+							} catch (error) {
+								console.log(error);
 							}
 						}
-						if (req.body.prospect && re) {}
-					});
+					}
 				});
-		} catch (error) {
-			console.log(error);
-		}
+			});
 	} else {
 		console.log(camper_schema.validate(req.body).error);
 	}
@@ -218,10 +246,17 @@ router.post("/signup-prospect", async (req, res) => {
 async function prospectSignup(user_data) {
 	return new Promise((resolve, reject) => {
 		let unique_retrieval = uuidv4();
-		connection.query("INSERT INTO prospect (first_name, last_name, email, unique_retrieval, subscribed) VALUES (?, ?, ?, ?, ?)", [user_data.first_name, user_data.last_name, user_data.email, unique_retrieval, user_data.updates], (err) => {
-			if (err) reject(err); //chat with bre about error handle
-			resolve(false);
-		});
+		if (user_data.refer_id) {
+			connection.query("INSERT INTO prospect (camper_refer_id, name, email, unique_retrieval, subscribed) VALUES (?, ?, ?, ?, ?)", [user_data.refer_id, user_data.name, user_data.email, unique_retrieval, 1], (err) => {
+				if (err) reject(err); //chat with bre about error handle
+				resolve(false);
+			});
+		} else {
+			connection.query("INSERT INTO prospect (name, email, unique_retrieval, subscribed) VALUES (?, ?, ?, ?)", [user_data.id, user_data.name, user_data.email, unique_retrieval, 1], (err) => {
+				if (err) reject(err); //chat with bre about error handle
+				resolve(false);
+			});
+		}
 	});
 }
 
