@@ -7,14 +7,10 @@ const form = "lg:w-96 lg:mx-auto";
 
 let updates = new Smartform("/", "POST");
 
-let firstName = new Field("input:text", "first_name")
+let name = new Field("input:text", "name")
     .require()
-    .setLabel("First Name")
-    .placeholder("ex. Tanjiro");
-let lastName = new Field("input:text", "last_name")
-    .require()
-    .setLabel("Last Name")
-    .placeholder("ex. Kamado");
+    .setLabel("Full Name")
+    .placeholder("ex. Tanjiro Kamado");
 let email = new Field("input:email", "email")
     .require()
     .setLabel("Email Address")
@@ -27,8 +23,7 @@ updates
     .styles(labels, notes, spans, inputs)
     .formStyles(form)
     .addFields([
-        firstName,
-        lastName,
+        name,
         email,
         submit
     ])
