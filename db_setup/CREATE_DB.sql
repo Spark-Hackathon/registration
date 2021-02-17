@@ -48,7 +48,7 @@ CREATE TABLE enrollment (
 );
 
 CREATE TABLE prospect (
-	camper_refer_id INT NOT NULL,
+	camper_refer_id INT,
 	first_name VARCHAR(255) NOT NULL,
 	last_name VARCHAR(255) NOT NULL,
 	email VARCHAR(255) NOT NULL,

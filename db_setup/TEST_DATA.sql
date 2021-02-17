@@ -1,3 +1,4 @@
+
 USE registration;
 
 INSERT INTO system_settings (name, value_str) VALUES ("admin_code", "7e135d92-10d3-4a20-8e1d-4028d0587f99");
