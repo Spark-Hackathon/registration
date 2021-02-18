@@ -9,6 +9,7 @@ INSERT INTO week (title, start_date, end_date, cb_code, inClass_available, virtu
 INSERT INTO question_meta (week_id, question_text) VALUES (1, "Why do you think web should be an important component of school life?");
 INSERT INTO question_meta (week_id, question_text) VALUES (2, "Do you think coding can be creative? Interpet");
 INSERT INTO question_meta (week_id, question_text) VALUES (3, "How do you think you might use art to provide a more wonderful game?");
+INSERT INTO question_meta (week_id, question_text) VALUES (1, "Is there purpose behind creating a beautiful experience for users?");
 
 INSERT INTO camper (first_name, last_name, email, dob, school, grade, gender, type, race_ethnicity, hopes_dreams, tshirt_size, 
 	borrow_laptop, guardian_name, guardian_email, guardian_phone, participated) VALUES ("Charlie", "Hall", "chall22@students.stab.org",
