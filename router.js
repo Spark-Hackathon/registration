@@ -138,11 +138,22 @@ router.post("/camper-register-queueing", async (req, res) => {
 		item.type = type_meta[item.type];
 		//reverse the data order
 		item.dob = item.dob.replace(/(..).(..).(....)/, "$3-$1-$2");
-		// add them to the camper database, then enrollment based on their weeks
-		connection.query("INSERT INTO camper (first_name, last_name, email, dob, school, grade, gender, type, race_ethnicity, " +
-			"hopes_dreams, tshirt_size, borrow_laptop, guardian_name, guardian_email, guardian_phone, participated) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", [item.first_name, item.last_name, item.email, item.dob, item.school, item.grade, item.gender, item.type, item.race_ethncity,
-				item.hopes, item.tshirt_size, item.borrow_laptop, item.guardian_name, item.guardian_email, item.guardian_number, item.participated
-			], async (err) => {
+		connection.query("SELECT id FROM camper WHERE first_name=? AND last_name=? AND email=?", [item.first_name, item.last_name, item.email], (err, pre_id) => {
+			if (err) console.log(err);
+			let camper_writeup;
+			let extra_camper_info = [];
+			extra_camper_info.push(item.first_name, item.last_name, item.email, item.dob, item.school, item.grade, item.gender, item.type, item.race_ethnicity,
+				item.hopes, item.tshirt_size, item.borrow_laptop, item.guardian_name, item.guardian_email, item.guardian_number, item.participated);
+			if (pre_id.length) {
+				camper_writeup = "UPDATE camper SET first_name=?, last_name=?, email=?, dob=?, school=?, grade=?, gender=?, type=?, race_ethnicity=?, " +
+					"hopes_dreams=?, tshirt_size=?, borrow_laptop=?, guardian_name=?, guardian_email=?, guardian_phone=?, participated=? WHERE first_name=? AND last_name=? AND email=?";
+				extra_camper_info.push(item.first_name, item.last_name, item.email);
+			} else {
+				camper_writeup = "INSERT INTO camper (first_name, last_name, email, dob, school, grade, gender, type, race_ethnicity, " +
+					"hopes_dreams, tshirt_size, borrow_laptop, guardian_name, guardian_email, guardian_phone, participated) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+			}
+			// add them to the camper database, then enrollment based on their weeks
+			connection.query(camper_writeup, extra_camper_info, async (err) => {
 				if (err) {
 					console.log(err);
 				} else {
@@ -163,8 +174,8 @@ router.post("/camper-register-queueing", async (req, res) => {
 						});
 						async function enrollmentInsert(week) {
 							return new Promise((resolve, reject) => {
-								connection.query("INSERT INTO enrollment (camper_id, week_id, signup_time, enrollment_code, person_loc, approved) VALUES " +
-									"(?, ?, ?, ?, ?, ?)", [camper_id[0].id, week[0], new Date(), uuidv4(), week[1] - 1, 0], (err) => {
+								connection.query("INSERT INTO enrollment (camper_id, week_id, signup_time, enrollment_code, person_loc, approved, confirmed) VALUES " +
+									"(?, ?, ?, ?, ?, ?, ?)", [camper_id[0].id, week[0], new Date(), uuidv4(), week[1] - 1, 0, 0], (err) => {
 										if (err) reject(err);
 										connection.query("SELECT id, question_text FROM question_meta WHERE week_id=?", week[0][0], (err, questions) => {
 											if (err) reject(err);
@@ -202,14 +213,14 @@ router.post("/camper-register-queueing", async (req, res) => {
 											if (referral_schema.validate(user_data)) {
 												await prospectSignup(user_data);
 												try {
-													sendmail({
-														from: "spark" + getDate() + "@cs.stab.org",
-														to: item.email,
-														subject: "You've signed up!",
-														text: "Hey " + item.first_name + " " + item.last_name + ", we've received your signup, we'll go and check out the application in just a bit!"
-													}, (err, info) => {
-														console.log(err, info);
-													});
+													// sendmail({
+													// 	from: "spark" + getDate() + "@cs.stab.org",
+													// 	to: item.email,
+													// 	subject: "You've signed up!",
+													// 	text: "Hey " + item.first_name + " " + item.last_name + ", we've received your signup, we'll go and check out the application in just a bit!"
+													// }, (err, info) => {
+													// 	console.log(err, info);
+													// });
 													res.json(questions);
 												} catch (error) {
 													res.render("error", {
@@ -223,14 +234,15 @@ router.post("/camper-register-queueing", async (req, res) => {
 											}
 										} else {
 											//send finish email, done
-											sendmail({
-												from: 'spark' + getDate() + '@cs.stab.org',
-												to: item.email,
-												subject: "You've signed up!",
-												text: "Hey " + item.first_name + " " + item.last_name + ", we've received your signup, we'll go and check out the application in just a bit!"
-											}, (err, info) => {
-												console.log(err, info);
-											});
+											// sendmail({
+											// 	from: 'spark' + getDate() + '@cs.stab.org',
+											// 	to: item.email,
+											// 	subject: "You've signed up!",
+											// 	text: "Hey " + item.first_name + " " + item.last_name + ", we've received your signup, we'll go and check out the application in just a bit!"
+											// }, (err, info) => {
+											// 	console.log(err, info);
+											// });
+											res.json(questions);
 										}
 									}
 								} catch (error) {
@@ -241,6 +253,7 @@ router.post("/camper-register-queueing", async (req, res) => {
 					});
 				}
 			});
+		});
 	} else {
 		console.log(camper_schema.validate(req.body).error);
 	}
@@ -292,6 +305,65 @@ router.get("/admin/get-weeks", (req, res) => {
 	res.json(weeks);
 });
 
+router.post("/admin/delete-week", async (req, res) => {
+	connection.query("SELECT value_str FROM system_settings WHERE name='admin_code'", async (err, code) => {
+		if (err) console.log(err);
+		if (req.body.code == code[0].value_str) {
+			let obj = {
+				week_question: []
+			};
+			connection.query("SELECT id, question_text FROM question_meta WHERE week_id=?", req.body.id, async (err, question_meta_info) => {
+				if (err) console.log(err);
+				async function pull_questions(id) {
+					return new Promise((resolve, reject) => {
+						connection.query("SELECT first_name, last_name, question_response FROM questions INNER JOIN camper ON questions.camper_id = camper.id WHERE question_meta_id=?", id, (err, question_res) => {
+							if (err) reject(err);
+							connection.query("DELETE FROM questions WHERE question_meta_id=?", id, (err) => {
+								if (err) reject(err);
+								resolve(question_res);
+							});
+						});
+					});
+				}
+				question_meta_info.forEach(async (item, index) => {
+					let questions = await pull_questions(item.id);
+					try {
+						obj.week_question.push({
+							question_text: item.question_text,
+							question_answer: []
+						});
+						questions.forEach((question, ind) => {
+							obj.week_question[index].question_answer.push({
+								camper_name: question.first_name + " " + question.last_name,
+								response: question.question_response
+							});
+						});
+						if (obj.week_question.length == question_meta_info.length) {
+							//grab all of the info for the questions about this week, drop that and make it into an obj to send to user
+							connection.query("DELETE FROM question_meta WHERE week_id=?", req.body.id, (err) => {
+								if (err) console.log(err);
+								connection.query("DELETE FROM enrollment WHERE week_id=?", req.body.id, (err) => {
+									if (err) console.log(err);
+									connection.query("DELETE FROM week WHERE id=?", req.body.id, (err) => {
+										if (err) console.log(err);
+										res.json(obj);
+									});
+								});
+							});
+						}
+					} catch (error) {
+						console.log(error);
+					}
+				});
+			});
+		}
+	});
+});
+
+router.post("/admin/add-week", (req, res) => {
+
+});
+
 router.get("/admin/get-questions", async (req, res) => {
 	connection.query("SELECT id, title FROM week", async (err, weeks) => {
 		if (err) console.log(err);
@@ -307,11 +379,17 @@ router.get("/admin/get-questions", async (req, res) => {
 		let count = -1;
 		weeks.forEach(async (week, week_index) => {
 			count++;
-			obj[count] = { title: week.title, info: [] };
+			obj[count] = {
+				title: week.title,
+				info: []
+			};
 			let question_data = await pull_questions(count, week.id);
 			try {
 				for (q_run in question_data[1]) {
-					obj[question_data[0]].info.push({ id: question_data[1][q_run].id, question: question_data[1][q_run].question_text });
+					obj[question_data[0]].info.push({
+						id: question_data[1][q_run].id,
+						question: question_data[1][q_run].question_text
+					});
 				}
 				if (question_data[0] == weeks.length - 1) {
 					res.json(obj);
