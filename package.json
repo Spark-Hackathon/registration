@@ -25,6 +25,7 @@
     "mysql2": "^2.2.5",
     "nodemailer": "^6.4.18",
     "nodemon": "^2.0.7",
+    "sendmail": "^1.6.1",
     "unique-names-generator": "^4.3.1",
     "uuid": "^8.3.2"
   },
