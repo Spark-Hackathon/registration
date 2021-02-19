@@ -39,6 +39,30 @@
         <tbody id="applicant-data"></tbody>
     </table>
 
+    <hr>
+
+    <form id="select-weeks">
+        <input type="hidden" name="code" class="password">
+
+        <label>Get all weeks</label>
+
+        <input type="submit" value="Query">
+    </form>
+
+    <table>
+        <tr>
+            <th>Week ID</th>
+            <th>Week Name</th>
+            <th>Virtual Available?</th>
+            <th>In-person Available?</th>
+            <th>Action</th>
+        </tr>
+        <tbody id="week-data"></tbody>
+    </table>
+
+    <button id="new-week">New Week</button>
+    <hr>
+
     <form action="/admin/send-mail" method="POST" class="border-2 px-4 py-2">
         <input type="hidden" name="code" class="password">
         <label for="week_name">Send mail</label>
@@ -73,7 +97,6 @@
     }
 
     const accept_camper = (week_name, camper_id) => {
-        console.log(week_name, camper_id);
         fetch("/admin/accept-camper-application", { 
             method: "POST",
             cache: "no-cache",
@@ -88,6 +111,51 @@
             .then(() => console.log("Accepted camper damnit"))
             .catch(err => console.error(err));
     }
+
+    const delete_week = (id) => {
+        fetch("/admin/delete-week", {
+            method: "POST",
+            cache: "no-cache",
+            headers: { "Content-Type": "application/json" },
+            redirect: "manual",
+            body: JSON.stringify({
+                code: password,
+                code2: "eatmyshorts",
+                id
+            })
+        })
+            .then(() => alert("=== WEEK DELETED ==="))
+            .catch(err => console.error(err));
+    }
+
+    const new_week = () => {
+        let week_name = prompt("Week Name?");
+        let start_date = prompt("Start date? (YYYY-MM-DD)");
+        let end_date = prompt("End date? (YYYY-MM-DD)");
+        let cb_code = "charliedawitch"; //prompt("CB Code?");
+        let inclass_available = prompt("In-class option available? y/n") == "y" ? 1 : 0;
+        let virtual_available = prompt("Virtual option available? y/n") == "y" ? 1 : 0;
+
+        fetch("/admin/add-week", {
+            method: "POST",
+            cache: "no-cache",
+            headers: { "Content-Type": "application/json" },
+            redirect: "manual",
+            body: JSON.stringify({
+                code: password,
+                week_name,
+                start_date,
+                end_date,
+                cb_code,
+                inclass_available,
+                virtual_available
+            })
+        })
+            .then(() => alert("=== WEEK CREATED ==="))
+            .catch(err => console.error(err));
+    }
+
+    $("#new-week").click(new_week)
 
     $("#select-applicants").on("submit", async event => {
         event.preventDefault();
@@ -142,6 +210,36 @@
                     ]);
 
                     $("#applicant-data").append(camper_row);
+                }
+            })
+            .catch(err => console.error(err));
+    });
+
+    $("#select-weeks").on("submit", event => {
+        event.preventDefault();
+        $("#week-data").empty();
+
+        fetch("/admin/get-weeks")
+            .then(response => response.json())
+            .then(weeks => {
+                for(let week of weeks) {
+                    let week_row = $("<tr></tr>");
+
+                    let id = $(`<td>${week.week_id}</td>`);
+                    let name = $(`<td>${week.name}</td>`);
+                    let virtual = $(`<td>${week.virtual_available ? "Yes" : "No"}</td>`);
+                    let in_person = $(`<td>${week.inclass_available ? "Yes" : "No"}</td>`);
+                    let delete_button = `<button onclick="delete_week(${week.week_id})">Delete Week</button>`;
+
+                    week_row.append([
+                        id,
+                        name,
+                        virtual,
+                        in_person,
+                        delete_button
+                    ]);
+
+                    $("#week-data").append(week_row);
                 }
             })
             .catch(err => console.error(err));
