@@ -30,7 +30,8 @@ CREATE TABLE week (
 	cb_code VARCHAR(255) NOT NULL,
 	inClass_available TINYINT(1) NOT NULL,
 	virtual_available TINYINT(1) NOT NULL,
-	PRIMARY KEY(id)
+	PRIMARY KEY(id),
+	UNIQUE INDEX `unique_week` (`title`, `start_date`, `end_date`)
 );
 CREATE TABLE enrollment (
 	camper_id INT NOT NULL,
