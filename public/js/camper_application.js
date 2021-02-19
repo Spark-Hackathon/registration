@@ -5,7 +5,7 @@ const spans = "text-red-500 inline-block";
 const submitStyle = "w-full p-4 font-semibold bg-yellow-300 cursor-pointer hover:bg-yellow-500 hover:text-white transition duration-200 rounded-lg";
 const form = "lg:w-96 lg:mx-auto";
 
-let application = new Smartform("/", "POST");
+let application = new Smartform("/camper-register-queueing", "POST");
 
 let weekIds = [];
 
@@ -180,13 +180,13 @@ fetch("/open-weeks")
     .then(results => results.json())
     .then(weeks => {
         for(let week of weeks) {
-            let { id, inclass_available: in_person, virtual_available: virtual } = week;
+            let { title, id, inclass_available: in_person, virtual_available: virtual } = week;
             weekIds.push(id);
 
             application.addFields([
                 new Field("select", id)
                     .require()
-                    .setLabel(`Will you attend the ${id} week?`)
+                    .setLabel(`Will you attend the ${title} week?`)
                     .addOptions([
                         [0, "No, I will not attend."],
                         [1, "Yes, I will attend virtually (via Zoom)"],

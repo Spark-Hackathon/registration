@@ -34,6 +34,7 @@
             <th>Type</th>
             <th>Hopes & Dreams</th>
             <th>Participated Before?</th>
+            <th>Accept or Decline?</th>
         </tr>
         <tbody id="applicant-data"></tbody>
     </table>
@@ -69,6 +70,23 @@
         for(let fields of password_fields) {
             fields.value = password;
         }
+    }
+
+    const accept_camper = (week_name, camper_id) => {
+        console.log(week_name, camper_id);
+        fetch("/admin/accept-camper-application", { 
+            method: "POST",
+            cache: "no-cache",
+            headers: { "Content-Type": "application/json" },
+            redirect: "manual",
+            body: JSON.stringify({
+                code: password,
+                week_name,
+                camper_id
+            })
+        })
+            .then(() => console.log("Accepted camper damnit"))
+            .catch(err => console.error(err));
     }
 
     $("#select-applicants").on("submit", async event => {
@@ -110,6 +128,7 @@
                     let type = $(`<td>${type_translation[camper.type]}</td>`);
                     let hopes_dreams = $(`<td>${camper.hopes_dreams}</td>`);
                     let participated = $(`<td>${camper.participated}</td>`);
+                    let accept_decline = `<button onclick="accept_camper('${camper.week}', ${camper.camper_id})">Accept Camper</button>`;
 
                     camper_row.append([
                         id,
@@ -118,7 +137,8 @@
                         week,
                         type,
                         hopes_dreams,
-                        participated
+                        participated,
+                        accept_decline
                     ]);
 
                     $("#applicant-data").append(camper_row);
