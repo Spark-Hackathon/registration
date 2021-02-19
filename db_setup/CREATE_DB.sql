@@ -1,8 +1,6 @@
 DROP DATABASE IF EXISTS registration;
 CREATE DATABASE registration;
-
 USE registration;
-
 CREATE TABLE camper (
 	id INT NOT NULL AUTO_INCREMENT, 
 	first_name VARCHAR(255) NOT NULL,
@@ -24,7 +22,6 @@ CREATE TABLE camper (
 	PRIMARY KEY(id),
 	UNIQUE INDEX `unique_camper` (`first_name`, `last_name`, `email`)
 );
-
 CREATE TABLE week (
 	id INT NOT NULL AUTO_INCREMENT,
 	title VARCHAR(255) NOT NULL,
@@ -35,7 +32,6 @@ CREATE TABLE week (
 	virtual_available TINYINT(1) NOT NULL,
 	PRIMARY KEY(id)
 );
-
 CREATE TABLE enrollment (
 	camper_id INT NOT NULL,
 	week_id INT NOT NULL,
@@ -49,7 +45,6 @@ CREATE TABLE enrollment (
 	FOREIGN KEY (`camper_id`) REFERENCES camper (`id`),
 	FOREIGN KEY (`week_id`) REFERENCES week (`id`)
 );
-
 CREATE TABLE prospect (
 	camper_refer_id INT,
 	name VARCHAR(255) NOT NULL,
@@ -59,7 +54,6 @@ CREATE TABLE prospect (
 	FOREIGN KEY (`camper_refer_id`) REFERENCES camper (`id`),
 	UNIQUE KEY `unique_prospect` (`name`, `email`)
 );
-
 CREATE TABLE question_meta (
 	id INT NOT NULL AUTO_INCREMENT,
 	week_id INT NOT NULL,
@@ -67,7 +61,6 @@ CREATE TABLE question_meta (
 	PRIMARY KEY (id),
 	FOREIGN KEY (`week_id`) REFERENCES week (`id`)
 );
-
 CREATE TABLE questions (
 	camper_id INT NOT NULL,
 	question_meta_id INT NOT NULL,
@@ -75,7 +68,6 @@ CREATE TABLE questions (
 	FOREIGN KEY (`camper_id`) REFERENCES camper (`id`),
 	FOREIGN KEY (`question_meta_id`) REFERENCES question_meta (`id`)
 );
-
 CREATE TABLE system_settings (
 	name VARCHAR(255) NOT NULL,
 	value_int INT,

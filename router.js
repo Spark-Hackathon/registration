@@ -136,8 +136,6 @@ router.post("/camper-register-queueing", async (req, res) => {
 	if (camper_schema.validate(req.body)) {
 		let item = req.body;
 		item.type = type_meta[item.type];
-		//reverse the data order
-		item.dob = item.dob.replace(/(..).(..).(....)/, "$3-$1-$2");
 		connection.query("SELECT id FROM camper WHERE first_name=? AND last_name=? AND email=?", [item.first_name, item.last_name, item.email], (err, pre_id) => {
 			if (err) console.log(err);
 			let camper_writeup;
