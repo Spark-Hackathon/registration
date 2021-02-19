@@ -323,43 +323,82 @@ router.post("/admin/delete-week", async (req, res) => {
 						});
 					});
 				}
-				question_meta_info.forEach(async (item, index) => {
-					let questions = await pull_questions(item.id);
-					try {
-						obj.week_question.push({
-							question_text: item.question_text,
-							question_answer: []
-						});
-						questions.forEach((question, ind) => {
-							obj.week_question[index].question_answer.push({
-								camper_name: question.first_name + " " + question.last_name,
-								response: question.question_response
+				if (question_meta_info.length) {
+					question_meta_info.forEach(async (item, index) => {
+						let questions = await pull_questions(item.id);
+						try {
+							obj.week_question.push({
+								question_text: item.question_text,
+								question_answer: []
 							});
-						});
-						if (obj.week_question.length == question_meta_info.length) {
-							//grab all of the info for the questions about this week, drop that and make it into an obj to send to user
-							connection.query("DELETE FROM question_meta WHERE week_id=?", req.body.id, (err) => {
-								if (err) console.log(err);
-								connection.query("DELETE FROM enrollment WHERE week_id=?", req.body.id, (err) => {
-									if (err) console.log(err);
-									connection.query("DELETE FROM week WHERE id=?", req.body.id, (err) => {
-										if (err) console.log(err);
-										res.json(obj);
-									});
+							questions.forEach((question, ind) => {
+								obj.week_question[index].question_answer.push({
+									camper_name: question.first_name + " " + question.last_name,
+									response: question.question_response
 								});
 							});
+							if (obj.week_question.length == question_meta_info.length) {
+								console.log("HEREH");
+								//grab all of the info for the questions about this week, drop that and make it into an obj to send to user
+								connection.query("DELETE FROM question_meta WHERE week_id=?", req.body.id, (err) => {
+									if (err) console.log(err);
+									connection.query("DELETE FROM enrollment WHERE week_id=?", req.body.id, (err) => {
+										if (err) console.log(err);
+										connection.query("DELETE FROM week WHERE id=?", req.body.id, (err) => {
+											if (err) console.log(err);
+											res.json(obj);
+										});
+									});
+								});
+							}
+						} catch (error) {
+							console.log(error);
 						}
-					} catch (error) {
-						console.log(error);
-					}
-				});
+					});
+				} else {
+					connection.query("DELETE FROM question_meta WHERE week_id=?", req.body.id, (err) => {
+						if (err) console.log(err);
+						connection.query("DELETE FROM enrollment WHERE week_id=?", req.body.id, (err) => {
+							if (err) console.log(err);
+							connection.query("DELETE FROM week WHERE id=?", req.body.id, (err) => {
+								if (err) console.log(err);
+								res.end();
+							});
+						});
+					});
+				}
 			});
+		} else {
+			res.redirect("/");
 		}
 	});
 });
 
-router.post("/admin/add-week", (req, res) => {
+const add_week_schema = Joi.object({
+	code: Joi.string().length(36).required(),
+	week_name: Joi.string().max(255).required(),
+	start_date: Joi.date().min("2015-01-01").required(),
+	end_date: Joi.date().min("2015-01-01").required(),
+	inclass_available: Joi.number().min(1).max(1).required(),
+	virtual_available: Joi.number().min(1).max(1).required()
+});
 
+router.post("/admin/add-week", (req, res) => {
+	if (add_week_schema.validate(req.body)) {
+		connection.query("SELECT value_str FROM system_settings WHERE name='admin_code'", async (err, code) => {
+			if (err) console.log(err);
+			if (req.body.code == code[0].value_str) {
+				connection.query("INSERT INTO week (title, start_date, end_date, cb_code, inClass_available, virtual_available) VALUES (?, ?, ?, ?, ?, ?)", [req.body.week_name, req.body.start_date, req.body.end_date, req.body.cb_code, req.body.inClass_available, req.body.virtual_available], (err) => {
+					if (err) console.log(err);
+					res.end();
+				});
+			} else {
+				res.redirect("/");
+			}
+		});
+	} else {
+		res.redirect("/");
+	}
 });
 
 router.get("/admin/get-questions", async (req, res) => {
@@ -506,7 +545,7 @@ router.post("/admin/accept-camper-application", (req, res) => { //ADMIN
 			if (req.body.code == code[0].value_str) {
 				connection.query("SELECT id FROM week WHERE title=?", req.body.week_name, (err, week_id) => {
 					if (err) console.log(err);
-					connection.query("SELECT first_name, last_name, email FROM camper WHERE camper_id=?", req.body.camper_id, (err, email_info) => {
+					connection.query("SELECT first_name, last_name, email FROM camper WHERE id=?", req.body.camper_id, (err, email_info) => {
 						if (err) console.log(err);
 						if (email_info.length) {
 							connection.query("UPDATE enrollment SET approved=1 WHERE camper_id=? AND week_id=?", [req.body.camper_id, week_id[0].id], (err) => {
