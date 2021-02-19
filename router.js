@@ -304,7 +304,7 @@ router.get("/admin/get-weeks", (req, res) => {
 });
 
 router.post("/admin/delete-week", async (req, res) => {
-	connection.query("SELECT value_str FROM system_settings WHERE name='admin_code'", async (err, code) => {
+	connection.query("SELECT system_settings.value_str, week.title FROM system_settings system_settings CROSS JOIN week week WHERE system_settings.name='admin_code' AND week.id=?", req.body.id, async (err, code) => {
 		if (err) console.log(err);
 		if (req.body.code == code[0].value_str) {
 			let obj = {
@@ -346,6 +346,7 @@ router.post("/admin/delete-week", async (req, res) => {
 										if (err) console.log(err);
 										connection.query("DELETE FROM week WHERE id=?", req.body.id, (err) => {
 											if (err) console.log(err);
+											week_meta.delete(code[0].title);
 											res.json(obj);
 										});
 									});
@@ -362,6 +363,9 @@ router.post("/admin/delete-week", async (req, res) => {
 							if (err) console.log(err);
 							connection.query("DELETE FROM week WHERE id=?", req.body.id, (err) => {
 								if (err) console.log(err);
+								console.log(code[0].title);
+								console.log(week_meta.delete(code[0].title));
+								console.log(week_meta);
 								res.end();
 							});
 						});
