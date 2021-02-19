@@ -388,7 +388,7 @@ router.post("/admin/add-week", (req, res) => {
 		connection.query("SELECT value_str FROM system_settings WHERE name='admin_code'", async (err, code) => {
 			if (err) console.log(err);
 			if (req.body.code == code[0].value_str) {
-				connection.query("INSERT INTO week (title, start_date, end_date, cb_code, inClass_available, virtual_available) VALUES (?, ?, ?, ?, ?, ?)", [req.body.week_name, req.body.start_date, req.body.end_date, req.body.cb_code, req.body.inClass_available, req.body.virtual_available], (err) => {
+				connection.query("INSERT INTO week (title, start_date, end_date, cb_code, inClass_available, virtual_available) VALUES (?, ?, ?, ?, ?, ?)", [req.body.week_name, req.body.start_date, req.body.end_date, req.body.cb_code, req.body.inclass_available, req.body.virtual_available], (err) => {
 					if (err) console.log(err);
 					res.end();
 				});
