@@ -390,7 +390,17 @@ router.post("/admin/add-week", (req, res) => {
 			if (req.body.code == code[0].value_str) {
 				connection.query("INSERT INTO week (title, start_date, end_date, cb_code, inClass_available, virtual_available) VALUES (?, ?, ?, ?, ?, ?)", [req.body.week_name, req.body.start_date, req.body.end_date, req.body.cb_code, req.body.inclass_available, req.body.virtual_available], (err) => {
 					if (err) console.log(err);
-					res.end();
+					connection.query("SELECT id FROM week WHERE title=? AND start_date=? AND end_date=?", [req.body.week_name, req.body.start_date, req.body.end_date], (err, row) => {
+						if (err) console.log(err);
+						week_meta.set(req.body.week_name, {
+							id: row[0].id,
+							inclass_available: req.body.inclass_available,
+							virtual_available: req.body.virtual_available,
+							start_date: req.body.start_date,
+							end_date: req.body.end_date
+						});
+						res.end();
+					});
 				});
 			} else {
 				res.redirect("/");
