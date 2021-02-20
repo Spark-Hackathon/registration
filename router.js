@@ -597,10 +597,25 @@ router.post("/admin/delete-enrollment", (req, res) => {
 					});
 				} else {
 					connection.query("DELETE FROM enrollment WHERE camper_id=? AND week_id=?", [req.body.camper_id, req.body.week_id], (err) => {
-						if (err)console.log(err);
+						if (err) console.log(err);
 						res.redirect("/admin");
 					});
 				}
+			});
+		}
+	});
+});
+
+router.post("/admin/delete-camper", (req, res) => {
+	connection.query("SELECT value_str FROM system_settings WHERE name='admin_code'", (err, code) => {
+		if (err) console.log(err);
+		if (req.body.code == code[0].value_str) {
+			connection.query("SELECT * FROM camper WHERE first_name=? AND last_name=? AND email=?", [req.body.first_name, req.body.last_name, req.body.email], (err, camper_value) => {
+				if (err) console.log(err);
+				connection.query("DELETE FROM camper WHERE first_name=? AND last_name=? AND email=?", [req.body.first_name, req.body.last_name, req.body.email], (err) => {
+					if (err) console.log(err);
+					res.json(camper_value);
+				});
 			});
 		}
 	});
