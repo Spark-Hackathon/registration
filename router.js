@@ -452,19 +452,25 @@ function partition(array, low, high) {
 			i--;
 			let week_buffer = array[i][0];
 			let camper_buffer = array[i][1];
+			let confirmed_buffer = array[i][2];
 			array[i][0] = array[j][0];
 			array[i][1] = array[j][1];
+			array[i][2] = array[j][2];
 			array[j][0] = week_buffer;
 			array[j][1] = camper_buffer;
+			array[j][2] = confirmed_buffer;
 		}
 	}
 	if (i >= 0) {
 		let week_buffer = array[i - 1][0];
 		let camper_buffer = array[i - 1][1];
+		let confirmed_buffer = array[i - 1][2];
 		array[i - 1][0] = array[pivot][0];
 		array[i - 1][1] = array[pivot][1];
+		array[i - 1][2] = array[pivot][2];
 		array[pivot][0] = week_buffer;
 		array[pivot][1] = camper_buffer;
+		array[pivot][2] = confirmed_buffer;
 	}
 	return [i - 1, array];
 }
@@ -474,7 +480,8 @@ router.post("/admin/pull-current-campers", async (req, res) => { //ADMIN
 		if (err) console.log(err);
 		if (req.body.code == code[0].value_str) {
 			//throw all currently pending campers - run through and see which ones are still waiting in enrollment
-			connection.query("SELECT camper_id, week_id FROM enrollment WHERE approved=?", req.body['applicants-or-registered'], async (err, camper_ids) => {
+			let addition_on_camper = req.body['applicants-or-registered'] == 1 ? ", confirmed" : "";
+			connection.query("SELECT camper_id, week_id" + addition_on_camper + " FROM enrollment WHERE approved=?", req.body['applicants-or-registered'], async (err, camper_ids) => {
 				if (err) console.log(err);
 				let obj = {
 					campers: []
@@ -483,8 +490,9 @@ router.post("/admin/pull-current-campers", async (req, res) => { //ADMIN
 				let camper_pos = [];
 				for (ids in camper_ids) {
 					camper_pos[ids] = [];
-					camper_pos[ids][0] = camper_ids[ids].week_id
+					camper_pos[ids][0] = camper_ids[ids].week_id;
 					camper_pos[ids][1] = camper_ids[ids].camper_id;
+					camper_pos[ids][2] = camper_ids[ids].confirmed;
 				}
 				camper_pos = quicksort(camper_pos, 0, camper_pos.length - 1);
 
@@ -503,6 +511,9 @@ router.post("/admin/pull-current-campers", async (req, res) => { //ADMIN
 								inner.type = camper[0].type;
 								inner.hopes_dreams = camper[0].hopes_dreams;
 								inner.participated = camper[0].participated == 1 ? "Participated before" : "Has not participated";
+								if (id[2] == 0 || id[2] == 1) {
+									inner.confirmed = id[2] == 1 ? "This camper has been confirmed" : "This camper is unconfirmed";
+								}
 								resolve(inner);
 							});
 						});
@@ -512,6 +523,7 @@ router.post("/admin/pull-current-campers", async (req, res) => { //ADMIN
 				for (let each_id = 0; each_id < camper_ids.length; each_id++) {
 					id[0] = camper_pos[each_id][1];
 					id[1] = camper_pos[each_id][0];
+					id[2] = camper_pos[each_id][2];
 					obj.campers.push(await allCampers());
 					try {
 						if (each_id == camper_ids.length - 1) {
@@ -521,6 +533,7 @@ router.post("/admin/pull-current-campers", async (req, res) => { //ADMIN
 						console.log(error);
 					}
 				}
+				res.end();
 			});
 		} else {
 			res.sendStatus(404);
@@ -544,16 +557,17 @@ router.post("/admin/accept-camper-application", (req, res) => { //ADMIN
 					connection.query("SELECT first_name, last_name, email FROM camper WHERE id=?", req.body.camper_id, (err, email_info) => {
 						if (err) console.log(err);
 						if (email_info.length) {
-							connection.query("UPDATE enrollment SET approved=1 WHERE camper_id=? AND week_id=?", [req.body.camper_id, week_id[0].id], (err) => {
+							let approved_date = Date.now();
+							connection.query("UPDATE enrollment SET approved=1, approved_time=? WHERE camper_id=? AND week_id=?", [approved_date, req.body.camper_id, week_id[0].id], (err) => {
 								if (err) console.log(err);
-								transporter.sendMail({
-									from: "spark" + getDate + "@cs.stab.org",
-									to: email_info[0].email,
-									subject: "You were accepted for " + req.body.week_name,
-									text: "Hey " + email_info.first_name + " " + email_info.last_name + ", "
-								}, (err, info) => {
-									console.log(err);
-								});
+								// transporter.sendMail({
+								// 	from: "spark" + getDate + "@cs.stab.org",
+								// 	to: email_info[0].email,
+								// 	subject: "You were accepted for " + req.body.week_name,
+								// 	text: "Hey " + email_info.first_name + " " + email_info.last_name + ", "
+								// }, (err, info) => {
+								// 	console.log(err);
+								// });
 								res.end();
 							});
 						}
@@ -578,7 +592,7 @@ const send_mail_schema = Joi.object({
 
 router.post("/admin/send-mail", (req, res) => { //ADMIN
 	if (send_mail_schema.validate(req.body)) {
-
+		
 	}
 });
 
