@@ -582,6 +582,30 @@ router.post("/admin/accept-camper-application", (req, res) => { //ADMIN
 	}
 });
 
+router.post("/admin/delete-enrollment", (req, res) => {
+	connection.query("SELECT value_str FROM system_settings WHERE name='admin_code'", (err, code) => {
+		if (err) console.log(err);
+		if (req.body.code == code[0].value_str) {
+			//check for if their an applicant or a regisered camper
+			req.body.week_id = week_meta.get(req.body.week_name).id;
+			connection.query("SELECT approved FROM enrollment WHERE camper_id=? AND week_id=?", [req.body.camper_id, req.body.week_id], (err, approved) => {
+				if (err) console.log(err);
+				if (approved[0].approved == 1) {
+					connection.query("UPDATE enrollment SET approved=0 WHERE camper_id=? AND week_id=?", [req.body.camper_id, req.body.week_id], (err) => {
+						if (err) console.log(err);
+						res.redirect("/admin");
+					});
+				} else {
+					connection.query("DELETE FROM enrollment WHERE camper_id=? AND week_id=?", [req.body.camper_id, req.body.week_id], (err) => {
+						if (err)console.log(err);
+						res.redirect("/admin");
+					});
+				}
+			});
+		}
+	});
+});
+
 const send_mail_schema = Joi.object({
 	code: Joi.string().length().required(),
 	email_from: Joi.string().email().required(),
@@ -592,7 +616,7 @@ const send_mail_schema = Joi.object({
 
 router.post("/admin/send-mail", (req, res) => { //ADMIN
 	if (send_mail_schema.validate(req.body)) {
-		
+
 	}
 });
 
