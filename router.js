@@ -316,10 +316,7 @@ router.post("/admin/delete-week", async (req, res) => {
 					return new Promise((resolve, reject) => {
 						connection.query("SELECT first_name, last_name, question_response FROM questions INNER JOIN camper ON questions.camper_id = camper.id WHERE question_meta_id=?", id, (err, question_res) => {
 							if (err) reject(err);
-							connection.query("DELETE FROM questions WHERE question_meta_id=?", id, (err) => {
-								if (err) reject(err);
-								resolve(question_res);
-							});
+							resolve(question_res);
 						});
 					});
 				}
@@ -338,18 +335,11 @@ router.post("/admin/delete-week", async (req, res) => {
 								});
 							});
 							if (obj.week_question.length == question_meta_info.length) {
-								console.log("HEREH");
 								//grab all of the info for the questions about this week, drop that and make it into an obj to send to user
-								connection.query("DELETE FROM question_meta WHERE week_id=?", req.body.id, (err) => {
+								connection.query("DELETE FROM week WHERE id=?", req.body.id, (err) => {
 									if (err) console.log(err);
-									connection.query("DELETE FROM enrollment WHERE week_id=?", req.body.id, (err) => {
-										if (err) console.log(err);
-										connection.query("DELETE FROM week WHERE id=?", req.body.id, (err) => {
-											if (err) console.log(err);
-											week_meta.delete(code[0].title);
-											res.json(obj);
-										});
-									});
+									week_meta.delete(code[0].title);
+									res.json(obj);
 								});
 							}
 						} catch (error) {
@@ -357,18 +347,10 @@ router.post("/admin/delete-week", async (req, res) => {
 						}
 					});
 				} else {
-					connection.query("DELETE FROM question_meta WHERE week_id=?", req.body.id, (err) => {
+					connection.query("DELETE FROM week WHERE id=?", req.body.id, (err) => {
 						if (err) console.log(err);
-						connection.query("DELETE FROM enrollment WHERE week_id=?", req.body.id, (err) => {
-							if (err) console.log(err);
-							connection.query("DELETE FROM week WHERE id=?", req.body.id, (err) => {
-								if (err) console.log(err);
-								console.log(code[0].title);
-								console.log(week_meta.delete(code[0].title));
-								console.log(week_meta);
-								res.end();
-							});
-						});
+						week_meta.delete(code[0].title);
+						res.end();
 					});
 				}
 			});

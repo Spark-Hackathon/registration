@@ -43,8 +43,8 @@ CREATE TABLE enrollment (
 	approved_time DATETIME,
 	confirmed TINYINT(1) NOT NULL,
 	campbrain_completion DATETIME,
-	FOREIGN KEY (`camper_id`) REFERENCES camper (`id`),
-	FOREIGN KEY (`week_id`) REFERENCES week (`id`)
+	FOREIGN KEY (`camper_id`) REFERENCES camper (`id`) ON DELETE CASCADE,
+	FOREIGN KEY (`week_id`) REFERENCES week (`id`) ON DELETE CASCADE
 );
 CREATE TABLE prospect (
 	camper_refer_id INT,
@@ -52,7 +52,7 @@ CREATE TABLE prospect (
 	email VARCHAR(255) NOT NULL,
 	unique_retrieval VARCHAR(255) NOT NULL,
 	subscribed TINYINT(1) NOT NULL DEFAULT 1,
-	FOREIGN KEY (`camper_refer_id`) REFERENCES camper (`id`),
+	FOREIGN KEY (`camper_refer_id`) REFERENCES camper (`id`) ON DELETE CASCADE,
 	UNIQUE KEY `unique_prospect` (`name`, `email`)
 );
 CREATE TABLE question_meta (
@@ -60,14 +60,14 @@ CREATE TABLE question_meta (
 	week_id INT NOT NULL,
 	question_text MEDIUMTEXT,
 	PRIMARY KEY (id),
-	FOREIGN KEY (`week_id`) REFERENCES week (`id`)
+	FOREIGN KEY (`week_id`) REFERENCES week (`id`) ON DELETE CASCADE
 );
 CREATE TABLE questions (
 	camper_id INT NOT NULL,
 	question_meta_id INT NOT NULL,
 	question_response MEDIUMTEXT,
-	FOREIGN KEY (`camper_id`) REFERENCES camper (`id`),
-	FOREIGN KEY (`question_meta_id`) REFERENCES question_meta (`id`)
+	FOREIGN KEY (`camper_id`) REFERENCES camper (`id`) ON DELETE CASCADE,
+	FOREIGN KEY (`question_meta_id`) REFERENCES question_meta (`id`) ON DELETE CASCADE
 );
 CREATE TABLE system_settings (
 	name VARCHAR(255) NOT NULL,
