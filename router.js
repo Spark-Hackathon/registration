@@ -557,7 +557,7 @@ router.post("/admin/accept-camper-application", (req, res) => { //ADMIN
 					connection.query("SELECT first_name, last_name, email FROM camper WHERE id=?", req.body.camper_id, (err, email_info) => {
 						if (err) console.log(err);
 						if (email_info.length) {
-							let approved_date = Date.now();
+							let approved_date = new Date();
 							connection.query("UPDATE enrollment SET approved=1, approved_time=? WHERE camper_id=? AND week_id=?", [approved_date, req.body.camper_id, week_id[0].id], (err) => {
 								if (err) console.log(err);
 								// transporter.sendMail({
