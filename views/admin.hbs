@@ -39,6 +39,7 @@
             <table class="table-fixed min-w-full divide-gray-200 divide-y">
                 <thead>
                     <tr class="divide-x divide-gray-200">
+                        <th class="py-2 divide-x divide-gray-200">Status</th>
                         <th class="py-2 divide-x divide-gray-200">Camper ID</th>
                         <th class="py-2 divide-x divide-gray-200">First Name</th>
                         <th class="py-2 divide-x divide-gray-200">Last Name</th>
@@ -186,6 +187,28 @@
             })
                 .then(() => {
                     alert("Successfully accepted camper.");
+                    reload();
+                })
+                .catch(err => {
+                    alert("An error has occurred. Try checking the client-side logs first. If there's nothing, the server is broken.");
+                    console.error(err);
+                });
+        }
+
+        const confirm_camper = (week_name, camper_id) => {
+            fetch("/admin/confirm-camper", { 
+                method: "POST",
+                cache: "no-cache",
+                headers: { "Content-Type": "application/json" },
+                redirect: "manual",
+                body: JSON.stringify({
+                    code: password,
+                    week_name,
+                    camper_id
+                })
+            })
+                .then(() => {
+                    alert("Successfully confirmed camper.");
                     reload();
                 })
                 .catch(err => {
@@ -352,6 +375,20 @@
                     for(let camper of campers) {
                         let camper_row = $(`<tr class="text-center divide-x divide-gray-200"></tr>`);
 
+                        let confirmation = -1;
+
+                        if(camper.confirmed == 0 || camper.confirmed == 1) {
+                            confirmation = camper.confirmed;
+                        }
+
+                        let confirmed; // = $(`<td class="text-gray-500 py-4 px-2">${(camper.confirmed == 0) ? "&cross;" : "&check;"}</td>`);
+
+                        if(camper.confirmed == undefined || camper.confirmed == null || camper.confirmed == "") {
+                            confirmed = $(`<td class="text-gray-500 py-4 px-2">&empty;</td>`);
+                        } else {
+                            confirmed = $(`<td class="text-gray-500 py-4 px-2">${(camper.confirmed == 0) ? "&cross;" : "&check;"}</td>`);
+                        }
+
                         let id = $(`<td class="text-gray-500 py-4 px-2">${camper.camper_id}</td>`);
                         let first_name = $(`<td class="text-gray-500 py-4 px-2">${camper.first_name}</td>`);
                         let last_name = $(`<td class="text-gray-500 py-4 px-2">${camper.last_name}</td>`);
@@ -361,10 +398,12 @@
                         let participated = $(`<td class="text-gray-500 py-4 px-2">${(camper.participated) == "Participated before" ? "Yes" : "No"}</td>`);
                         let accept_decline = `<td class="py-6 text-center mx-auto">
                             <button class="outline-none text-green-400 cursor-pointer hover:text-green-600 transition duration-200" onclick="accept_camper('${camper.week}', ${camper.camper_id})">Accept Camper</button><br/>
+                            <button class="outline-none mt-2 text-blue-400 cursor-pointer hover:text-blue-600 transition duration-200" onclick="confirm_camper('${camper.week}', ${camper.camper_id})">Confirm Camper</button><br/>
                             <button class="outline-none mt-2 text-red-400 cursor-pointer hover:text-red-600 transition duration-200" onclick="delete_camper('${camper.week}', ${camper.camper_id})">Delete Camper</button>
                             </td>`;
 
                         camper_row.append([
+                            confirmed,
                             id,
                             first_name,
                             last_name,
