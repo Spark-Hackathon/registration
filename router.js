@@ -297,7 +297,7 @@ router.post("/camper-submit-questions", (req, res) => {
 });
 
 router.post("/signup-prospect", async (req, res) => {
-	if (pros_schema.validate(req.body)) {
+	if (referral_schema.validate(req.body)) {
 		await prospectSignup(req.body);
 		try {
 			res.end();
@@ -319,7 +319,7 @@ async function prospectSignup(user_data) {
 				resolve(false);
 			});
 		} else {
-			connection.query("INSERT INTO prospect (name, email, unique_retrieval, subscribed) VALUES (?, ?, ?, ?)", [user_data.id, user_data.name, user_data.email, unique_retrieval, 1], (err) => {
+			connection.query("INSERT INTO prospect (name, email, unique_retrieval, subscribed) VALUES (?, ?, ?, ?)", [user_data.name, user_data.email, unique_retrieval, 1], (err) => {
 				if (err) reject(err); //chat with bre about error handle
 				resolve(false);
 			});
@@ -762,7 +762,6 @@ router.post("/admin/send-mail", async (req, res) => { //ADMIN
 			function send_mail(first_name, last_name, email) {
 				let temp_text = req.body.message.replace("{{FIRST_NAME}}", first_name);
 				temp_text = temp_text.replace(" {{LAST_NAME}}", last_name);
-				console.log(temp_text);
 				transporter.sendMail({
 					from: "spark" + getDate + "@cs.stab.org",
 					to: email,
