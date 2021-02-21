@@ -9,6 +9,9 @@ module.exports = {
           DEFAULT: "#FFBF00",
           dark: "#E0A800"
         }
+      },
+      spacing: {
+        "100": "32rem"
       }
     }
   },
