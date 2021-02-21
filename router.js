@@ -760,13 +760,14 @@ router.post("/admin/send-mail", async (req, res) => { //ADMIN
 			}
 
 			function send_mail(first_name, last_name, email) {
-				let temp_text = req.body.text.replace("{{FIRST_NAME}}", first_name);
-				temp_text = temp_text.replace("{{LAST_NAME}}", last_name);
+				let temp_text = req.body.message.replace("{{FIRST_NAME}}", first_name);
+				temp_text = temp_text.replace(" {{LAST_NAME}}", last_name);
+				console.log(temp_text);
 				transporter.sendMail({
 					from: "spark" + getDate + "@cs.stab.org",
 					to: email,
 					subject: req.body.subject,
-					text: req.body.message
+					text: temp_text
 				}, (err, info) => {
 					console.log(err);
 				});
@@ -779,13 +780,17 @@ router.post("/admin/send-mail", async (req, res) => { //ADMIN
 						//run through each of these, then send emails for each of them
 						if (all_campers.length) {
 							all_campers.forEach((item, index) => {
-								send_mail(item.first_name, item.last_name, item.email);
+								send_mail(item.first_name, " " + item.last_name, item.email);
 							});
 						}
 						if (prospect_info.length) {
 							prospect_info.forEach((item, index) => {
-								let name = prospect_info.name.split(" ");
-								send_mail(name[0], name[name.length - 1], prospect_info.email);
+								if (item.name.indexOf(" ") > 0) {
+									let name = item.name.split(" ");
+									send_mail(name[0], name[name.length - 1], item.email);
+								} else {
+									send_mail(item.name, "", item.email)
+								}
 							});
 						}
 					});
