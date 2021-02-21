@@ -85,9 +85,10 @@
 
     <table>
         <tr>
-            <th>Week</th>
             <th>Question ID</th>
+            <th>Week</th>
             <th>Question</th>
+            <th>Responses</th>
         </tr>
         <tbody id="question-data"></tbody>
     </table>
@@ -282,25 +283,31 @@
         event.preventDefault();
         $("#question-data").empty();
 
-        fetch("/admin/get-questions")
+        fetch(`/admin/get-questions/${password}`)
             .then(response => response.json())
             .then(questions => {
                 for(let question of questions) {
                     let question_row = $("<tr></tr>");
 
-                    let week = $(`<td>${question.title}</td>`);
-                    let ids = $(`<td></td>`);
-                    let questions = $(`<td></td>`);
+                    let q_id = $(`<td>${question.id}</td>`);
+                    let q = $(`<td>${question.question}</td>`);
+                    let week = $(`<td>${question.week}</td>`);
+                    let responses = $("<td></td>");
 
-                    for(let q of question.info) {
-                        ids.append($(`<td>${q.id}\n</p>`));
-                        questions.append($(`<p>${q.question}</p>`));
+                    for(let response of question.responses) {
+                        let r_container = $("<div></div>");
+
+                        let res = $(`<p>${response.response}</p>`);
+
+                        r_container.append([ res ]);
+                        responses.append(r_container);
                     }
 
                     question_row.append([
-                        ids,
+                        q_id,
                         week,
-                        questions
+                        q,
+                        responses
                     ]);
 
                     $("#question-data").append(question_row);
