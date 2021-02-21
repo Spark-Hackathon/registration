@@ -225,6 +225,7 @@ router.post("/camper-register-queueing", async (req, res) => {
 														res.render("question.hbs", {
 															title: `Application Questions – Summer Spark ${getDate()}`,
 															year: getDate(),
+															camper_id: camper_id[0].id,
 															questions: questions
 														});
 													});
@@ -251,6 +252,7 @@ router.post("/camper-register-queueing", async (req, res) => {
 											res.render("question.hbs", {
 												title: `Application Questions – Summer Spark ${getDate()}`,
 												year: getDate(),
+												camper_id: camper_id[0].id,
 												questions: questions
 											});
 										}
