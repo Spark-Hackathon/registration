@@ -479,7 +479,16 @@ router.post("/admin/add-question", (req, res) => {
 });
 
 router.post("/admin/delete-question", (req, res) => {
-
+	connection.query("SELECT value_str FROM system_settings WHERE name='admin_code'", (err, code) => {
+		if (err) console.log(err);
+		if (req.body.code == code[0].value_str) {
+			let week_id = week_meta.get(req.body.week).id;
+			connection.query("DELETE FROM question_meta WHERE id=? AND week_id=?", [req.body.id, week_id], (err) => {
+				if (err) console.log(err);
+				res.end();
+			});
+		}
+	});
 });
 
 function quicksort(array, low, high) {
