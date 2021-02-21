@@ -163,7 +163,7 @@ let referEmail = new Field("input:email", "refer_email")
     .setLabel("Friend's Email Address")
     .placeholder("bob@smith.com");
 let submit = new Field("input:submit", "")
-    .value("Apply for Summer Spark")
+    .value("Apply for Summer Spark →")
     .class(submitStyle);
 
 application
