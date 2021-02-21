@@ -49,6 +49,20 @@ app.get("/about-us", (req, res) => {
     });
 });
 
+app.get("/apply/thank-you", (req, res) => {
+    res.render("thank_you_apply", {
+        "title": `Thank You – Spark Camp ${getDate()}`,
+        "year": getDate()
+    });
+});
+
+app.get("/updates/thank-you", (req, res) => {
+    res.render("thank_you_updates", {
+        "title": `Thank You – Spark Camp ${getDate()}`,
+        "year": getDate()
+    });
+});
+
 app.get("/admin", (req, res) => {
     res.render("admin.hbs", {
         "title": `[ADMIN] Spark Camp ${getDate()}`,

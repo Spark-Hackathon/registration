@@ -11,7 +11,10 @@ module.exports = {
         }
       },
       spacing: {
-        "100": "32rem"
+        "100": "32rem",
+      },
+      width: {
+        "col": "12.5%"
       }
     }
   },
