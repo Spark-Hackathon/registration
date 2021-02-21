@@ -13,9 +13,10 @@ const type_meta = {
 	designer: 0,
 	artist: 1,
 	researcher: 2,
-	writer: 3,
-	leader: 4,
-	none: 5
+	engineer: 3,
+	writer: 4,
+	leader: 5,
+	none: 6
 };
 
 const router = express.Router();
@@ -221,7 +222,11 @@ router.post("/camper-register-queueing", async (req, res) => {
 													// });
 													connection.query("DELETE FROM prospect WHERE email=?", item.email, (err) => {
 														if (err) console.log(err);
-														res.json(questions);
+														res.render("question.hbs", {
+															title: `Application Questions – Summer Spark ${getDate()}`,
+															year: getDate(),
+															questions: JSON.stringify(questions)
+														});
 													});
 												} catch (error) {
 													res.render("error", {
