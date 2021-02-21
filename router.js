@@ -291,6 +291,7 @@ async function prospectSignup(user_data) {
 router.get("/admin/get-weeks", (req, res) => {
 	let weeks = [];
 	let count = 0;
+	console.log("HERE", weeks);
 	week_meta.forEach((week, index) => {
 		weeks[count] = {
 			name: index,
@@ -397,40 +398,68 @@ router.post("/admin/add-week", (req, res) => {
 	}
 });
 
-router.get("/admin/get-questions", async (req, res) => {
-	connection.query("SELECT id, title FROM week", async (err, weeks) => {
+router.get("/admin/get-questions/:code", async (req, res) => {
+	connection.query("SELECT value_str FROM system_settings WHERE name='admin_code'", (err, code) => {
 		if (err) console.log(err);
-		async function pull_questions(count, week_id) {
-			return new Promise((resolve, reject) => {
-				connection.query("SELECT id, question_text FROM question_meta WHERE week_id=?", week_id, (err, questions) => {
-					if (err) reject(err);
-					resolve([count, questions]);
+		if (req.params.code == code[0].value_str) {
+			connection.query("SELECT COUNT(id) AS question_count FROM question_meta", (err, question_length) => {
+				if (err) console.log(err);
+				let question_obj = [];
+				async function pull_questions(week_name, week_id) {
+					return new Promise((resolve, reject) => {
+						async function pull_responses(question_meta_id) {
+							return new Promise((resolve_res, reject_rej) => {
+								connection.query("SELECT camper_id, question_response FROM questions WHERE question_meta_id=?", question_meta_id, (err, response) => {
+									if (err) reject_res(err);
+									resolve_res(response);
+								});
+							});
+						}
+						connection.query("SELECT id, question_text FROM question_meta WHERE week_id=?", week_id, async (err, question_meta_info) => {
+							if (err) reject(err);
+							let inner_full = [];
+							question_meta_info.forEach(async (question, index) => {
+								let responses = await pull_responses(question.id);
+								try {
+									console.log(question);
+									let inner = {};
+									inner.week = week_name;
+									inner.id = question.id;
+									inner.question = question.question_text;
+									inner.responses = [];
+									responses.forEach((response, response_index) => {
+										inner.responses.push({
+											id: response.camper_id,
+											response: response.question_response
+										});
+									});
+									inner_full.push(inner);
+									if (index == question_length.length - 1) {
+										resolve(inner_full);
+									}
+								} catch (error) {
+									reject(error);
+								}
+							});
+						});
+					});
+				}
+				let questions = [];
+				week_meta.forEach(async (week, index) => {
+					let inner_array = await pull_questions(index, week.id);
+					try {
+						for (num in inner_array) {
+							questions.push(inner_array[num]);
+						}
+						if (questions.length == week_meta.size) {
+							res.json(questions);
+						}
+					} catch (error) {
+						console.log(error);
+					}
 				});
 			});
 		}
-		let obj = [];
-		let count = -1;
-		weeks.forEach(async (week, week_index) => {
-			count++;
-			obj[count] = {
-				title: week.title,
-				info: []
-			};
-			let question_data = await pull_questions(count, week.id);
-			try {
-				for (q_run in question_data[1]) {
-					obj[question_data[0]].info.push({
-						id: question_data[1][q_run].id,
-						question: question_data[1][q_run].question_text
-					});
-				}
-				if (question_data[0] == weeks.length - 1) {
-					res.json(obj);
-				}
-			} catch (error) {
-				console.log(error);
-			}
-		});
 	});
 });
 
