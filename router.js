@@ -219,7 +219,10 @@ router.post("/camper-register-queueing", async (req, res) => {
 													// }, (err, info) => {
 													// 	console.log(err, info);
 													// });
-													res.json(questions);
+													connection.query("DELETE FROM prospect WHERE email=?", item.email, (err) => {
+														if (err) console.log(err);
+														res.json(questions);
+													});
 												} catch (error) {
 													res.render("error", {
 														title: "Uh oh"
@@ -651,17 +654,77 @@ router.post("/admin/delete-camper", (req, res) => {
 
 router.post("/admin/send-mail", async (req, res) => { //ADMIN
 	connection.query("SELECT value_str FROM system_settings WHERE name='admin_code'", async (err, code) => {
+		if (err) console.log(err);
+		let all_campers;
+		let transporter = nodemail.createTransport({
+			sendmail: true,
+			newline: 'unix',
+			path: 'user/sbin/sendmail'
+		});
 		if (req.body.code == code[0].value_str) {
-			async function pull_campers(week_id) {
+			async function pull_campers() {
 				return new Promise((resolve, reject) => {
-					connection.query("SELECT camper_id, first_name, last_name, email FROM enrollment INNER JOIN camper ON enrollment.camper_id = camper.id WHERE enrollment.week_id=?", week_id, (err, camper_info) => {
-						if (err) reject(err);
-					});
+					if (req.body.week_id.length > 0) {
+						let week_value = "";
+						week_value = " WHERE enrollment.week_id=?";
+						if (req.body.week_id.length > 1) {
+							req.body.week_id.forEach((item, index) => {
+								req.body.week_id[index] = parseInt(item, 10);
+								week_value += index < req.body.week_id.length - 1 ? " OR enrollment.week_id=?" : "";
+							});
+						}
+						week_value += req.body.applicants == 1 ? " AND approved=0" : "";
+						week_value += req.body.registered == 1 ? " AND approved=1" : "";
+						connection.query("SELECT camper_id, first_name, last_name, email FROM enrollment INNER JOIN camper ON enrollment.camper_id = camper.id" + week_value, req.body.week_id, (err, enrolled_info) => {
+							if (err) reject(err);
+							resolve(enrolled_info);
+						});
+					} else {
+						resolve(0);
+					}
 				});
 			}
-			req.body.week_id.forEach((id, index) => {
-				await pull_campers(3);
-			});
+
+			function send_mail(first_name, last_name, email) {
+				let temp_text = req.body.text.replace("{{FIRST_NAME}}", first_name);
+				temp_text = temp_text.replace("{{LAST_NAME}}", last_name);
+				transporter.sendMail({
+					from: "spark" + getDate + "@cs.stab.org",
+					to: email,
+					subject: req.body.subject,
+					text: req.body.text
+				}, (err, info) => {
+					console.log(err);
+				});
+			}
+			let all_campers = await pull_campers();
+			try {
+				if (req.body.prospects == 1) {
+					connection.query("SELECT name, email FROM prospect WHERE subscribed=1", (err, prospect_info) => {
+						if (err) console.log(err);
+						//run through each of these, then send emails for each of them
+						if (all_campers.length) {
+							all_campers.forEach((item, index) => {
+								send_mail(item.first_name, item.last_name, item.email);
+							});
+						}
+						if (prospect_info.length) {
+							prospect_info.forEach((item, index) => {
+								let name = prospect_info.name.split(" ");
+								send_mail(name[0], name[name.length - 1], prospect_info.email);
+							});
+						}
+					});
+				} else {
+					if (all_campers.length) {
+						all_campers.forEach((item, index) => {
+							send_mail(item.first_name, item.last_name, item.email);
+						});
+					}
+				}
+			} catch (error) {
+				console.log(error);
+			}
 		}
 	});
 });
