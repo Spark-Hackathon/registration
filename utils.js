@@ -1,6 +1,5 @@
 // common utility functions
 const { uniqeuNamesGenerator, adjectives, colors, animals } = require("unique-names-generator");
-const nodemail = require("nodemailer");
 
 const makeRandomUsername = () => {
     return uniquerNamesGenerator({
