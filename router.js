@@ -748,8 +748,8 @@ router.post("/admin/send-mail", async (req, res) => { //ADMIN
 							});
 						}
 						week_value += req.body.applicants == 1 ? " AND approved=0" : "";
-						week_value += req.body.registered == 1 ? " AND approved=1" : "";
-						connection.query("SELECT camper_id, first_name, last_name, email FROM enrollment INNER JOIN camper ON enrollment.camper_id = camper.id" + week_value, req.body.weeks, (err, enrolled_info) => {
+						week_value += req.body.registered == 1 ? " OR approved=1" : "";
+						connection.query("SELECT DISTINCT camper_id, first_name, last_name, email FROM enrollment INNER JOIN camper ON enrollment.camper_id = camper.id" + week_value, req.body.weeks, (err, enrolled_info) => {
 							if (err) reject(err);
 							resolve(enrolled_info);
 						});
@@ -780,6 +780,7 @@ router.post("/admin/send-mail", async (req, res) => { //ADMIN
 						//run through each of these, then send emails for each of them
 						if (all_campers.length) {
 							all_campers.forEach((item, index) => {
+								console.log("RUNNING", index, item);
 								send_mail(item.first_name, " " + item.last_name, item.email);
 							});
 						}
