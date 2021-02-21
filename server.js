@@ -52,7 +52,8 @@ app.get("/about-us", (req, res) => {
 app.get("/admin", (req, res) => {
     res.render("admin.hbs", {
         "title": `[ADMIN] Spark Camp ${getDate()}`,
-        "layout": false
+        "layout": false,
+        "year": getDate()
     });
 });
 
