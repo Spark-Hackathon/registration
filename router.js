@@ -738,18 +738,18 @@ router.post("/admin/send-mail", async (req, res) => { //ADMIN
 		if (req.body.code == code[0].value_str) {
 			async function pull_campers() {
 				return new Promise((resolve, reject) => {
-					if (req.body.week_id.length > 0) {
+					if (req.body.weeks.length > 0) {
 						let week_value = "";
 						week_value = " WHERE enrollment.week_id=?";
-						if (req.body.week_id.length > 1) {
-							req.body.week_id.forEach((item, index) => {
-								req.body.week_id[index] = week_meta.get(item).id;
-								week_value += index < req.body.week_id.length - 1 ? " OR enrollment.week_id=?" : "";
+						if (req.body.weeks.length > 1) {
+							req.body.weeks.forEach((item, index) => {
+								req.body.weeks[index] = week_meta.get(item).id;
+								week_value += index < req.body.weeks.length - 1 ? " OR enrollment.week_id=?" : "";
 							});
 						}
 						week_value += req.body.applicants == 1 ? " AND approved=0" : "";
 						week_value += req.body.registered == 1 ? " AND approved=1" : "";
-						connection.query("SELECT camper_id, first_name, last_name, email FROM enrollment INNER JOIN camper ON enrollment.camper_id = camper.id" + week_value, req.body.week_id, (err, enrolled_info) => {
+						connection.query("SELECT camper_id, first_name, last_name, email FROM enrollment INNER JOIN camper ON enrollment.camper_id = camper.id" + week_value, req.body.weeks, (err, enrolled_info) => {
 							if (err) reject(err);
 							resolve(enrolled_info);
 						});
@@ -766,7 +766,7 @@ router.post("/admin/send-mail", async (req, res) => { //ADMIN
 					from: "spark" + getDate + "@cs.stab.org",
 					to: email,
 					subject: req.body.subject,
-					text: req.body.text
+					text: req.body.message
 				}, (err, info) => {
 					console.log(err);
 				});
