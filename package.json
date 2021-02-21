@@ -4,7 +4,8 @@
   "description": "A public-facing homepage and registration portal for Spark Camp '21",
   "main": "server.js",
   "scripts": {
-    "start": "postcss ./public/css/styles.css -o ./public/css/master.css && nodemon server.js"
+    "css": "postcss ./public/css/styles.css -o ./public/css/master.css",
+    "start": " npm run css & nodemon server.js"
   },
   "repository": {
     "type": "git",
@@ -20,7 +21,7 @@
     "body-parser": "^1.19.0",
     "dotenv": "^8.2.0",
     "express": "^4.17.1",
-    "express-handlebars": "^5.2.0",
+    "express-handlebars": "^5.2.1",
     "joi": "^17.4.0",
     "mysql2": "^2.2.5",
     "nodemailer": "^6.4.18",
