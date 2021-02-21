@@ -269,6 +269,31 @@ router.post("/camper-register-queueing", async (req, res) => {
 	}
 });
 
+router.post("/camper-submit-questions", (req, res) => {
+	async function insertion(question_id, response) {
+		return new Promise((resolve, reject) => {
+			connection.query("INSERT INTO questions (camper_id, question_meta_id, question_response) VALUES (?, ?, ?)", [req.body.camper_id, question_id, response], (err) => {
+				if (err) reject(err);
+				resolve();
+			});
+		});
+	}
+	if (req.body.responses.length) {
+		req.body.responses.forEach(async (item, index) => {
+			await insertion(item.question_id, item.response);
+			try {
+				if (index = req.body.responses.length - 1) {
+					res.end();
+				}
+			} catch (error) {
+				console.log(error);
+			}
+		});
+	} else {
+		res.end();
+	}
+});
+
 router.post("/signup-prospect", async (req, res) => {
 	if (pros_schema.validate(req.body)) {
 		await prospectSignup(req.body);
