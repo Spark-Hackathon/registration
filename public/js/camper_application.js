@@ -12,14 +12,17 @@ let weekIds = [];
 let firstName = new Field("input:text", "first_name")
     .require()
     .setLabel("Camper's First Name")
+    .value("Tanjiro")
     .placeholder("ex. Tanjiro");
 let lastName = new Field("input:text", "last_name")
     .require()
     .setLabel("Camper's Last Name")
+    .value("Kamado")
     .placeholder("ex. Kamado");
 let email = new Field("input:email", "email")
     .require()
     .setLabel("Camper's Email Address")
+    .value("tanjiro@kamado.com")
     .placeholder("kamado@tanjiro.com");
 let updates = new Field("select", "updates")
     .require()
@@ -31,6 +34,7 @@ let updates = new Field("select", "updates")
 let dob = new Field("input:date", "dob")
     .require()
     .setLabel("Camper's Date of Birth")
+    .value("01/01/2002")
     .placeholder("01/01/2002");
 let schoolList = new Field("datalist", "school")
     .removeName()
@@ -59,6 +63,7 @@ let school = new Field("input:text", "school")
     .addNote("Note: if your school does not appear, you can type it in.")
     .removeType()
     .placeholder("Click to start typing")
+    .value("None of your business")
     .list("school");
 let grade = new Field("select", "grade")
     .require()
@@ -85,6 +90,7 @@ let gender = new Field("input:text", "gender")
     .addNote("Note: if your gender identity does not appear, you can type it in.")
     .removeType()
     .placeholder("Click to start typing")
+    .value("None of your business")
     .list("gender");
 let type = new Field("select", "type")
     .require()
@@ -132,15 +138,18 @@ let laptop = new Field("select", "borrow_laptop")
 let parentName = new Field("input:text", "guardian_name")
     .require()
     .setLabel("Parent/Guardian Full Name")
+    .value("Tanjirou Kamado")
     .placeholder("Jane Doe");
 let parentEmail = new Field("input:email", "guardian_email")
     .require()
     .setLabel("Parent/Guardian Email Address")
+    .value("tanjirou@kamado.com")
     .placeholder("jane@doe.com");
 let parentNumber = new Field("input:tel", "guardian_number")
     .require()
     .setLabel("Parent/Guardian Phone Number")
-    .pattern("[0-9]{3}[0-9]{3}[0-9]{4}")
+    .value("4444444444")
+    .pattern("[0-9]{10}")
     .placeholder("ex. 1112223333");
 let participationStatus = new Field("select", "participated")
     .require()
@@ -163,7 +172,7 @@ let referEmail = new Field("input:email", "refer_email")
     .setLabel("Friend's Email Address")
     .placeholder("bob@smith.com");
 let submit = new Field("input:submit", "")
-    .value("Apply for Summer Spark →")
+    .value("Continue Application →")
     .class(submitStyle);
 
 application
@@ -188,8 +197,8 @@ fetch("/open-weeks")
                     .require()
                     .setLabel(`Will you attend the ${title} week?`)
                     .addOptions([
-                        [0, "No, I will not attend."],
                         [1, "Yes, I will attend virtually (via Zoom)"],
+                        [0, "No, I will not attend."],
                         [2, "Yes, I will attend in-person (at St. Anne's)"]
                     ])
             ]);
