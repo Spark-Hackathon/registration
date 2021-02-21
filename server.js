@@ -65,7 +65,7 @@ app.get("/updates/thank-you", (req, res) => {
 
 app.get("/admin", (req, res) => {
     res.render("admin.hbs", {
-        "title": `[ADMIN] Spark Camp ${getDate()}`,
+        "title": `Admin – Spark Camp ${getDate()}`,
         "layout": false,
         "year": getDate()
     });
