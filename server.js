@@ -71,6 +71,14 @@ app.get("/admin", (req, res) => {
     });
 });
 
+app.use((error, req, res, next) => {
+	console.error(error);
+	res.render("error", {
+		title: `Help! – Summer Camp ${getDate()}`,
+		error: error.message
+	})
+});
+
 // start application
 app.listen(process.env.PORT, () => {
 	console.log("server go vroom");
