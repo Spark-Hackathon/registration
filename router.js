@@ -300,7 +300,7 @@ router.post("/signup-prospect", async (req, res) => {
 	if (referral_schema.validate(req.body)) {
 		await prospectSignup(req.body);
 		try {
-			res.end();
+			res.redirect("/updates/thank-you");
 		} catch (error) {
 			console.log(error);
 		}
