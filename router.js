@@ -38,30 +38,20 @@ connection.connect((err) => {
 });
 
 let week_meta;
-async function weeks() {
-	async function pullWeeks() {
-		return new Promise((resolve, reject) => {
-			connection.query("SELECT id, title, start_date, end_date, inClass_available, virtual_available FROM week", (err, row) => {
-				if (err) reject(err);
-				let pre_week = new Map();
-				for (row_number in row) {
-					pre_week.set(row[row_number].title, {
-						id: row[row_number].id,
-						inclass_available: row[row_number].inClass_available,
-						virtual_available: row[row_number].virtual_available,
-						start_date: row[row_number].start_date,
-						end_date: row[row_number].end_date
-					});
-				}
-				resolve(pre_week);
-			});
+connection.query("SELECT id, title, start_date, end_date, inClass_available, virtual_available FROM week", (err, row) => {
+	if (err) console.log(err);
+	let pre_week = new Map();
+	for (row_number in row) {
+		pre_week.set(row[row_number].title, {
+			id: row[row_number].id,
+			inclass_available: row[row_number].inClass_available,
+			virtual_available: row[row_number].virtual_available,
+			start_date: row[row_number].start_date,
+			end_date: row[row_number].end_date
 		});
 	}
-	week_meta = await pullWeeks().catch((error) => {
-		console.log(error);
-	});
-}
-weeks();
+	week_meta = pre_week;
+});
 
 router.use(bodyParser.urlencoded({
 	extended: false
@@ -135,11 +125,6 @@ const referral_schema = Joi.object({
 
 router.post("/camper-register-queueing", async (req, res) => {
 	if (camper_schema.validate(req.body)) {
-		let transporter = nodemail.createTransport({
-			sendmail: true,
-			newline: 'unix',
-			path: 'user/sbin/sendmail'
-		});
 		let item = req.body;
 		item.type = type_meta[item.type];
 		connection.query("SELECT id FROM camper WHERE first_name=? AND last_name=? AND email=?", [item.first_name, item.last_name, item.email], (err, pre_id) => {
@@ -226,7 +211,7 @@ router.post("/camper-register-queueing", async (req, res) => {
 											if (referral_schema.validate(user_data)) {
 												await prospectSignup(user_data);
 												try {
-													sendmail({
+													tranporter.sendMail({
 														from: "spark" + getDate() + "@cs.stab.org",
 														to: item.email,
 														subject: "You've signed up!",
@@ -736,6 +721,54 @@ router.post("/admin/pull-current-campers", async (req, res) => { //ADMIN
 			res.render("error", {
 				title: `Help! – Summer Camp ${getDate()}`,
 				error: "Hmm... Looks like selecting the campers didn't work, try reloading?"
+			});
+		}
+	});
+});
+
+function ConvertToCSV(objArray) {
+	var array = typeof objArray != 'object' ? JSON.parse(objArray) : objArray;
+	var str = '';
+
+	for (var i = 0; i < array.length; i++) {
+		var line = '';
+		for (var index in array[i]) {
+			if (line != '') line += ','
+
+			line += array[i][index];
+		}
+
+		str += line + '\r\n';
+	}
+
+	return str;
+}
+
+router.post("/admin/export/week", (req, res) => {
+	connection.query("SELECT value_str FROM system_settings WHERE name='admin_code'", async (err, code) => {
+		if (err) res.render("error", {
+			title: `Help! – Summer Camp ${getDate()}`,
+			error: "Hmm... Looks like accepting the campers didn't work, try reloading?"
+		});
+		if (req.body.code == code[0].value_str) {
+			connection.query("SELECT * FROM camper INNER JOIN enrollment ON enrollment.camper_id = camper.id WHERE enrollment.week_id=?", week_meta.get(req.body.week_name).id, (err, week_campers) => {
+				if (err) throw err;
+				res.end(ConvertToCSV(week_campers));
+			});
+		}
+	});
+});
+
+router.get("/admin/export/all/:code", (req, res) => {
+	connection.query("SELECT value_str FROM system_settings WHERE name='admin_code'", async (err, code) => {
+		if (err) res.render("error", {
+			title: `Help! – Summer Camp ${getDate()}`,
+			error: "Hmm... Looks like accepting the campers didn't work, try reloading?"
+		});
+		if (req.params.code == code[0].value_str) {
+			connection.query("SELECT * FROM camper", (err, all_campers) => {
+				if (err) throw err;
+				res.end(ConvertToCSV(all_campers));
 			});
 		}
 	});
