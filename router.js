@@ -421,7 +421,6 @@ router.get("/admin/get-questions/:code", async (req, res) => {
 							question_meta_info.forEach(async (question, index) => {
 								let responses = await pull_responses(question.id);
 								try {
-									console.log(question);
 									let inner = {};
 									inner.week = week_name;
 									inner.id = question.id;
@@ -451,7 +450,7 @@ router.get("/admin/get-questions/:code", async (req, res) => {
 						for (num in inner_array) {
 							questions.push(inner_array[num]);
 						}
-						if (questions.length == week_meta.size) {
+						if (questions.length == week_meta.size - 1) {
 							res.json(questions);
 						}
 					} catch (error) {
@@ -650,18 +649,21 @@ router.post("/admin/delete-camper", (req, res) => {
 	});
 });
 
-const send_mail_schema = Joi.object({
-	code: Joi.string().length().required(),
-	email_from: Joi.string().email().required(),
-	email_to: Joi.number().required(),
-	email_subject: Joi.string().length(255).required(),
-	email_text: Joi.string().required()
-});
-
-router.post("/admin/send-mail", (req, res) => { //ADMIN
-	if (send_mail_schema.validate(req.body)) {
-
-	}
+router.post("/admin/send-mail", async (req, res) => { //ADMIN
+	connection.query("SELECT value_str FROM system_settings WHERE name='admin_code'", async (err, code) => {
+		if (req.body.code == code[0].value_str) {
+			async function pull_campers(week_id) {
+				return new Promise((resolve, reject) => {
+					connection.query("SELECT camper_id, first_name, last_name, email FROM enrollment INNER JOIN camper ON enrollment.camper_id = camper.id WHERE enrollment.week_id=?", week_id, (err, camper_info) => {
+						if (err) reject(err);
+					});
+				});
+			}
+			req.body.week_id.forEach((id, index) => {
+				await pull_campers(3);
+			});
+		}
+	});
 });
 
 module.exports = router;
