@@ -248,7 +248,11 @@ router.post("/camper-register-queueing", async (req, res) => {
 											// }, (err, info) => {
 											// 	console.log(err, info);
 											// });
-											res.json(questions);
+											res.render("question.hbs", {
+												title: `Application Questions – Summer Spark ${getDate()}`,
+												year: getDate(),
+												questions: JSON.stringify(questions)
+											});
 										}
 									}
 								} catch (error) {
