@@ -135,10 +135,18 @@ const referral_schema = Joi.object({
 
 router.post("/camper-register-queueing", async (req, res) => {
 	if (camper_schema.validate(req.body)) {
+		let transporter = nodemail.createTransport({
+			sendmail: true,
+			newline: 'unix',
+			path: 'user/sbin/sendmail'
+		});
 		let item = req.body;
 		item.type = type_meta[item.type];
 		connection.query("SELECT id FROM camper WHERE first_name=? AND last_name=? AND email=?", [item.first_name, item.last_name, item.email], (err, pre_id) => {
-			if (err) console.log(err);
+			if (err) res.render("error", {
+				title: `Help! – Summer Camp ${getDate()}`,
+				error: "Hmm... Looks like registering didn't work, try reloading?"
+			});
 			let camper_writeup;
 			let extra_camper_info = [];
 			extra_camper_info.push(item.first_name, item.last_name, item.email, item.dob, item.school, item.grade, item.gender, item.type, item.race_ethnicity,
@@ -154,10 +162,16 @@ router.post("/camper-register-queueing", async (req, res) => {
 			// add them to the camper database, then enrollment based on their weeks
 			connection.query(camper_writeup, extra_camper_info, async (err) => {
 				if (err) {
-					console.log(err);
+					res.render("error", {
+						title: `Help! – Summer Camp ${getDate()}`,
+						error: "Hmm... Looks like registering didn't work, try reloading?"
+					});
 				} else {
 					connection.query("SELECT id FROM camper WHERE first_name=? AND last_name=? AND email=?", [item.first_name, item.last_name, item.email], async (err, camper_id) => {
-						if (err) console.log(err);
+						if (err) res.render("error", {
+							title: `Help! – Summer Camp ${getDate()}`,
+							error: "Hmm... Looks like registering didn't work, try reloading?"
+						});
 						//insert for each week they signed up for
 						let weeks = [],
 							count = 0;
@@ -231,17 +245,19 @@ router.post("/camper-register-queueing", async (req, res) => {
 													});
 												} catch (error) {
 													res.render("error", {
-														title: "Uh oh"
+														title: `Help! – Summer Camp ${getDate()}`,
+														error: "Hmm... Looks like registering didn't work, try reloading?"
 													});
 												}
 											} else {
 												res.render("error", {
-													title: "Uh oh"
+													title: `Help! – Summer Camp ${getDate()}`,
+													error: "Hmm... Looks like registering didn't work, try reloading?"
 												});
 											}
 										} else {
 											//send finish email, done
-											sendmail({
+											transport.sendMail({
 												from: 'spark' + getDate() + '@cs.stab.org',
 												to: item.email,
 												subject: "You've signed up!",
@@ -258,7 +274,10 @@ router.post("/camper-register-queueing", async (req, res) => {
 										}
 									}
 								} catch (error) {
-									console.log(error);
+									res.render("error", {
+										title: `Help! – Summer Camp ${getDate()}`,
+										error: "Hmm... Looks like registering didn't work, try reloading?"
+									});
 								}
 							}
 						}
@@ -268,6 +287,10 @@ router.post("/camper-register-queueing", async (req, res) => {
 		});
 	} else {
 		console.log(camper_schema.validate(req.body).error);
+		res.render("error", {
+			title: `Help! – Summer Camp ${getDate()}`,
+			error: "Hmm... Looks like registering didn't work, try reloading?"
+		});
 	}
 });
 
@@ -288,7 +311,10 @@ router.post("/camper-submit-questions", (req, res) => {
 					res.end();
 				}
 			} catch (error) {
-				console.log(error);
+				res.render("error", {
+					title: `Help! – Summer Camp ${getDate()}`,
+					error: "Hmm... Looks like deleting week didn't work, try reloading?"
+				});
 			}
 		});
 	} else {
@@ -302,10 +328,17 @@ router.post("/signup-prospect", async (req, res) => {
 		try {
 			res.redirect("/updates/thank-you");
 		} catch (error) {
-			console.log(error);
+			res.render("error", {
+				title: `Help! – Summer Camp ${getDate()}`,
+				error: "Hmm... Looks like deleting week didn't work, try reloading?"
+			});
 		}
 	} else {
 		console.log(pros_schema.validate(user_data).error);
+		res.render("error", {
+			title: `Help! – Summer Camp ${getDate()}`,
+			error: "Hmm... Looks like deleting week didn't work, try reloading?"
+		});
 	}
 });
 
@@ -330,7 +363,6 @@ async function prospectSignup(user_data) {
 router.get("/admin/get-weeks", (req, res) => {
 	let weeks = [];
 	let count = 0;
-	console.log("HERE", weeks);
 	week_meta.forEach((week, index) => {
 		weeks[count] = {
 			name: index,
@@ -345,13 +377,19 @@ router.get("/admin/get-weeks", (req, res) => {
 
 router.post("/admin/delete-week", async (req, res) => {
 	connection.query("SELECT system_settings.value_str, week.title FROM system_settings system_settings CROSS JOIN week week WHERE system_settings.name='admin_code' AND week.id=?", req.body.id, async (err, code) => {
-		if (err) console.log(err);
+		if (err) res.render("error", {
+			title: `Help! – Summer Camp ${getDate()}`,
+			error: "Hmm... Looks like deleting week didn't work, try reloading?"
+		});
 		if (req.body.code == code[0].value_str) {
 			let obj = {
 				week_question: []
 			};
 			connection.query("SELECT id, question_text FROM question_meta WHERE week_id=?", req.body.id, async (err, question_meta_info) => {
-				if (err) console.log(err);
+				if (err) res.render("error", {
+					title: `Help! – Summer Camp ${getDate()}`,
+					error: "Hmm... Looks like deleting week didn't work, try reloading?"
+				});
 				async function pull_questions(id) {
 					return new Promise((resolve, reject) => {
 						connection.query("SELECT first_name, last_name, question_response FROM questions INNER JOIN camper ON questions.camper_id = camper.id WHERE question_meta_id=?", id, (err, question_res) => {
@@ -383,19 +421,28 @@ router.post("/admin/delete-week", async (req, res) => {
 								});
 							}
 						} catch (error) {
-							console.log(error);
+							res.render("error", {
+								title: `Help! – Summer Camp ${getDate()}`,
+								error: "Hmm... Looks like deleting week didn't work, try reloading?"
+							});
 						}
 					});
 				} else {
 					connection.query("DELETE FROM week WHERE id=?", req.body.id, (err) => {
-						if (err) console.log(err);
+						if (err) res.render("error", {
+							title: `Help! – Summer Camp ${getDate()}`,
+							error: "Hmm... Looks like deleting week didn't work, try reloading?"
+						});
 						week_meta.delete(code[0].title);
 						res.end();
 					});
 				}
 			});
 		} else {
-			res.redirect("/");
+			res.render("error", {
+				title: `Help! – Summer Camp ${getDate()}`,
+				error: "Hmm... Looks like deleting week didn't work, try reloading?"
+			});
 		}
 	});
 });
@@ -439,10 +486,16 @@ router.post("/admin/add-week", (req, res) => {
 
 router.get("/admin/get-questions/:code", async (req, res) => {
 	connection.query("SELECT value_str FROM system_settings WHERE name='admin_code'", (err, code) => {
-		if (err) console.log(err);
+		if (err) res.render("error", {
+			title: `Help! – Summer Camp ${getDate()}`,
+			error: "Hmm... Looks like getting your question didn't work, try reloading?"
+		});
 		if (req.params.code == code[0].value_str) {
 			connection.query("SELECT COUNT(id) AS question_count FROM question_meta", (err, question_length) => {
-				if (err) console.log(err);
+				if (err) res.render("error", {
+					title: `Help! – Summer Camp ${getDate()}`,
+					error: "Hmm... Looks like adding your question didn't work, try reloading?"
+				});
 				let question_obj = [];
 				async function pull_questions(week_name, week_id) {
 					return new Promise((resolve, reject) => {
@@ -501,7 +554,10 @@ router.get("/admin/get-questions/:code", async (req, res) => {
 							res.json(questions);
 						}
 					} catch (error) {
-						console.log(error);
+						res.render("error", {
+							title: `Help! – Summer Camp ${getDate()}`,
+							error: "Hmm... Looks like adding your question didn't work, try reloading?"
+						});
 					}
 				});
 			});
@@ -511,11 +567,17 @@ router.get("/admin/get-questions/:code", async (req, res) => {
 
 router.post("/admin/add-question", (req, res) => {
 	connection.query("SELECT value_str FROM system_settings WHERE name='admin_code'", (err, code) => {
-		if (err) console.log(err);
+		if (err) render("error", {
+			title: `Help! – Summer Camp ${getDate()}`,
+			error: "Hmm... Looks like adding your question didn't work, try reloading?"
+		});
 		if (req.body.code == code[0].value_str) {
 			let week_id = week_meta.get(req.body.week).id;
 			connection.query("INSERT INTO question_meta (week_id, question_text) VALUE (?, ?)", [week_id, req.body.question], (err) => {
-				if (err) console.log(err);
+				if (err) res.render("error", {
+					title: `Help! – Summer Camp ${getDate()}`,
+					error: "Hmm... Looks like adding your question didn't work, try reloading?"
+				});
 				res.end();
 			});
 		}
@@ -524,11 +586,17 @@ router.post("/admin/add-question", (req, res) => {
 
 router.post("/admin/delete-question", (req, res) => {
 	connection.query("SELECT value_str FROM system_settings WHERE name='admin_code'", (err, code) => {
-		if (err) console.log(err);
+		if (err) res.render("error", {
+			title: `Help! – Summer Camp ${getDate()}`,
+			error: "Hmm... Looks like deleting your question didn't work, try reloading?"
+		});
 		if (req.body.code == code[0].value_str) {
 			let week_id = week_meta.get(req.body.week).id;
 			connection.query("DELETE FROM question_meta WHERE id=? AND week_id=?", [req.body.id, week_id], (err) => {
-				if (err) console.log(err);
+				if (err) res.render("error", {
+					title: `Help! – Summer Camp ${getDate()}`,
+					error: "Hmm... Looks like deleting your question didn't work, try reloading?"
+				});
 				res.end();
 			});
 		}
@@ -537,10 +605,16 @@ router.post("/admin/delete-question", (req, res) => {
 
 router.post("/admin/delete-response", (req, res) => {
 	connection.query("SELECT value_str FROM system_settings WHERE name='admin_code'", (err, code) => {
-		if (err) console.log(err);
+		if (err) res.render("error", {
+			title: `Help! – Summer Camp ${getDate()}`,
+			error: "Hmm... Looks like deleting this response didn't work, try reloading?"
+		});
 		if (req.body.code == code[0].value_str) {
 			connection.query("DELETE FROM questions WHERE camper_id=? AND question_meta_id=?", [req.body.camper_id, req.body.question_id], (err) => {
-				if (err) console.log(err);
+				if (err) res.render("error", {
+					title: `Help! – Summer Camp ${getDate()}`,
+					error: "Hmm... Looks like deleting this response didn't work, try reloading?"
+				});
 				res.end();
 			});
 		}
@@ -590,12 +664,18 @@ function partition(array, low, high) {
 
 router.post("/admin/pull-current-campers", async (req, res) => { //ADMIN
 	connection.query("SELECT value_str FROM system_settings WHERE name='admin_code'", async (err, code) => {
-		if (err) console.log(err);
+		if (err) res.render("error", {
+			title: `Help! – Summer Camp ${getDate()}`,
+			error: "Hmm... Looks like selecting the campers didn't work, try reloading?"
+		});
 		if (req.body.code == code[0].value_str) {
 			//throw all currently pending campers - run through and see which ones are still waiting in enrollment
 			let addition_on_camper = req.body['applicants-or-registered'] == 1 ? ", confirmed" : "";
 			connection.query("SELECT camper_id, week_id" + addition_on_camper + " FROM enrollment WHERE approved=?", req.body['applicants-or-registered'], async (err, camper_ids) => {
-				if (err) console.log(err);
+				if (err) res.render("error", {
+					title: `Help! – Summer Camp ${getDate()}`,
+					error: "Hmm... Looks like selecting the campers didn't work, try reloading?"
+				});
 				let obj = {
 					campers: []
 				};
@@ -643,13 +723,19 @@ router.post("/admin/pull-current-campers", async (req, res) => { //ADMIN
 							res.json(obj);
 						}
 					} catch (error) {
-						console.log(error);
+						res.render("error", {
+							title: `Help! – Summer Camp ${getDate()}`,
+							error: "Hmm... Looks like selecting the campers didn't work, try reloading?"
+						});
 					}
 				}
 				res.end();
 			});
 		} else {
-			res.sendStatus(404);
+			res.render("error", {
+				title: `Help! – Summer Camp ${getDate()}`,
+				error: "Hmm... Looks like selecting the campers didn't work, try reloading?"
+			});
 		}
 	});
 });
@@ -663,23 +749,43 @@ const application_schema = Joi.object({
 router.post("/admin/accept-camper-application", (req, res) => { //ADMIN
 	if (application_schema.validate(req.body)) {
 		connection.query("SELECT value_str FROM system_settings WHERE name='admin_code'", async (err, code) => {
-			if (err) console.log(err);
+			if (err) res.render("error", {
+				title: `Help! – Summer Camp ${getDate()}`,
+				error: "Hmm... Looks like accepting the campers didn't work, try reloading?"
+			});
 			if (req.body.code == code[0].value_str) {
+				let transporter = nodemail.createTransport({
+					sendmail: true,
+					newline: 'unix',
+					path: 'user/sbin/sendmail'
+				});
 				connection.query("SELECT id FROM week WHERE title=?", req.body.week_name, (err, week_id) => {
-					if (err) console.log(err);
+					if (err) res.render("error", {
+						title: `Help! – Summer Camp ${getDate()}`,
+						error: "Hmm... Looks like accepting the campers didn't work, try reloading?"
+					});
 					connection.query("SELECT first_name, last_name, email FROM camper WHERE id=?", req.body.camper_id, (err, email_info) => {
-						if (err) console.log(err);
+						if (err) res.render("error", {
+							title: `Help! – Summer Camp ${getDate()}`,
+							error: "Hmm... Looks like accepting the campers didn't work, try reloading?"
+						});
 						if (email_info.length) {
 							let approved_date = new Date();
 							connection.query("UPDATE enrollment SET approved=1, approved_time=? WHERE camper_id=? AND week_id=?", [approved_date, req.body.camper_id, week_id[0].id], (err) => {
-								if (err) console.log(err);
+								if (err) res.render("error", {
+									title: `Help! – Summer Camp ${getDate()}`,
+									error: "Hmm... Looks like accepting the campers didn't work, try reloading?"
+								});
 								transporter.sendMail({
 									from: "spark" + getDate + "@cs.stab.org",
 									to: email_info[0].email,
 									subject: "You were accepted for " + req.body.week_name,
 									text: "Hey " + email_info.first_name + " " + email_info.last_name + ", "
 								}, (err, info) => {
-									console.log(err);
+									res.render("error", {
+										title: `Help! – Summer Camp ${getDate()}`,
+										error: "Hmm... Looks like accepting the campers didn't work, try reloading?"
+									});
 								});
 								res.end();
 							});
@@ -689,28 +795,41 @@ router.post("/admin/accept-camper-application", (req, res) => { //ADMIN
 			}
 		});
 	} else {
-		res.render("error", {
-			title: "Uh oh"
+		render("error", {
+			title: `Help! – Summer Camp ${getDate()}`,
+			error: "Hmm... Looks like accepting the campers didn't work, try reloading?"
 		});
 	}
 });
 
 router.post("/admin/delete-enrollment", (req, res) => {
 	connection.query("SELECT value_str FROM system_settings WHERE name='admin_code'", (err, code) => {
-		if (err) console.log(err);
+		if (err) res.render("error", {
+			title: `Help! – Summer Camp ${getDate()}`,
+			error: "Hmm... Looks like deleting a camper enrollment didn't work, try reloading?"
+		});
 		if (req.body.code == code[0].value_str) {
 			//check for if their an applicant or a regisered camper
 			req.body.week_id = week_meta.get(req.body.week_name).id;
 			connection.query("SELECT approved FROM enrollment WHERE camper_id=? AND week_id=?", [req.body.camper_id, req.body.week_id], (err, approved) => {
-				if (err) console.log(err);
+				if (err) res.render("error", {
+					title: `Help! – Summer Camp ${getDate()}`,
+					error: "Hmm... Looks like deleting a camper enrollment didn't work, try reloading?"
+				});
 				if (approved[0].approved == 1) {
 					connection.query("UPDATE enrollment SET approved=0 WHERE camper_id=? AND week_id=?", [req.body.camper_id, req.body.week_id], (err) => {
-						if (err) console.log(err);
+						if (err) res.render("error", {
+							title: `Help! – Summer Camp ${getDate()}`,
+							error: "Hmm... Looks like deleting a camper enrollment didn't work, try reloading?"
+						});
 						res.redirect("/admin");
 					});
 				} else {
 					connection.query("DELETE FROM enrollment WHERE camper_id=? AND week_id=?", [req.body.camper_id, req.body.week_id], (err) => {
-						if (err) console.log(err);
+						if (err) res.render("error", {
+							title: `Help! – Summer Camp ${getDate()}`,
+							error: "Hmm... Looks like deleting a camper enrollment didn't work, try reloading?"
+						});
 						res.redirect("/admin");
 					});
 				}
@@ -721,12 +840,21 @@ router.post("/admin/delete-enrollment", (req, res) => {
 
 router.post("/admin/delete-camper", (req, res) => {
 	connection.query("SELECT value_str FROM system_settings WHERE name='admin_code'", (err, code) => {
-		if (err) console.log(err);
+		if (err) res.render("error", {
+			title: `Help! – Summer Camp ${getDate()}`,
+			error: "Hmm... Looks like deleting a camper didn't work, try reloading?"
+		});
 		if (req.body.code == code[0].value_str) {
 			connection.query("SELECT * FROM camper WHERE first_name=? AND last_name=? AND email=?", [req.body.first_name, req.body.last_name, req.body.email], (err, camper_value) => {
-				if (err) console.log(err);
+				if (err) res.render("error", {
+					title: `Help! – Summer Camp ${getDate()}`,
+					error: "Hmm... Looks like deleting a camper didn't work, try reloading?"
+				});
 				connection.query("DELETE FROM camper WHERE first_name=? AND last_name=? AND email=?", [req.body.first_name, req.body.last_name, req.body.email], (err) => {
-					if (err) console.log(err);
+					if (err) res.render("error", {
+						title: `Help! – Summer Camp ${getDate()}`,
+						error: "Hmm... Looks like deleting a camper didn't work, try reloading?"
+					});
 					res.json(camper_value);
 				});
 			});
@@ -736,7 +864,10 @@ router.post("/admin/delete-camper", (req, res) => {
 
 router.post("/admin/send-mail", async (req, res) => { //ADMIN
 	connection.query("SELECT value_str FROM system_settings WHERE name='admin_code'", async (err, code) => {
-		if (err) console.log(err);
+		if (err) res.render("error", {
+			title: `Help! – Summer Camp ${getDate()}`,
+			error: "Hmm... Looks like sending mail didn't work, try reloading?"
+		});
 		let all_campers;
 		let transporter = nodemail.createTransport({
 			sendmail: true,
@@ -770,21 +901,26 @@ router.post("/admin/send-mail", async (req, res) => { //ADMIN
 			function send_mail(first_name, last_name, email) {
 				let temp_text = req.body.message.replace("{{FIRST_NAME}}", first_name);
 				temp_text = temp_text.replace(" {{LAST_NAME}}", last_name);
-				console.log(temp_text);
 				transporter.sendMail({
 					from: "spark" + getDate + "@cs.stab.org",
 					to: email,
 					subject: req.body.subject,
 					text: temp_text
 				}, (err, info) => {
-					console.log(err);
+					res.render("error", {
+						title: `Help! – Summer Camp ${getDate()}`,
+						error: "Hmm... Looks like sending mail didn't work, try reloading?"
+					});
 				});
 			}
 			let all_campers = await pull_campers();
 			try {
 				if (req.body.prospects == 1) {
 					connection.query("SELECT name, email FROM prospect WHERE subscribed=1", (err, prospect_info) => {
-						if (err) console.log(err);
+						if (err) res.render("error", {
+							title: `Help! – Summer Camp ${getDate()}`,
+							error: "Hmm... Looks like sending mail didn't work, try reloading?"
+						});
 						//run through each of these, then send emails for each of them
 						if (all_campers.length) {
 							all_campers.forEach((item, index) => {
@@ -810,7 +946,10 @@ router.post("/admin/send-mail", async (req, res) => { //ADMIN
 					}
 				}
 			} catch (error) {
-				console.log(error);
+				res.render("error", {
+					title: `Help! – Summer Camp ${getDate()}`,
+					error: "Hmm... Looks like sending mail didn't work, try reloading?"
+				});
 			}
 		}
 	});
