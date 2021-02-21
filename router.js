@@ -743,7 +743,7 @@ router.post("/admin/send-mail", async (req, res) => { //ADMIN
 						week_value = " WHERE enrollment.week_id=?";
 						if (req.body.week_id.length > 1) {
 							req.body.week_id.forEach((item, index) => {
-								req.body.week_id[index] = parseInt(item, 10);
+								req.body.week_id[index] = week_meta.get(item).id;
 								week_value += index < req.body.week_id.length - 1 ? " OR enrollment.week_id=?" : "";
 							});
 						}
