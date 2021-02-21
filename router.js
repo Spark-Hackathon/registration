@@ -800,7 +800,7 @@ router.post("/admin/accept-camper-application", (req, res) => { //ADMIN
 					});
 					if (email_info.length) {
 						let approved_date = new Date();
-						connection.query("UPDATE enrollment SET approved=1, approved_time=? WHERE camper_id=? AND week_id=?", [approved_date, req.body.camper_id, week_meta.get(req.body.week).id], (err) => {
+						connection.query("UPDATE enrollment SET approved=1, approved_time=? WHERE camper_id=? AND week_id=?", [approved_date, req.body.camper_id, week_meta.get(req.body.week_name).id], (err) => {
 							if (err) res.render("error", {
 								title: `Help! – Summer Camp ${getDate()}`,
 								error: "Hmm... Looks like accepting the campers didn't work, try reloading?"

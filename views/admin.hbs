@@ -59,14 +59,14 @@
         </div>
 
         <div class="mt-10 bg-white rounded-lg shadow-md px-8 py-4">
-            <form id="select-weeks">
+            <form id="select-all-weeks">
                 <input type="hidden" name="code" class="password">
 
                 <div class="grid grid-cols-2 items-center">
                     <label><span class="text-red-500 inline-block">*</span> Get all weeks</label>
 
                     <div class="block">
-                        <input type="submit" value="Query" class="inline-block px-4 py-2 rounded-full bg-green-300 cursor-pointer font-semibold outline-none">
+                        <input type="submit" id="get-all-weeks" value="Query" class="inline-block px-4 py-2 rounded-full bg-green-300 cursor-pointer font-semibold outline-none">
                         <p class="inline-block text-gray-500 text-sm italic ml-2">or</p>
                         <button id="new-week" class="ml-2 inline-block px-4 py-2 rounded-full bg-blue-300 cursor-pointer font-semibold outline-none">New Week</button>
                     </div>
@@ -83,6 +83,25 @@
                 </tr>
                 <tbody id="week-data" class="divide-y divide-gray-200"></tbody>
             </table>
+        </div>
+
+        <div class="mt-10 bg-white rounded-lg shadow-md px-8 py-4" id="export">
+            <form id="export-by-week">
+                <input type="hidden" name="code" class="password" />
+
+                <label><span class="text-red-500 inline-block">*</span> Select by week for export as CSV</label>
+                <select name="week_names" id="export_week_name" required class="block ml-4 text-gray-500"></select>
+                <input type="submit" value="Query" class="inline-block px-4 py-2 rounded-full bg-green-300 cursor-pointer font-semibold outline-none">
+            </form>
+
+            <br>
+
+            <form id="export-all">
+                <input type="hidden" name="code" class="password" />
+
+                <label><span class="text-red-500 inline-block">*</span> Download everything</label>
+                <input type="submit" value="Query" class="inline-block px-4 py-2 rounded-full bg-green-300 cursor-pointer font-semibold outline-none">
+            </form>
         </div>
 
         <div class="mt-10 bg-white rounded-lg shadow-md px-8 py-4">
@@ -427,7 +446,7 @@
                 });
         });
 
-        $("#select-weeks").on("submit", event => {
+        $("#select-all-weeks").on("submit", event => {
             event.preventDefault();
             $("#week-data").empty();
 
@@ -436,6 +455,7 @@
                 .then(weeks => {
                     $("select#week_title").empty();
                     $("select#week_names").empty();
+                    $("select#export_week_name").empty();
 
                     for(let week of weeks) {
                         let week_row = $(`<tr class="text-center divide-x divide-gray-200"></tr>`);
@@ -445,6 +465,7 @@
 
                         $("select#week_title").append(`<option name="${week.name}">${week.name}</option>`);
                         $("select#week_names").append(`<option name="${week.name}">${week.name}</option>`);
+                        $("select#export_week_name").append(`<option name="${week.name}">${week.name}</option>`);
 
                         let virtual = $(`<td class="text-gray-500 py-4 px-2">${week.virtual_available ? "Yes" : "No"}</td>`);
                         let in_person = $(`<td class="text-gray-500 py-4 px-2">${week.inclass_available ? "Yes" : "No"}</td>`);
@@ -568,6 +589,47 @@
                 .then(() => {
                     alert("Successfully sent emails.");
                     reload();
+                })
+                .catch(err => {
+                    alert("An error has occurred. Try checking the client-side logs first. If there's nothing, the server is broken.");
+                    console.error(err);
+                });
+        });
+
+        $("#export-by-week").on("submit", event => {
+            event.preventDefault();
+
+            let week_name = $("#export_week_name").val();
+
+            fetch("/admin/export/week", {
+                method: "POST",
+                cache: "no-cache",
+                headers: { "Content-Type": "application/json" },
+                redirect: "manual",
+                body: JSON.stringify({
+                    code: password,
+                    week_name
+                })
+            })
+                .then(response => response.text())
+                .then(data => {
+                    alert("Successfully exported week to CSV. Dismiss to download.");
+                    window.location.href = `data:text/csv;charset=utf-8,${encodeURI(data)}`;;
+                })
+                .catch(err => {
+                    alert("An error has occurred. Try checking the client-side logs first. If there's nothing, the server is broken.");
+                    console.error(err);
+                });
+        });
+
+        $("#export-all").on("submit", event => {
+            event.preventDefault();
+
+            fetch(`/admin/export/all/${password}`)
+                .then(response => response.text())
+                .then(data => {
+                    alert("Successfully exported campers to CSV. Dismiss to download.");
+                    window.location.href = `data:text/csv;charset=utf-8,${encodeURI(data)}`;;
                 })
                 .catch(err => {
                     alert("An error has occurred. Try checking the client-side logs first. If there's nothing, the server is broken.");
