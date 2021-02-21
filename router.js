@@ -837,7 +837,7 @@ router.post("/admin/confirm-camper", (req, res) => {
 			error: "Hmm... Looks like confirming a camper enrollment didn't work, try reloading?"
 		});
 		if (req.body.code == code[0].value_str) {
-			connection.query("UPDATE enrollment SET confirmed=1, campbrain_completion=? WHERE camper_id=? AND week_id=?", [new Date(), req.body.camper_id, week_meta.get(req.body.week).id], (err) => {
+			connection.query("UPDATE enrollment SET confirmed=1, campbrain_completion=? WHERE camper_id=? AND week_id=?", [new Date(), req.body.camper_id, week_meta.get(req.body.week_name).id], (err) => {
 				if (err) res.render("error", {
 					title: `Help! – Summer Camp ${getDate()}`,
 					error: "Hmm... Looks like confirming a camper enrollment didn't work, try reloading?"
