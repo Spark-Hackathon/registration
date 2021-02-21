@@ -1,9 +1,9 @@
-const labels = "text-sm font-semibold";
-const inputs = "bg-transparent mt-1 border-2 border-solid border-gray-200 outline-none focus:border-black transition duration-200 px-4 py-2 mb-8 appearance-none w-full";
-const notes = "text-sm text-gray-600 italic";
+const labels = "text-lg font-semibold";
+const inputs = "text-xl bg-transparent mt-1 border-4 border-solid border-gray-200 outline-none focus:border-yellow transition duration-200 px-6 md:px-8 py-4 mb-8 appearance-none w-full";
+const notes = "text-base text-gray-500 italic";
 const spans = "text-red-500 inline-block";
-const submitStyle = "w-full p-4 font-semibold bg-yellow-300 cursor-pointer hover:bg-yellow-500 hover:text-white transition duration-200 rounded-lg";
-const form = "lg:w-96 lg:mx-auto";
+const submitStyle = "block text-center py-4 w-full bg-yellow font-semibold hover:bg-yellow-dark transition duration-200 md:text-xl cursor-pointer";
+const form = "md:w-100 md:mx-auto";
 
 let application = new Smartform("/camper-register-queueing", "POST");
 
@@ -141,7 +141,7 @@ let parentNumber = new Field("input:tel", "guardian_number")
     .require()
     .setLabel("Parent/Guardian Phone Number")
     .pattern("[0-9]{3}[0-9]{3}[0-9]{4}")
-    .placeholder("###-###-####");
+    .placeholder("ex. 1112223333");
 let participationStatus = new Field("select", "participated")
     .require()
     .setLabel("Have you participated in a Spark event before?")
@@ -163,7 +163,7 @@ let referEmail = new Field("input:email", "refer_email")
     .setLabel("Friend's Email Address")
     .placeholder("bob@smith.com");
 let submit = new Field("input:submit", "")
-    .value("Apply for Summer Spark")
+    .value("Apply for Summer Spark →")
     .class(submitStyle);
 
 application

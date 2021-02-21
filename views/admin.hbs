@@ -1,4 +1,10 @@
+<title>{{title}}</title>
+
 <style>
+    * {
+        font-family: "Courier", sans-serif;
+    }
+
     table {
         border: 1px solid black;
     }
@@ -34,7 +40,7 @@
             <th>Type</th>
             <th>Hopes & Dreams</th>
             <th>Participated Before?</th>
-            <th>Accept or Decline?</th>
+            <th>Accept or Delete?</th>
         </tr>
         <tbody id="applicant-data"></tbody>
     </table>
@@ -48,6 +54,7 @@
 
         <input type="submit" value="Query">
     </form>
+    <button id="new-week">New Week</button>
 
     <table>
         <tr>
@@ -60,7 +67,6 @@
         <tbody id="week-data"></tbody>
     </table>
 
-    <button id="new-week">New Week</button>
     <hr>
 
     <form action="/admin/send-mail" method="POST" class="border-2 px-4 py-2">
@@ -69,15 +75,32 @@
         <input type="submit" value="Query">
     </form>
 
-    <form action="/admin/get-weeks" method="POST" class="border-2 px-4 py-2">
+    <hr>
+
+    <form id="select-questions">
         <input type="hidden" name="code" class="password">
-        <label for="week_name">Fetch all weeks</label>
+        <label>Get questions</label>
         <input type="submit" value="Query">
     </form>
 
-    <form action="/admin/get-questions" method="POST" class="border-2 px-4 py-2">
+    <table>
+        <tr>
+            <th>Question ID</th>
+            <th>Week</th>
+            <th>Question</th>
+            <th>Responses</th>
+            <th>Action</th>
+        </tr>
+        <tbody id="question-data"></tbody>
+    </table>
+
+    <p>Note: first you have to get all weeks before attempting to create new question.</p>
+    <form id="new-question">
         <input type="hidden" name="code" class="password">
-        <label for="week_name">Fetch all questions</label>
+        <label for="week">Select week</label>
+        <select name="week" id="week_title" required></select>
+        <label for="question">Question</label>
+        <input type="text" name="question" id="question" placeholder="ex. Why do you think you'd be a good candidate?" required>
         <input type="submit" value="Query">
     </form>
 </div>
@@ -108,7 +131,23 @@
                 camper_id
             })
         })
-            .then(() => console.log("Accepted camper damnit"))
+            .then(() => alert("=== ACCEPTED CAMPER ==="))
+            .catch(err => console.error(err));
+    }
+
+    const delete_camper = (week_name, camper_id) => {
+        fetch("/admin/delete-enrollment", {
+            method: "POST",
+            cache: "no-cache",
+            headers: { "Content-Type": "application/json" },
+            redirect: "manual",
+            body: JSON.stringify({
+                code: password,
+                week_name,
+                camper_id
+            })
+        })
+            .then(() => alert("=== DELETED CAMPER ==="))
             .catch(err => console.error(err));
     }
 
@@ -128,31 +167,66 @@
             .catch(err => console.error(err));
     }
 
-    const new_week = () => {
-        let week_name = prompt("Week Name?");
-        let start_date = prompt("Start date? (YYYY-MM-DD)");
-        let end_date = prompt("End date? (YYYY-MM-DD)");
-        let cb_code = "charliedawitch"; //prompt("CB Code?");
-        let inclass_available = prompt("In-class option available? y/n") == "y" ? 1 : 0;
-        let virtual_available = prompt("Virtual option available? y/n") == "y" ? 1 : 0;
-
-        fetch("/admin/add-week", {
+    const delete_question = (question_id, week_name) => {
+        fetch("/admin/delete-question", {
             method: "POST",
             cache: "no-cache",
             headers: { "Content-Type": "application/json" },
             redirect: "manual",
             body: JSON.stringify({
                 code: password,
-                week_name,
-                start_date,
-                end_date,
-                cb_code,
-                inclass_available,
-                virtual_available
+                week: week_name,
+                id: question_id
             })
         })
-            .then(() => alert("=== WEEK CREATED ==="))
+            .then(() => alert("=== QUESTION DELETED ==="))
             .catch(err => console.error(err));
+    }
+
+    const delete_reponse = (question_id, camper_id) => {
+        fetch("/admin/delete-response", {
+            method: "POST",
+            cache: "no-cache",
+            headers: { "Content-Type": "application/json" },
+            redirect: "manual",
+            body: JSON.stringify({
+                code: password,
+                question_id,
+                camper_id
+            })
+        })
+            .then(() => alert("=== RESPONSE DELETED ==="))
+            .catch(err => console.error(err));
+    }
+
+    const new_week = () => {
+        let week_name = prompt("Week Name?");
+
+        if(week_name != "") {
+            let start_date = prompt("Start date? (YYYY-MM-DD)");
+            let end_date = prompt("End date? (YYYY-MM-DD)");
+            let cb_code = "charliedawitch"; //prompt("CB Code?");
+            let inclass_available = prompt("In-class option available? y/n") == "y" ? 1 : 0;
+            let virtual_available = prompt("Virtual option available? y/n") == "y" ? 1 : 0;
+
+            fetch("/admin/add-week", {
+                method: "POST",
+                cache: "no-cache",
+                headers: { "Content-Type": "application/json" },
+                redirect: "manual",
+                body: JSON.stringify({
+                    code: password,
+                    week_name,
+                    start_date,
+                    end_date,
+                    cb_code,
+                    inclass_available,
+                    virtual_available
+                })
+            })
+                .then(() => alert("=== WEEK CREATED ==="))
+                .catch(err => console.error(err));
+        }
     }
 
     $("#new-week").click(new_week)
@@ -196,7 +270,10 @@
                     let type = $(`<td>${type_translation[camper.type]}</td>`);
                     let hopes_dreams = $(`<td>${camper.hopes_dreams}</td>`);
                     let participated = $(`<td>${camper.participated}</td>`);
-                    let accept_decline = `<button onclick="accept_camper('${camper.week}', ${camper.camper_id})">Accept Camper</button>`;
+                    let accept_decline = `
+                        <button onclick="accept_camper('${camper.week}', ${camper.camper_id})">Accept Camper</button>
+                        <button onclick="delete_camper('${camper.week}', ${camper.camper_id})">Delete Camper</button>
+                        `;
 
                     camper_row.append([
                         id,
@@ -227,6 +304,9 @@
 
                     let id = $(`<td>${week.week_id}</td>`);
                     let name = $(`<td>${week.name}</td>`);
+
+                    $("select#week_title").append(`<option name="${week.name}">${week.name}</option>`);
+
                     let virtual = $(`<td>${week.virtual_available ? "Yes" : "No"}</td>`);
                     let in_person = $(`<td>${week.inclass_available ? "Yes" : "No"}</td>`);
                     let delete_button = `<button onclick="delete_week(${week.week_id})">Delete Week</button>`;
@@ -243,5 +323,67 @@
                 }
             })
             .catch(err => console.error(err));
+    });
+
+    $("#select-questions").on("submit", event => {
+        event.preventDefault();
+        $("#question-data").empty();
+
+        fetch(`/admin/get-questions/${password}`)
+            .then(response => response.json())
+            .then(questions => {
+                for(let question of questions) {
+                    let question_row = $("<tr></tr>");
+
+                    console.log(question);
+
+                    let q_id = $(`<td>${question.id}</td>`);
+                    let q = $(`<td>${question.question}</td>`);
+                    let week = $(`<td>${question.week}</td>`);
+                    let responses = $("<td></td>");
+                    let delete_action = `<button onclick="delete_question(${question.id}, '${question.week}');">Delete Question</button>`;
+
+                    for(let response of question.responses) {
+                        let r_container = $("<div></div>");
+
+                        let res = $(`<p>${response.response} <button onclick="delete_response(${question.id}, ${response.id});">Delete Response</button></p>`);
+
+                        r_container.append([ res ]);
+                        responses.append(r_container);
+                    }
+
+                    question_row.append([
+                        q_id,
+                        week,
+                        q,
+                        responses,
+                        delete_action
+                    ]);
+
+                    $("#question-data").append(question_row);
+                }
+            })
+            .catch(err => console.error(err));
+    });
+
+    $("#new-question").on("submit", event => {
+        event.preventDefault();
+        
+        let week = $("#week_title").val();
+        let question = $("#question").val();
+
+        fetch("/admin/add-question", {
+            method: "POST",
+            cache: "no-cache",
+            headers: { "Content-Type": "application/json" },
+            redirect: "manual",
+            body: JSON.stringify({
+                code: password,
+                week,
+                question
+            })
+        })
+                .then(() => alert("=== NEW QUESTION CREATED ==="))
+                .catch(err => console.error(err));
     });
 </script>
