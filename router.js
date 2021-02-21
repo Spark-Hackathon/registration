@@ -212,14 +212,14 @@ router.post("/camper-register-queueing", async (req, res) => {
 											if (referral_schema.validate(user_data)) {
 												await prospectSignup(user_data);
 												try {
-													// sendmail({
-													// 	from: "spark" + getDate() + "@cs.stab.org",
-													// 	to: item.email,
-													// 	subject: "You've signed up!",
-													// 	text: "Hey " + item.first_name + " " + item.last_name + ", we've received your signup, we'll go and check out the application in just a bit!"
-													// }, (err, info) => {
-													// 	console.log(err, info);
-													// });
+													sendmail({
+														from: "spark" + getDate() + "@cs.stab.org",
+														to: item.email,
+														subject: "You've signed up!",
+														text: "Hey " + item.first_name + " " + item.last_name + ", we've received your signup, we'll go and check out the application in just a bit!"
+													}, (err, info) => {
+														console.log(err, info);
+													});
 													connection.query("DELETE FROM prospect WHERE email=?", item.email, (err) => {
 														if (err) console.log(err);
 														res.render("question.hbs", {
@@ -241,14 +241,14 @@ router.post("/camper-register-queueing", async (req, res) => {
 											}
 										} else {
 											//send finish email, done
-											// sendmail({
-											// 	from: 'spark' + getDate() + '@cs.stab.org',
-											// 	to: item.email,
-											// 	subject: "You've signed up!",
-											// 	text: "Hey " + item.first_name + " " + item.last_name + ", we've received your signup, we'll go and check out the application in just a bit!"
-											// }, (err, info) => {
-											// 	console.log(err, info);
-											// });
+											sendmail({
+												from: 'spark' + getDate() + '@cs.stab.org',
+												to: item.email,
+												subject: "You've signed up!",
+												text: "Hey " + item.first_name + " " + item.last_name + ", we've received your signup, we'll go and check out the application in just a bit!"
+											}, (err, info) => {
+												console.log(err, info);
+											});
 											res.render("question.hbs", {
 												title: `Application Questions – Summer Spark ${getDate()}`,
 												year: getDate(),
@@ -457,39 +457,47 @@ router.get("/admin/get-questions/:code", async (req, res) => {
 						connection.query("SELECT id, question_text FROM question_meta WHERE week_id=?", week_id, async (err, question_meta_info) => {
 							if (err) reject(err);
 							let inner_full = [];
-							question_meta_info.forEach(async (question, index) => {
-								let responses = await pull_responses(question.id);
-								try {
-									let inner = {};
-									inner.week = week_name;
-									inner.id = question.id;
-									inner.question = question.question_text;
-									inner.responses = [];
-									responses.forEach((response, response_index) => {
-										inner.responses.push({
-											id: response.camper_id,
-											response: response.question_response
+							if (question_meta_info.length >= 1) {
+								question_meta_info.forEach(async (question, index) => {
+									let responses = await pull_responses(question.id);
+									try {
+										let inner = {};
+										inner.week = week_name;
+										inner.id = question.id;
+										inner.question = question.question_text;
+										inner.responses = [];
+										responses.forEach((response, response_index) => {
+											inner.responses.push({
+												id: response.camper_id,
+												response: response.question_response
+											});
 										});
-									});
-									inner_full.push(inner);
-									if (index == question_length.length - 1) {
-										resolve(inner_full);
+										inner_full.push(inner);
+										if (index == question_meta_info.length - 1) {
+											resolve(inner_full);
+										}
+									} catch (error) {
+										reject(error);
 									}
-								} catch (error) {
-									reject(error);
-								}
-							});
+								});
+							} else {
+								resolve(1);
+							}
 						});
 					});
 				}
 				let questions = [];
+				let count = -1;
 				week_meta.forEach(async (week, index) => {
 					let inner_array = await pull_questions(index, week.id);
 					try {
-						for (num in inner_array) {
-							questions.push(inner_array[num]);
+						if (inner_array != 1) {
+							for (num in inner_array) {
+								questions.push(inner_array[num]);
+							}
 						}
-						if (questions.length == week_meta.size - 1) {
+						count++;
+						if (count == week_meta.size - 1) {
 							res.json(questions);
 						}
 					} catch (error) {
@@ -665,14 +673,14 @@ router.post("/admin/accept-camper-application", (req, res) => { //ADMIN
 							let approved_date = new Date();
 							connection.query("UPDATE enrollment SET approved=1, approved_time=? WHERE camper_id=? AND week_id=?", [approved_date, req.body.camper_id, week_id[0].id], (err) => {
 								if (err) console.log(err);
-								// transporter.sendMail({
-								// 	from: "spark" + getDate + "@cs.stab.org",
-								// 	to: email_info[0].email,
-								// 	subject: "You were accepted for " + req.body.week_name,
-								// 	text: "Hey " + email_info.first_name + " " + email_info.last_name + ", "
-								// }, (err, info) => {
-								// 	console.log(err);
-								// });
+								transporter.sendMail({
+									from: "spark" + getDate + "@cs.stab.org",
+									to: email_info[0].email,
+									subject: "You were accepted for " + req.body.week_name,
+									text: "Hey " + email_info.first_name + " " + email_info.last_name + ", "
+								}, (err, info) => {
+									console.log(err);
+								});
 								res.end();
 							});
 						}
