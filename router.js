@@ -491,6 +491,18 @@ router.post("/admin/delete-question", (req, res) => {
 	});
 });
 
+router.post("/admin/delete-response", (req, res) => {
+	connection.query("SELECT value_str FROM system_settings WHERE name='admin_code'", (err, code) => {
+		if (err) console.log(err);
+		if (req.body.code == code[0].value_str) {
+			connection.query("DELETE FROM questions WHERE camper_id=? AND question_meta_id=?", [req.body.camper_id, req.body.question_id], (err) => {
+				if (err) console.log(err);
+				res.end();
+			});
+		}
+	});
+});
+
 function quicksort(array, low, high) {
 	if (low < high) {
 		let pivot = partition(array, low, high);
