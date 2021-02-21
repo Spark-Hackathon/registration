@@ -705,7 +705,7 @@ router.post("/admin/pull-current-campers", async (req, res) => { //ADMIN
 								inner.hopes_dreams = camper[0].hopes_dreams;
 								inner.participated = camper[0].participated == 1 ? "Participated before" : "Has not participated";
 								if (id[2] == 0 || id[2] == 1) {
-									inner.confirmed = id[2] == 1 ? "This camper has been confirmed" : "This camper is unconfirmed";
+									inner.confirmed = id[2];
 								}
 								resolve(inner);
 							});
@@ -720,6 +720,7 @@ router.post("/admin/pull-current-campers", async (req, res) => { //ADMIN
 					obj.campers.push(await allCampers());
 					try {
 						if (each_id == camper_ids.length - 1) {
+							console.log(obj);
 							res.json(obj);
 						}
 					} catch (error) {
@@ -759,38 +760,32 @@ router.post("/admin/accept-camper-application", (req, res) => { //ADMIN
 					newline: 'unix',
 					path: 'user/sbin/sendmail'
 				});
-				connection.query("SELECT id FROM week WHERE title=?", req.body.week_name, (err, week_id) => {
+				connection.query("SELECT first_name, last_name, email FROM camper WHERE id=?", req.body.camper_id, (err, email_info) => {
 					if (err) res.render("error", {
 						title: `Help! – Summer Camp ${getDate()}`,
 						error: "Hmm... Looks like accepting the campers didn't work, try reloading?"
 					});
-					connection.query("SELECT first_name, last_name, email FROM camper WHERE id=?", req.body.camper_id, (err, email_info) => {
-						if (err) res.render("error", {
-							title: `Help! – Summer Camp ${getDate()}`,
-							error: "Hmm... Looks like accepting the campers didn't work, try reloading?"
-						});
-						if (email_info.length) {
-							let approved_date = new Date();
-							connection.query("UPDATE enrollment SET approved=1, approved_time=? WHERE camper_id=? AND week_id=?", [approved_date, req.body.camper_id, week_id[0].id], (err) => {
-								if (err) res.render("error", {
+					if (email_info.length) {
+						let approved_date = new Date();
+						connection.query("UPDATE enrollment SET approved=1, approved_time=? WHERE camper_id=? AND week_id=?", [approved_date, req.body.camper_id, week_meta.get(req.body.week).id], (err) => {
+							if (err) res.render("error", {
+								title: `Help! – Summer Camp ${getDate()}`,
+								error: "Hmm... Looks like accepting the campers didn't work, try reloading?"
+							});
+							transporter.sendMail({
+								from: "spark" + getDate + "@cs.stab.org",
+								to: email_info[0].email,
+								subject: "You were accepted for " + req.body.week_name,
+								text: "Hey " + email_info.first_name + " " + email_info.last_name + ", "
+							}, (err, info) => {
+								res.render("error", {
 									title: `Help! – Summer Camp ${getDate()}`,
 									error: "Hmm... Looks like accepting the campers didn't work, try reloading?"
 								});
-								transporter.sendMail({
-									from: "spark" + getDate + "@cs.stab.org",
-									to: email_info[0].email,
-									subject: "You were accepted for " + req.body.week_name,
-									text: "Hey " + email_info.first_name + " " + email_info.last_name + ", "
-								}, (err, info) => {
-									res.render("error", {
-										title: `Help! – Summer Camp ${getDate()}`,
-										error: "Hmm... Looks like accepting the campers didn't work, try reloading?"
-									});
-								});
-								res.end();
 							});
-						}
-					});
+							res.end();
+						});
+					}
 				});
 			}
 		});
@@ -800,6 +795,24 @@ router.post("/admin/accept-camper-application", (req, res) => { //ADMIN
 			error: "Hmm... Looks like accepting the campers didn't work, try reloading?"
 		});
 	}
+});
+
+router.post("/admin/confirm-camper", (req, res) => {
+	connection.query("SELECT value_str FROM system_settings WHERE name='admin_code'", (err, code) => {
+		if (err) res.render("error", {
+			title: `Help! – Summer Camp ${getDate()}`,
+			error: "Hmm... Looks like confirming a camper enrollment didn't work, try reloading?"
+		});
+		if (req.body.code == code[0].value_str) {
+			connection.query("UPDATE enrollment SET confirmed=1, campbrain_completion=? WHERE camper_id=? AND week_id=?", [new Date(), req.body.camper_id, week_meta.get(req.body.week).id], (err) => {
+				if (err) res.render("error", {
+					title: `Help! – Summer Camp ${getDate()}`,
+					error: "Hmm... Looks like confirming a camper enrollment didn't work, try reloading?"
+				});
+				res.end();
+			});
+		}
+	});
 });
 
 router.post("/admin/delete-enrollment", (req, res) => {
