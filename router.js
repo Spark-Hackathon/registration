@@ -465,6 +465,23 @@ router.get("/admin/get-questions/:code", async (req, res) => {
 	});
 });
 
+router.post("/admin/add-question", (req, res) => {
+	connection.query("SELECT value_str FROM system_settings WHERE name='admin_code'", (err, code) => {
+		if (err) console.log(err);
+		if (req.body.code == code[0].value_str) {
+			let week_id = week_meta.get(req.body.week).id;
+			connection.query("INSERT INTO question_meta (week_id, question_text) VALUE (?, ?)", [week_id, req.body.question], (err) => {
+				if (err) console.log(err);
+				res.end();
+			});
+		}
+	});
+});
+
+router.post("/admin/delete-question", (req, res) => {
+
+});
+
 function quicksort(array, low, high) {
 	if (low < high) {
 		let pivot = partition(array, low, high);
