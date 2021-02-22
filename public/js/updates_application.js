@@ -10,11 +10,11 @@ let updates = new Smartform("/signup-prospect", "POST");
 let name = new Field("input:text", "name")
     .require()
     .setLabel("Full Name")
-    .placeholder("ex. Tanjiro Kamado");
+    .placeholder("ex. Dakota Jones");
 let email = new Field("input:email", "email")
     .require()
     .setLabel("Email Address")
-    .placeholder("kamado@tanjiro.com");
+    .placeholder("dakota@jones.com");
 let submit = new Field("input:submit", "")
     .value("Get Updates →")
     .class(submitStyle);

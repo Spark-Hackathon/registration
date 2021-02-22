@@ -12,29 +12,18 @@ let weekIds = [];
 let firstName = new Field("input:text", "first_name")
     .require()
     .setLabel("Camper's First Name")
-    .value("Tanjiro")
-    .placeholder("ex. Tanjiro");
+    .placeholder("ex. John");
 let lastName = new Field("input:text", "last_name")
     .require()
     .setLabel("Camper's Last Name")
-    .value("Kamado")
-    .placeholder("ex. Kamado");
+    .placeholder("ex. Smith");
 let email = new Field("input:email", "email")
     .require()
     .setLabel("Camper's Email Address")
-    .value("tanjiro@kamado.com")
-    .placeholder("kamado@tanjiro.com");
-let updates = new Field("select", "updates")
-    .require()
-    .setLabel("Would you like to recieve email updates?")
-    .addOptions([
-        [0, "No, thank you"],
-        [1, "Yes, please"]
-    ]);
+    .placeholder("ex. john@smith.com");
 let dob = new Field("input:date", "dob")
     .require()
     .setLabel("Camper's Date of Birth")
-    .value("01/01/2002")
     .placeholder("01/01/2002");
 let schoolList = new Field("datalist", "school")
     .removeName()
@@ -63,7 +52,6 @@ let school = new Field("input:text", "school")
     .addNote("Note: if your school does not appear, you can type it in.")
     .removeType()
     .placeholder("Click to start typing")
-    .value("None of your business")
     .list("school");
 let grade = new Field("select", "grade")
     .require()
@@ -90,7 +78,6 @@ let gender = new Field("input:text", "gender")
     .addNote("Note: if your gender identity does not appear, you can type it in.")
     .removeType()
     .placeholder("Click to start typing")
-    .value("None of your business")
     .list("gender");
 let type = new Field("select", "type")
     .require()
@@ -117,7 +104,7 @@ let race = new Field("select", "race_ethnicity")
     ]);
 let hopes = new Field("textarea", "hopes")
     .require()
-    .setLabel("Why are you interested in participating in the Hackathon? What do you want to gain from it?")
+    .setLabel("Why are you interesting in participating in SPARK? What do you hope to gain from this experience?")
     .placeholder("Your answer");
 let tShirtSize = new Field("select", "tshirt_size")
     .require()
@@ -129,7 +116,6 @@ let tShirtSize = new Field("select", "tshirt_size")
         "X-Large"
     ]);
 let laptop = new Field("select", "borrow_laptop")
-    .require()
     .setLabel("If you’re coming in-person, do you have your own laptop that you could bring?")
     .addOptions([
         [0, "Yes, I will come with my own laptop"],
@@ -138,17 +124,14 @@ let laptop = new Field("select", "borrow_laptop")
 let parentName = new Field("input:text", "guardian_name")
     .require()
     .setLabel("Parent/Guardian Full Name")
-    .value("Tanjirou Kamado")
-    .placeholder("Jane Doe");
+    .placeholder("Jane Smith");
 let parentEmail = new Field("input:email", "guardian_email")
     .require()
     .setLabel("Parent/Guardian Email Address")
-    .value("tanjirou@kamado.com")
-    .placeholder("jane@doe.com");
+    .placeholder("jane@smith.com");
 let parentNumber = new Field("input:tel", "guardian_number")
     .require()
     .setLabel("Parent/Guardian Phone Number")
-    .value("4444444444")
     .pattern("[0-9]{10}")
     .placeholder("ex. 1112223333");
 let participationStatus = new Field("select", "participated")
@@ -167,10 +150,10 @@ let participationStatus = new Field("select", "participated")
     ]);
 let referName = new Field("input:text", "refer_name")
     .setLabel("If you'd like, you can refer a friend! They'll get an email asking if they would like to sign up.")
-    .placeholder("Bob Smith");
+    .placeholder("ex. Dakota Jones");
 let referEmail = new Field("input:email", "refer_email")
     .setLabel("Friend's Email Address")
-    .placeholder("bob@smith.com");
+    .placeholder("ex. dakota@jones.com");
 let submit = new Field("input:submit", "")
     .value("Continue Application →")
     .class(submitStyle);
@@ -181,8 +164,7 @@ application
     .addFields([
         firstName,
         lastName,
-        email,
-        updates
+        email
     ]);
 
 fetch("/open-weeks")
@@ -197,8 +179,8 @@ fetch("/open-weeks")
                     .require()
                     .setLabel(`Will you attend the ${title} week?`)
                     .addOptions([
-                        [1, "Yes, I will attend virtually (via Zoom)"],
                         [0, "No, I will not attend."],
+                        [1, "Yes, I will attend virtually (via Zoom)"],
                         [2, "Yes, I will attend in-person (at St. Anne's)"]
                     ])
             ]);
