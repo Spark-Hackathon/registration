@@ -276,24 +276,25 @@ router.post("/camper-register-queueing", async (req, res) => {
 							let weeks = [],
 								count = 0;
 							week_meta.forEach((week, index) => {
-								for (pieces in item.weeks_coming) {
-									let inner_week = pieces.split("-");
+								item.weeks_coming.forEach((enroll_week, enroll_index) => {
+									let inner_week = enroll_week.split("-");
 									inner_week[0] = parseInt(inner_week[0], 10);
 									inner_week[1] = parseInt(inner_week[1], 10);
-									if (inner_week[0] == week.id && inner_weeek[1] > 0) { 
+									if (inner_week[0] == week.id && inner_week[1] > 0) {
 										weeks[count] = [];
 										weeks[count][0] = inner_week[0];
 										weeks[count][1] = inner_week[1];
 										count++;
 									}
-								}
+								});
 							});
+							console.log(weeks);
 							async function enrollmentInsert(week) {
 								return new Promise((resolve, reject) => {
 									connection.query("INSERT INTO enrollment (camper_id, week_id, signup_time, enrollment_code, person_loc, approved, confirmed) VALUES " +
 										"(?, ?, ?, ?, ?, ?, ?)", [camper_id[0].id, week[0], new Date(), uuidv4(), week[1] - 1, 0, 0], (err) => {
 											if (err) reject(err);
-											connection.query("SELECT id, question_text FROM question_meta WHERE week_id=?", week[0][0], (err, questions) => {
+											connection.query("SELECT id, question_text FROM question_meta WHERE week_id=?", week[0], (err, questions) => {
 												if (err) reject(err);
 												if (questions.length) resolve(questions);
 												resolve([]);
