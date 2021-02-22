@@ -448,7 +448,7 @@ const unsubscribe_schema = Joi.object({
 
 router.post("/unsubscribe", (req, res) => {
 	try {
-		if (unsubscribe_schema.validate(req.body) {
+		if (unsubscribe_schema.validate(req.body)) {
 			connection.query("SELECT * FROM prospect WHERE email=?", req.body.email, (err, prospect_info) => {
 				if (err) throw err;
 				if (prospect_info.length) {
