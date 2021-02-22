@@ -124,11 +124,11 @@ let laptop = new Field("select", "borrow_laptop")
 let parentName = new Field("input:text", "guardian_name")
     .require()
     .setLabel("Parent/Guardian Full Name")
-    .placeholder("Jane Smith");
+    .placeholder("ex. Jane Smith");
 let parentEmail = new Field("input:email", "guardian_email")
     .require()
     .setLabel("Parent/Guardian Email Address")
-    .placeholder("jane@smith.com");
+    .placeholder("ex. jane@smith.com");
 let parentNumber = new Field("input:tel", "guardian_number")
     .require()
     .setLabel("Parent/Guardian Phone Number")
