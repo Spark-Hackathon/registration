@@ -211,7 +211,7 @@ const camper_schema = Joi.object({
 	race_ethnicity: Joi.string().required(),
 	hopes_dreams: Joi.string().min(50).required(),
 	tshirt_size: Joi.string().min(1).max(20).required(),
-	borrow_laptop: Joi.number().max(1).required(),
+	borrow_laptop: Joi.number().max(1).default(0),
 	guardian_name: Joi.string().min(1).max(255).required(),
 	guardian_email: Joi.string().email({
 		minDomainSegments: 1,
