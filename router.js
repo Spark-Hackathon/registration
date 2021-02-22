@@ -899,6 +899,7 @@ router.post("/admin/accept-camper-application", (req, res) => { //ADMIN
 });
 
 router.post("/admin/confirm-camper", (req, res) => {
+<<<<<<< HEAD
 	try {
 		connection.query("SELECT value_str FROM system_settings WHERE name='admin_code'", (err, code) => {
 			if (err) throw err;
@@ -906,6 +907,18 @@ router.post("/admin/confirm-camper", (req, res) => {
 				connection.query("UPDATE enrollment SET confirmed=1, campbrain_completion=? WHERE camper_id=? AND week_id=?", [new Date(), req.body.camper_id, week_meta.get(req.body.week).id], (err) => {
 					if (err) throw err;
 					res.end();
+=======
+	connection.query("SELECT value_str FROM system_settings WHERE name='admin_code'", (err, code) => {
+		if (err) res.render("error", {
+			title: `Help! – Summer Camp ${getDate()}`,
+			error: "Hmm... Looks like confirming a camper enrollment didn't work, try reloading?"
+		});
+		if (req.body.code == code[0].value_str) {
+			connection.query("UPDATE enrollment SET confirmed=1, campbrain_completion=? WHERE camper_id=? AND week_id=?", [new Date(), req.body.camper_id, week_meta.get(req.body.week_name).id], (err) => {
+				if (err) res.render("error", {
+					title: `Help! – Summer Camp ${getDate()}`,
+					error: "Hmm... Looks like confirming a camper enrollment didn't work, try reloading?"
+>>>>>>> 27e90709c1ce78317d1d55ec5441c0c0c5f9f03e
 				});
 			}
 		});

@@ -1,25 +1,26 @@
 <title>{{title}}</title>
 <link href="https://unpkg.com/tailwindcss@^2/dist/tailwind.min.css" rel="stylesheet">
+<link rel="shortcut icon" href="/images/spark.svg" type="image/x-icon">
 
-{{!-- <style>
+<link rel="preconnect" href="https://fonts.gstatic.com">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,400;0,500;0,600;0,800;1,400;1,500;1,600;1,800&display=swap" rel="stylesheet">
+
+<style>
     * {
-        font-family: "Courier", sans-serif;
+        font-family: "Montserrat", serif;
     }
 
-    table {
-        border: 1px solid black;
+    h1 {
+        font-weight: 700 !important;
     }
-
-    tr, th, td {
-        border: 1px solid #DADCE0;
-    }
-
-    th, td {
-        padding: 12px;
-    }
-</style> --}}
+</style>
 
 <body class="bg-gray-200 container mx-auto py-20">
+    <header class="mb-20">
+        <h1 class="text-4xl md:text-6xl">Admin for <span class="px-2 bg-yellow-200 leading-tight md:px-6">Summer Spark {{year}}</span>.</h1>
+        <p class="mt-4 text-xl leading-normal text-gray-500 md:text-3xl md:leading-relaxed">Admin experience is a little clunky but it's the best we can do in the limited amount of time.</p>
+    </header>
+
     <div id="admin">
         <div class="bg-white rounded-lg shadow-md px-8 py-4">
             <form id="select-applicants">
@@ -42,6 +43,7 @@
             <table class="table-fixed min-w-full divide-gray-200 divide-y">
                 <thead>
                     <tr class="divide-x divide-gray-200">
+                        <th class="py-2 divide-x divide-gray-200">Status</th>
                         <th class="py-2 divide-x divide-gray-200">Camper ID</th>
                         <th class="py-2 divide-x divide-gray-200">First Name</th>
                         <th class="py-2 divide-x divide-gray-200">Last Name</th>
@@ -57,14 +59,14 @@
         </div>
 
         <div class="mt-10 bg-white rounded-lg shadow-md px-8 py-4">
-            <form id="select-weeks">
+            <form id="select-all-weeks">
                 <input type="hidden" name="code" class="password">
 
                 <div class="grid grid-cols-2 items-center">
                     <label><span class="text-red-500 inline-block">*</span> Get all weeks</label>
 
                     <div class="block">
-                        <input type="submit" value="Query" class="inline-block px-4 py-2 rounded-full bg-green-300 cursor-pointer font-semibold outline-none">
+                        <input type="submit" id="get-all-weeks" value="Query" class="inline-block px-4 py-2 rounded-full bg-green-300 cursor-pointer font-semibold outline-none">
                         <p class="inline-block text-gray-500 text-sm italic ml-2">or</p>
                         <button id="new-week" class="ml-2 inline-block px-4 py-2 rounded-full bg-blue-300 cursor-pointer font-semibold outline-none">New Week</button>
                     </div>
@@ -81,6 +83,25 @@
                 </tr>
                 <tbody id="week-data" class="divide-y divide-gray-200"></tbody>
             </table>
+        </div>
+
+        <div class="mt-10 bg-white rounded-lg shadow-md px-8 py-4" id="export">
+            <form id="export-by-week">
+                <input type="hidden" name="code" class="password" />
+
+                <label><span class="text-red-500 inline-block">*</span> Select by week for export as CSV</label>
+                <select name="week_names" id="export_week_name" required class="block ml-4 text-gray-500"></select>
+                <input type="submit" value="Query" class="inline-block px-4 py-2 rounded-full bg-green-300 cursor-pointer font-semibold outline-none">
+            </form>
+
+            <br>
+
+            <form id="export-all">
+                <input type="hidden" name="code" class="password" />
+
+                <label><span class="text-red-500 inline-block">*</span> Download everything</label>
+                <input type="submit" value="Query" class="inline-block px-4 py-2 rounded-full bg-green-300 cursor-pointer font-semibold outline-none">
+            </form>
         </div>
 
         <div class="mt-10 bg-white rounded-lg shadow-md px-8 py-4">
@@ -162,7 +183,8 @@
 
     <script src="https://code.jquery.com/jquery-3.5.1.min.js" integrity="sha256-9/aliU8dGd2tb6OSsuzixeV4y/faTqgFtohetphbbj0=" crossorigin="anonymous"></script>
     <script>
-        let password = "7e135d92-10d3-4a20-8e1d-4028d0587f99"; //prompt("Enter admin password");
+        const reload = () => location.reload();
+        let password = prompt("Enter admin password");
 
         if(password == null || password == undefined || password == "") {
             document.getElementById("admin").style.display = "none";
@@ -186,8 +208,36 @@
                     camper_id
                 })
             })
-                .then(() => alert("=== ACCEPTED CAMPER ==="))
-                .catch(err => console.error(err));
+                .then(() => {
+                    alert("Successfully accepted camper.");
+                    reload();
+                })
+                .catch(err => {
+                    alert("An error has occurred. Try checking the client-side logs first. If there's nothing, the server is broken.");
+                    console.error(err);
+                });
+        }
+
+        const confirm_camper = (week_name, camper_id) => {
+            fetch("/admin/confirm-camper", { 
+                method: "POST",
+                cache: "no-cache",
+                headers: { "Content-Type": "application/json" },
+                redirect: "manual",
+                body: JSON.stringify({
+                    code: password,
+                    week_name,
+                    camper_id
+                })
+            })
+                .then(() => {
+                    alert("Successfully confirmed camper.");
+                    reload();
+                })
+                .catch(err => {
+                    alert("An error has occurred. Try checking the client-side logs first. If there's nothing, the server is broken.");
+                    console.error(err);
+                });
         }
 
         const delete_camper = (week_name, camper_id) => {
@@ -202,8 +252,14 @@
                     camper_id
                 })
             })
-                .then(() => alert("=== DELETED CAMPER ==="))
-                .catch(err => console.error(err));
+                .then(() => {
+                    alert("Successfully deleted camper.");
+                    reload();
+                })
+                .catch(err => {
+                    alert("An error has occurred. Try checking the client-side logs first. If there's nothing, the server is broken.");
+                    console.error(err);
+                });
         }
 
         const delete_week = (id) => {
@@ -218,8 +274,14 @@
                     id
                 })
             })
-                .then(() => alert("=== WEEK DELETED ==="))
-                .catch(err => console.error(err));
+                .then(() => {
+                    alert("Successfully deleted week.");
+                    reload();
+                })
+                .catch(err => {
+                    alert("An error has occurred. Try checking the client-side logs first. If there's nothing, the server is broken.");
+                    console.error(err);
+                });
         }
 
         const delete_question = (question_id, week_name) => {
@@ -234,8 +296,14 @@
                     id: question_id
                 })
             })
-                .then(() => alert("=== QUESTION DELETED ==="))
-                .catch(err => console.error(err));
+                .then(() => {
+                    alert("Successfully deleted question.");
+                    reload();
+                })
+                .catch(err => {
+                    alert("An error has occurred. Try checking the client-side logs first. If there's nothing, the server is broken.");
+                    console.error(err);
+                });
         }
 
         const delete_response = (question_id, camper_id) => {
@@ -250,8 +318,14 @@
                     camper_id
                 })
             })
-                .then(() => alert("=== RESPONSE DELETED ==="))
-                .catch(err => console.error(err));
+                .then(() => {
+                    alert("Successfully deleted response.");
+                    reload();
+                })
+                .catch(err => {
+                    alert("An error has occurred. Try checking the client-side logs first. If there's nothing, the server is broken.");
+                    console.error(err);
+                });
         }
 
         const new_week = () => {
@@ -260,7 +334,7 @@
             if(week_name != "") {
                 let start_date = prompt("Start date? (YYYY-MM-DD)");
                 let end_date = prompt("End date? (YYYY-MM-DD)");
-                let cb_code = "charliedawitch"; //prompt("CB Code?");
+                let cb_code = prompt("CB Code?");
                 let inclass_available = prompt("In-class option available? y/n") == "y" ? 1 : 0;
                 let virtual_available = prompt("Virtual option available? y/n") == "y" ? 1 : 0;
 
@@ -279,8 +353,14 @@
                         virtual_available
                     })
                 })
-                    .then(() => alert("=== WEEK CREATED ==="))
-                    .catch(err => console.error(err));
+                    .then(() => {
+                        alert("Successfully created week.");
+                        reload();
+                    })
+                    .catch(err => {
+                        alert("An error has occurred. Try checking the client-side logs first. If there's nothing, the server is broken.");
+                        console.error(err);
+                    });
             }
         }
 
@@ -318,6 +398,14 @@
                     for(let camper of campers) {
                         let camper_row = $(`<tr class="text-center divide-x divide-gray-200"></tr>`);
 
+                        let confirmed;
+
+                        if(camper.confirmed == undefined || camper.confirmed == null || camper.confirmed == "") {
+                            confirmed = $(`<td class="text-gray-500 py-4 px-2">&empty;</td>`);
+                        } else {
+                            confirmed = $(`<td class="text-gray-500 py-4 px-2">${(camper.confirmed == 0) ? "&cross;" : "&check;"}</td>`);
+                        }
+
                         let id = $(`<td class="text-gray-500 py-4 px-2">${camper.camper_id}</td>`);
                         let first_name = $(`<td class="text-gray-500 py-4 px-2">${camper.first_name}</td>`);
                         let last_name = $(`<td class="text-gray-500 py-4 px-2">${camper.last_name}</td>`);
@@ -327,10 +415,12 @@
                         let participated = $(`<td class="text-gray-500 py-4 px-2">${(camper.participated) == "Participated before" ? "Yes" : "No"}</td>`);
                         let accept_decline = `<td class="py-6 text-center mx-auto">
                             <button class="outline-none text-green-400 cursor-pointer hover:text-green-600 transition duration-200" onclick="accept_camper('${camper.week}', ${camper.camper_id})">Accept Camper</button><br/>
+                            <button class="outline-none mt-2 text-blue-400 cursor-pointer hover:text-blue-600 transition duration-200" onclick="confirm_camper('${camper.week}', ${camper.camper_id})">Confirm Camper</button><br/>
                             <button class="outline-none mt-2 text-red-400 cursor-pointer hover:text-red-600 transition duration-200" onclick="delete_camper('${camper.week}', ${camper.camper_id})">Delete Camper</button>
                             </td>`;
 
                         camper_row.append([
+                            confirmed,
                             id,
                             first_name,
                             last_name,
@@ -344,16 +434,23 @@
                         $("#applicant-data").append(camper_row);
                     }
                 })
-                .catch(err => console.error(err));
+                .catch(err => {
+                    alert("An error has occurred. Try checking the client-side logs first. If there's nothing, the server is broken.");
+                    console.error(err);
+                });
         });
 
-        $("#select-weeks").on("submit", event => {
+        $("#select-all-weeks").on("submit", event => {
             event.preventDefault();
             $("#week-data").empty();
 
             fetch("/admin/get-weeks")
                 .then(response => response.json())
                 .then(weeks => {
+                    $("select#week_title").empty();
+                    $("select#week_names").empty();
+                    $("select#export_week_name").empty();
+
                     for(let week of weeks) {
                         let week_row = $(`<tr class="text-center divide-x divide-gray-200"></tr>`);
 
@@ -362,6 +459,7 @@
 
                         $("select#week_title").append(`<option name="${week.name}">${week.name}</option>`);
                         $("select#week_names").append(`<option name="${week.name}">${week.name}</option>`);
+                        $("select#export_week_name").append(`<option name="${week.name}">${week.name}</option>`);
 
                         let virtual = $(`<td class="text-gray-500 py-4 px-2">${week.virtual_available ? "Yes" : "No"}</td>`);
                         let in_person = $(`<td class="text-gray-500 py-4 px-2">${week.inclass_available ? "Yes" : "No"}</td>`);
@@ -380,7 +478,10 @@
                         $("#week-data").append(week_row);
                     }
                 })
-                .catch(err => console.error(err));
+                .catch(err => {
+                    alert("An error has occurred. Try checking the client-side logs first. If there's nothing, the server is broken.");
+                    console.error(err);
+                });
         });
 
         $("#select-questions").on("submit", event => {
@@ -421,7 +522,10 @@
                         $("#question-data").append(question_row);
                     }
                 })
-                .catch(err => console.error(err));
+                .catch(err => {
+                    alert("An error has occurred. Try checking the client-side logs first. If there's nothing, the server is broken.");
+                    console.error(err);
+                });
         });
 
         $("#new-question").on("submit", event => {
@@ -441,8 +545,14 @@
                     question
                 })
             })
-                    .then(() => alert("=== NEW QUESTION CREATED ==="))
-                    .catch(err => console.error(err));
+                .then(() => {
+                    alert("Successfully created question.");
+                    reload();
+                })
+                .catch(err => {
+                    alert("An error has occurred. Try checking the client-side logs first. If there's nothing, the server is broken.");
+                    console.error(err);
+                });
         });
 
         $("#send-mail").on("submit", event => {
@@ -470,8 +580,55 @@
                     message
                 })
             })
-                .then(() => alert("=== SENT EMAIL ==="))
-                .catch(err => console.error(err));
+                .then(() => {
+                    alert("Successfully sent emails.");
+                    reload();
+                })
+                .catch(err => {
+                    alert("An error has occurred. Try checking the client-side logs first. If there's nothing, the server is broken.");
+                    console.error(err);
+                });
+        });
+
+        $("#export-by-week").on("submit", event => {
+            event.preventDefault();
+
+            let week_name = $("#export_week_name").val();
+
+            fetch("/admin/export/week", {
+                method: "POST",
+                cache: "no-cache",
+                headers: { "Content-Type": "application/json" },
+                redirect: "manual",
+                body: JSON.stringify({
+                    code: password,
+                    week_name
+                })
+            })
+                .then(response => response.text())
+                .then(data => {
+                    alert("Successfully exported week to CSV. Dismiss to download.");
+                    window.location.href = `data:text/csv;charset=utf-8,${encodeURI(data)}`;;
+                })
+                .catch(err => {
+                    alert("An error has occurred. Try checking the client-side logs first. If there's nothing, the server is broken.");
+                    console.error(err);
+                });
+        });
+
+        $("#export-all").on("submit", event => {
+            event.preventDefault();
+
+            fetch(`/admin/export/all/${password}`)
+                .then(response => response.text())
+                .then(data => {
+                    alert("Successfully exported campers to CSV. Dismiss to download.");
+                    window.location.href = `data:text/csv;charset=utf-8,${encodeURI(data)}`;;
+                })
+                .catch(err => {
+                    alert("An error has occurred. Try checking the client-side logs first. If there's nothing, the server is broken.");
+                    console.error(err);
+                });
         });
     </script>
 </body>

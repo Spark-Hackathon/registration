@@ -5,7 +5,7 @@ const spans = "text-red-500 inline-block";
 const submitStyle = "block text-center py-4 w-full bg-yellow font-semibold hover:bg-yellow-dark transition duration-200 md:text-xl cursor-pointer";
 const form = "md:w-100 md:mx-auto";
 
-let updates = new Smartform("/", "POST");
+let updates = new Smartform("/signup-prospect", "POST");
 
 let name = new Field("input:text", "name")
     .require()
