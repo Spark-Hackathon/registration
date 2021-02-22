@@ -439,6 +439,36 @@ async function prospectSignup(user_data) {
 	});
 }
 
+const unsubscribe_schema = Joi.object({
+	email: Joi.string().email().required()
+});
+
+router.post("/unsubscribe", (req, res) => {
+	try {
+		if (unsubscribe_schema.validate(req.body) {
+			connection.query("SELECT * FROM prospect WHERE email=?", req.body.email, (err, prospect_info) => {
+				if (err) throw err;
+				if (prospect_info.length) {
+					connection.query("UPDATE propsect SET subscribed=0 WHERE email=?", req.body.email, (err) => {
+						if (err) throw err;
+						res.end();
+					});
+				} else {
+					res.render("error", {
+						error: "Uh oh... That email didn't exist",
+						show_apply: true
+					});
+				}
+			});
+		} else {
+			throw unsubscribe_schema.validate(req.body).error;
+		}
+	} catch (error) {
+		error.message = "Unsubscribing failed, maybe try reloading?";
+		next(error);
+	}
+});
+
 router.get("/admin/get-weeks", (req, res) => {
 	let weeks = [];
 	let count = 0;
