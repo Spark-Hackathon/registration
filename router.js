@@ -276,11 +276,14 @@ router.post("/camper-register-queueing", async (req, res) => {
 							let weeks = [],
 								count = 0;
 							week_meta.forEach((week, index) => {
-								for (pieces in item) {
-									if (parseInt(pieces, 10) == week.id && item[pieces.toString()] != 0) {
+								for (pieces in item.weeks_coming) {
+									let inner_week = pieces.split("-");
+									inner_week[0] = parseInt(inner_week[0], 10);
+									inner_week[1] = parseInt(inner_week[1], 10);
+									if (inner_week[0] == week.id && inner_weeek[1] > 0) { 
 										weeks[count] = [];
-										weeks[count][0] = pieces;
-										weeks[count][1] = item[pieces];
+										weeks[count][0] = inner_week[0];
+										weeks[count][1] = inner_week[1];
 										count++;
 									}
 								}
