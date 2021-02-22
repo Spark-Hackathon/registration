@@ -150,10 +150,10 @@ class Field {
 
             if(typeof value === "string") {
                 option.prop("value", value);
-                option.text(value);
+                option.html(`${value} ▾`);
             } else {
                 option.prop("value", value[0]);
-                option.text(value[1]);
+                option.html(`${value[1]} ▾`);
             }
 
             this.field.append(option);
