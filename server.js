@@ -64,9 +64,16 @@ app.get("/updates/thank-you", (req, res) => {
 });
 
 app.get("/admin", (req, res) => {
-    res.render("admin.hbs", {
+    res.render("admin", {
         "title": `Admin – Spark Camp ${getDate()}`,
         "layout": false,
+        "year": getDate()
+    });
+});
+
+app.get("/unsubscribe", (req, res) => {
+    res.render("unsubscribe", {
+        "title": `Unsubscribe – Spark Camp ${getDate()}`,
         "year": getDate()
     });
 });

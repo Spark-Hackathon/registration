@@ -452,7 +452,7 @@ router.post("/unsubscribe", (req, res) => {
 			connection.query("SELECT * FROM prospect WHERE email=?", req.body.email, (err, prospect_info) => {
 				if (err) throw err;
 				if (prospect_info.length) {
-					connection.query("UPDATE propsect SET subscribed=0 WHERE email=?", req.body.email, (err) => {
+					connection.query("UPDATE prospect SET subscribed=0 WHERE email=?", req.body.email, (err) => {
 						if (err) throw err;
 						res.end();
 					});
