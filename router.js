@@ -1,5 +1,6 @@
 const bodyParser = require("body-parser");
 const nodemail = require("nodemailer");
+const airtable = require("airtable");
 const sendmail = require("sendmail");
 const express = require("express");
 const mysql = require("mysql2");
@@ -38,7 +39,7 @@ connection.connect((err) => {
 });
 
 let week_meta;
-connection.query("SELECT id, title, start_date, end_date, inClass_available, virtual_available FROM week", (err, row) => {
+connection.query("SELECT id, title, start_date, end_date, inClass_available, virtual_available, unique_airtable_id FROM week", (err, row) => {
 	if (err) console.log(err);
 	let pre_week = new Map();
 	for (row_number in row) {
@@ -47,7 +48,8 @@ connection.query("SELECT id, title, start_date, end_date, inClass_available, vir
 			inclass_available: row[row_number].inClass_available,
 			virtual_available: row[row_number].virtual_available,
 			start_date: row[row_number].start_date,
-			end_date: row[row_number].end_date
+			end_date: row[row_number].end_date,
+			unique_airtable_id: row[row_number].unique_airtable_id
 		});
 	}
 	week_meta = pre_week;
@@ -57,6 +59,127 @@ router.use(bodyParser.urlencoded({
 	extended: false
 }));
 router.use(bodyParser.json());
+
+airtable.configure({
+	endpointUrl: 'https://api.airtable.com',
+	apiKey: 'keyzS7iqImZMJtnd0'
+})
+const base = airtable.base('appdB4qX865H9wetS');
+
+async function pull_weeks_airtable() {
+	week_meta.forEach(async (week, index) => {
+		let fields = {};
+		fields.Name = index;
+		fields.ID = week.id;
+		fields.start_date = week.start_date;
+		fields.end_date = week.end_date;
+		fields.inClass_available = week.inclass_available;
+		fields.virtual_available = week.virtual_available;
+		console.log(JSON.stringify(fields));
+		if (week.unique_airtable_id) {
+			await base('Weeks').destroy(week.unique_airtable_id, function(err, deletedRecords) {
+				if (err) {
+					console.error(err);
+					return;
+				}
+				console.log('Deleted', deletedRecords.length, 'records');
+			});
+		}
+		await base('Weeks').create([{
+			"fields": fields
+		}], (err, records) => {
+			if (err) {
+				console.error(err);
+				return;
+			}
+			records.forEach((record) => {
+				connection.query("UPDATE week SET unique_airtable_id=? WHERE id=?", [record.getId(), week.id], (err) => {
+					if (err) {
+						console.error(err);
+						base('Weeks').destroy([week.unique_airtable_id], function(err, deletedRecords) {
+							if (err) {
+								console.error(err);
+								return;
+							}
+							console.log('Deleted', deletedRecords.length, 'records');
+						});
+					}
+					week.unique_airtable_id = record.getId();
+				});
+			});
+		});
+	});
+}
+
+async function pull_campers_airtable() {
+	connection.query("SELECT * FROM camper", (err, campers) => {
+		if (err) {
+			console.error(err);
+		}
+		campers.forEach(async (camper, index) => {
+			let fields = {};
+			fields.ID = camper.id;
+			fields.first_name = camper.first_name;
+			fields.last_name = camper.last_name;
+			fields.email = camper.email;
+			fields.dob = camper.dob;
+			fields.school = camper.school;
+			fields.grade = camper.grade;
+			fields.gender = camper.gender;
+			fields.type = camper.type;
+			fields.race_ethnicity = camper.race_ethnicity;
+			fields.hopes_dreams = camper.hopes_dreams;
+			fields.tshirt_size = camper.tshirt_size;
+			fields.borrow_laptop = camper.borrow_laptop;
+			fields.guardian_name = camper.guardian_name;
+			fields.guardian_email = camper.guardian_email;
+			fields.guardian_phone = camper.guardian_phone;
+			fields.participated = camper.participated;
+			console.log("INSERTION");
+			console.log(JSON.stringify(fields));
+			if (camper.unique_airtable_id) {
+				await base('Applicants').destroy(camper.unique_airtable_id, function(err, deletedRecords) {
+					if (err) {
+						console.error(err);
+						return;
+					}
+					console.log('Deleted', deletedRecords.length, 'records');
+				});
+			}
+			await base('Applicants').create([{
+				"fields": fields
+			}], (err, records) => {
+				if (err) {
+					console.error(err);
+					return;
+				}
+				records.forEach((record) => {
+					connection.query("UPDATE camper SET unique_airtable_id=? WHERE id=?", [record.getId(), camper.id], (err) => {
+						if (err) {
+							console.error(err);
+							base('Weeks').destroy([camper.unique_airtable_id], function(err, deletedRecords) {
+								if (err) {
+									console.error(err);
+									return;
+								}
+								console.log('Deleted', deletedRecords.length, 'records');
+							});
+						}
+					});
+				});
+			});
+		});
+	});
+}
+
+router.get("/pull-weeks-airtable", (req, res) => {
+	pull_weeks_airtable();
+});
+
+router.get("/pull-campers-airtable", (req, res) => {
+	pull_campers_airtable();
+});
+
 
 const basic_schema = Joi.object({
 	first_name: Joi.string().min(1).max(255).required(),
@@ -184,53 +307,26 @@ router.post("/camper-register-queueing", async (req, res) => {
 									path: 'user/sbin/sendmail'
 								});
 								for (let weeks_db = 0; weeks_db < weeks.length; weeks_db++) {
-									try {
-										let any_questions = await enrollmentInsert(weeks[weeks_db]);
-										//each week sends back questions for the specific person - need to build up an array
-										for (let question = 0; question < any_questions.length; question++) {
-											questions[question_position] = {
-												question_text: any_questions[question].question_text,
-												id: any_questions[question].id
-											}
-											question_position++;
+									let any_questions = await enrollmentInsert(weeks[weeks_db]);
+									//each week sends back questions for the specific person - need to build up an array
+									for (let question = 0; question < any_questions.length; question++) {
+										questions[question_position] = {
+											question_text: any_questions[question].question_text,
+											id: any_questions[question].id
 										}
-										if (weeks_db == weeks.length - 1) {
-											if (item.refer_name && item.refer_email) {
-												let user_data = {}
-												user_data.refer_id = camper_id[0].id;
-												user_data.name = item.refer_name;;
-												user_data.email = item.refer_email;
-												if (referral_schema.validate(user_data)) {
-													try {
-														await prospectSignup(user_data);
-														tranporter.sendMail({
-															from: "spark" + getDate() + "@cs.stab.org",
-															to: item.email,
-															subject: "You've signed up!",
-															text: "Hey " + item.first_name + " " + item.last_name + ", we've received your signup, we'll go and check out the application in just a bit!"
-														}, (err, info) => {
-															err.send_mail_info = info;
-															throw err;
-														});
-														connection.query("DELETE FROM prospect WHERE email=?", item.email, (err) => {
-															if (err) throw err;
-															res.render("question.hbs", {
-																title: `Application Questions – Summer Spark ${getDate()}`,
-																year: getDate(),
-																camper_id: camper_id[0].id,
-																questions: questions
-															});
-														});
-													} catch (error) {
-														throw (error);
-													}
-												} else {
-													throw camper_schema.validate(req.body).error;
-												}
-											} else {
-												//send finish email, done
-												transport.sendMail({
-													from: 'spark' + getDate() + '@cs.stab.org',
+										question_position++;
+									}
+									if (weeks_db == weeks.length - 1) {
+										if (item.refer_name && item.refer_email) {
+											let user_data = {}
+											user_data.refer_id = camper_id[0].id;
+											user_data.name = item.refer_name;;
+											user_data.email = item.refer_email;
+											if (referral_schema.validate(user_data)) {
+												await prospectSignup(user_data);
+												pull_campers_airtable();
+												tranporter.sendMail({
+													from: "spark" + getDate() + "@cs.stab.org",
 													to: item.email,
 													subject: "You've signed up!",
 													text: "Hey " + item.first_name + " " + item.last_name + ", we've received your signup, we'll go and check out the application in just a bit!"
@@ -238,16 +334,37 @@ router.post("/camper-register-queueing", async (req, res) => {
 													err.send_mail_info = info;
 													throw err;
 												});
-												res.render("question.hbs", {
-													title: `Application Questions – Summer Spark ${getDate()}`,
-													year: getDate(),
-													camper_id: camper_id[0].id,
-													questions: questions
+												connection.query("DELETE FROM prospect WHERE email=?", item.email, (err) => {
+													if (err) throw err;
+													res.render("question.hbs", {
+														title: `Application Questions – Summer Spark ${getDate()}`,
+														year: getDate(),
+														camper_id: camper_id[0].id,
+														questions: questions
+													});
 												});
+											} else {
+												throw camper_schema.validate(req.body).error;
 											}
+										} else {
+											//send finish email, done
+											pull_campers_airtable();
+											transporter.sendMail({
+												from: 'spark' + getDate() + '@cs.stab.org',
+												to: item.email,
+												subject: "You've signed up!",
+												text: "Hey " + item.first_name + " " + item.last_name + ", we've received your signup, we'll go and check out the application in just a bit!"
+											}, (err, info) => {
+												err.send_mail_info = info;
+												throw err;
+											});
+											res.render("question.hbs", {
+												title: `Application Questions – Summer Spark ${getDate()}`,
+												year: getDate(),
+												camper_id: camper_id[0].id,
+												questions: questions
+											});
 										}
-									} catch (error) {
-										throw error;
 									}
 								}
 							}
@@ -421,6 +538,7 @@ router.post("/admin/add-week", (req, res) => {
 								start_date: req.body.start_date,
 								end_date: req.body.end_date
 							});
+							pull_campers_airtable();
 							res.end();
 						});
 					});
@@ -800,7 +918,7 @@ router.post("/admin/confirm-camper", (req, res) => {
 router.post("/admin/delete-enrollment", (req, res) => {
 	try {
 		connection.query("SELECT value_str FROM system_settings WHERE name='admin_code'", (err, code) => {
-			if (err) throw;
+			if (err) throw err;
 			if (req.body.code == code[0].value_str) {
 				//check for if their an applicant or a regisered camper
 				req.body.week_id = week_meta.get(req.body.week_name).id;
