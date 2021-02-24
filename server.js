@@ -1,5 +1,5 @@
 // import required dependencies
-require('dotenv').config();
+require('dotenv').config({path: __dirname + "/.env"});
 const express = require("express");
 const app = express();
 
@@ -64,11 +64,26 @@ app.get("/updates/thank-you", (req, res) => {
 });
 
 app.get("/admin", (req, res) => {
-    res.render("admin.hbs", {
+    res.render("admin", {
         "title": `Admin – Spark Camp ${getDate()}`,
         "layout": false,
         "year": getDate()
     });
+});
+
+app.get("/unsubscribe", (req, res) => {
+    res.render("unsubscribe", {
+        "title": `Unsubscribe – Spark Camp ${getDate()}`,
+        "year": getDate()
+    });
+});
+
+app.use((error, req, res, next) => {
+	console.error(error);
+	res.render("error", {
+		title: `Help! – Summer Camp ${getDate()}`,
+		error: error.message
+	})
 });
 
 // start application
