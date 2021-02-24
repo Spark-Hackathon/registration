@@ -31983,7 +31983,7 @@ select:not(#weeks_coming) {
         10px 10px,
         3px 1.9em;
   background-repeat: no-repeat;
-  margin: 0;
+  /* margin: 0; */
   box-sizing: border-box;
   -webkit-appearance: none;
   -moz-appearance: none;
