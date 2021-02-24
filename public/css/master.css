@@ -31971,10 +31971,24 @@ h1 {
   font-weight: 700 !important;
 }
 
-#multiple_select {
-  -webkit-appearance: auto;
-     -moz-appearance: auto;
-          appearance: auto;
+select {
+  background-image:
+        linear-gradient(45deg, transparent 50%, black 50%),
+        linear-gradient(135deg, black 50%, transparent 50%),
+        linear-gradient(to right, black, black);
+  background-position:
+        calc(100% - 1.75em) calc(1em + 6px),
+        calc(100% - 1.25em) calc(1em + 6px),
+        calc(100% - -0.5em) 0.5em;
+  background-size:
+        10px 10px,
+        10px 10px,
+        3px 1.9em;
+  background-repeat: no-repeat;
+  margin: 0;
+  box-sizing: border-box;
+  -webkit-appearance: none;
+  -moz-appearance: none;
 }
 
 @media (min-width: 640px) {
