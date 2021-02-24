@@ -276,21 +276,25 @@ router.post("/camper-register-queueing", async (req, res) => {
 							let weeks = [],
 								count = 0;
 							week_meta.forEach((week, index) => {
-								for (pieces in item) {
-									if (parseInt(pieces, 10) == week.id && item[pieces.toString()] != 0) {
+								item.weeks_coming.forEach((enroll_week, enroll_index) => {
+									let inner_week = enroll_week.split("-");
+									inner_week[0] = parseInt(inner_week[0], 10);
+									inner_week[1] = parseInt(inner_week[1], 10);
+									if (inner_week[0] == week.id && inner_week[1] > 0) {
 										weeks[count] = [];
-										weeks[count][0] = pieces;
-										weeks[count][1] = item[pieces];
+										weeks[count][0] = inner_week[0];
+										weeks[count][1] = inner_week[1];
 										count++;
 									}
-								}
+								});
 							});
+							console.log(weeks);
 							async function enrollmentInsert(week) {
 								return new Promise((resolve, reject) => {
 									connection.query("INSERT INTO enrollment (camper_id, week_id, signup_time, enrollment_code, person_loc, approved, confirmed) VALUES " +
 										"(?, ?, ?, ?, ?, ?, ?)", [camper_id[0].id, week[0], new Date(), uuidv4(), week[1] - 1, 0, 0], (err) => {
 											if (err) reject(err);
-											connection.query("SELECT id, question_text FROM question_meta WHERE week_id=?", week[0][0], (err, questions) => {
+											connection.query("SELECT id, question_text FROM question_meta WHERE week_id=?", week[0], (err, questions) => {
 												if (err) reject(err);
 												if (questions.length) resolve(questions);
 												resolve([]);
@@ -445,11 +449,11 @@ const unsubscribe_schema = Joi.object({
 
 router.post("/unsubscribe", (req, res) => {
 	try {
-		if (unsubscribe_schema.validate(req.body) {
+		if (unsubscribe_schema.validate(req.body)) {
 			connection.query("SELECT * FROM prospect WHERE email=?", req.body.email, (err, prospect_info) => {
 				if (err) throw err;
 				if (prospect_info.length) {
-					connection.query("UPDATE propsect SET subscribed=0 WHERE email=?", req.body.email, (err) => {
+					connection.query("UPDATE prospect SET subscribed=0 WHERE email=?", req.body.email, (err) => {
 						if (err) throw err;
 						res.end();
 					});

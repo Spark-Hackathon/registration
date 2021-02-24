@@ -117,6 +117,11 @@ class Field {
         return this;
     }
 
+    size = (n) => {
+        this.field.attr("size", `${n}`);
+        return this;
+    }
+
     placeholder = (text) => {
         this.field.attr("placeholder", text);
         return this;
