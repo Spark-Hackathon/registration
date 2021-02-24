@@ -124,11 +124,11 @@ let laptop = new Field("select", "borrow_laptop")
 let parentName = new Field("input:text", "guardian_name")
     .require()
     .setLabel("Parent/Guardian Full Name")
-    .placeholder("Jane Smith");
+    .placeholder("ex. Jane Smith");
 let parentEmail = new Field("input:email", "guardian_email")
     .require()
     .setLabel("Parent/Guardian Email Address")
-    .placeholder("jane@smith.com");
+    .placeholder("ex. jane@smith.com");
 let parentNumber = new Field("input:tel", "guardian_number")
     .require()
     .setLabel("Parent/Guardian Phone Number")
@@ -170,21 +170,33 @@ application
 fetch("/open-weeks")
     .then(results => results.json())
     .then(weeks => {
+        let select = new Field("select", "weeks_coming")
+            .require()
+            .setLabel("Select the weeks you'll come to.")
+            .multiple()
+            .addNote("Note: you can select multiple")
+            .size((weeks.length*3) + weeks.length)
+            
         for(let week of weeks) {
             let { title, id, inclass_available: in_person, virtual_available: virtual } = week;
             weekIds.push(id);
+            
+            let group = $(`<optgroup label="${title} – Choose one"></optgroup>`);
 
-            application.addFields([
-                new Field("select", id)
-                    .require()
-                    .setLabel(`Will you attend the ${title} week?`)
-                    .addOptions([
-                        [0, "No, I will not attend."],
-                        [1, "Yes, I will attend virtually (via Zoom)"],
-                        [2, "Yes, I will attend in-person (at St. Anne's)"]
-                    ])
-            ]);
+            group.append(`<option value="${id}-0">I am not attending this week</option>`);
+
+            if(virtual) {
+                group.append(`<option value="${id}-1">I will come virtually</option>`);
+            }
+
+            if(in_person) {
+                group.append(`<option value="${id}-2">I will come in person</option>`);
+            }
+
+            select.field.append(group);
         }
+
+        application.addFields([ select ]);
     })
     .then(() => {
         application
@@ -209,5 +221,12 @@ fetch("/open-weeks")
                 submit
             ])
             .mountTo("#camper_application");
+    })
+    .then(() => {
+        $("#weeks_coming option").mousedown(e => {
+            e.preventDefault();
+            $(e.target).attr("selected", !$(e.target).attr("selected"));
+            return false;
+        });
     })
     .catch(err => console.error(err));

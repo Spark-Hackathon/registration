@@ -31971,6 +31971,12 @@ h1 {
   font-weight: 700 !important;
 }
 
+#multiple_select {
+  -webkit-appearance: auto;
+     -moz-appearance: auto;
+          appearance: auto;
+}
+
 @media (min-width: 640px) {
   .sm\:container {
     width: 100%;
