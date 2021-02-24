@@ -31,3 +31,12 @@ select:not(#weeks_coming) {
     -webkit-appearance: none;
     -moz-appearance: none;
 }
+
+optgroup {
+    font-weight: 400;
+    color: rgba(75, 85, 99);
+}
+
+optgroup option {
+    color: black;
+}

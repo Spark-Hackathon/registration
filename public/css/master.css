@@ -31983,10 +31983,18 @@ select:not(#weeks_coming) {
         10px 10px,
         3px 1.9em;
   background-repeat: no-repeat;
-  /* margin: 0; */
   box-sizing: border-box;
   -webkit-appearance: none;
   -moz-appearance: none;
+}
+
+optgroup {
+  font-weight: 400;
+  color: rgba(75, 85, 99);
+}
+
+optgroup option {
+  color: black;
 }
 
 @media (min-width: 640px) {
