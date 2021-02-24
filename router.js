@@ -944,10 +944,11 @@ router.post("/admin/confirm-camper", (req, res) => {
 		connection.query("SELECT value_str FROM system_settings WHERE name='admin_code'", (err, code) => {
 			if (err) throw err;
 			if (req.body.code == code[0].value_str) {
-				connection.query("UPDATE enrollment SET confirmed=1, campbrain_completion=? WHERE camper_id=? AND week_id=?", [new Date(), req.body.camper_id, week_meta.get(req.body.week_name).id], (err) => {
+				connection.query("UPDATE enrollment SET confirmed=1, campbrain_completion=? WHERE approved=1 AND camper_id=? AND week_id=?", [new Date(), req.body.camper_id, week_meta.get(req.body.week_name).id], (err) => {
 					if (err) throw err;
 					res.end();
 				});
+				res.end();
 			}
 		});
 	} catch (error) {
