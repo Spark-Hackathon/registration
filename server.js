@@ -3,6 +3,8 @@ require('dotenv').config({path: __dirname + "/.env"});
 const express = require("express");
 const app = express();
 
+const fetch = require("node-fetch");
+
 const bodyParser = require("body-parser");
 const exphbs = require("express-handlebars");
 
@@ -22,18 +24,30 @@ app.set("views", `${__dirname}/views`);
 
 // application routes
 app.get("/", (req, res) => {
-    res.render("index", {
-        "title": `Spark Camp ${getDate()}`
-    });
+    fetch(`http://localhost:${process.env.PORT}/open-weeks`)
+        .then(response => response.json())
+        .then(weeks => {
+            res.render("index", {
+                "title": `Spark Camp ${getDate()}`,
+                weeks
+            });
+        })
+        .catch(err => console.error(err));
 });
 
 app.post("/", (req, res) => res.json(req.body));
 
 app.get("/apply/camper", (req, res) => {
-    res.render("apply", {
-        "title": `Camper Application for Spark Camp ${getDate()}`,
-        "year": getDate()
-    });
+    fetch(`http://localhost:${process.env.PORT}/open-weeks`)
+        .then(response => response.json())
+        .then(weeks => {
+            res.render("apply", {
+                "title": `Camper Application for Spark Camp ${getDate()}`,
+                "year": getDate(),
+                weeks
+            });
+        })
+        .catch(err => console.error(err));
 });
 
 app.get("/apply/updates", (req, res) => {

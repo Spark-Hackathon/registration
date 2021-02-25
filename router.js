@@ -39,7 +39,7 @@ connection.connect((err) => {
 });
 
 let week_meta;
-connection.query("SELECT id, title, start_date, end_date, inClass_available, virtual_available, unique_airtable_id FROM week", (err, row) => {
+connection.query("SELECT * FROM week", (err, row) => {
 	if (err) console.log(err);
 	let pre_week = new Map();
 	for (row_number in row) {
@@ -47,8 +47,10 @@ connection.query("SELECT id, title, start_date, end_date, inClass_available, vir
 			id: row[row_number].id,
 			inclass_available: row[row_number].inClass_available,
 			virtual_available: row[row_number].virtual_available,
+			cb_code: row[row_number].cd_code,
 			start_date: row[row_number].start_date,
 			end_date: row[row_number].end_date,
+			description: row[row_number].description,
 			unique_airtable_id: row[row_number].unique_airtable_id
 		});
 	}
@@ -223,14 +225,19 @@ const camper_schema = Joi.object({
 	participated: Joi.number().max(1).required(),
 });
 
+let months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+
 router.get("/open-weeks", (req, res) => {
 	let week_data = [];
 	for (let [key, value] of week_meta) {
 		let inner = {};
 		inner.id = value.id;
 		inner.title = key;
+		inner.start_date = months[parseInt(new Date(value.start_date).toLocaleDateString('en-US').split("/")[0], 10) - 1] + " " + new Date(value.start_date).toLocaleDateString('en-US').split("/")[1];
+		inner.end_date = months[parseInt(new Date(value.end_date).toLocaleDateString('en-US').split("/")[0], 10) - 1] + " " + new Date(value.end_date).toLocaleDateString('en-US').split("/")[1];
 		inner.inclass_available = value.inclass_available;
 		inner.virtual_available = value.inclass_available;
+		inner.description = value.description;
 		week_data.push(inner);
 	};
 	res.json(week_data);
