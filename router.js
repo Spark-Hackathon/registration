@@ -1038,66 +1038,62 @@ router.post("/admin/send-mail", async (req, res, next) => { //ADMIN
 					newline: 'unix',
 					path: 'user/sbin/sendmail'
 				});
-				if (req.body.code == code[0].value_str) {
-					if (req.body.weeks.length > 0) {
-						let week_value = "";
-						week_value = " WHERE enrollment.week_id=?";
-						if (req.body.weeks.length > 1) {
-							req.body.weeks.forEach((item, index) => {
-								req.body.weeks[index] = week_meta.get(item).id;
-								week_value += index < req.body.weeks.length - 1 ? " OR enrollment.week_id=?" : "";
-							});
-						}
-						week_value += req.body.applicants == 1 ? " AND approved=0" : "";
-						week_value += req.body.registered == 1 ? " OR approved=1" : "";
-						connection.query("SELECT DISTINCT camper_id, first_name, last_name, email FROM enrollment INNER JOIN camper ON enrollment.camper_id = camper.id" + week_value, req.body.weeks, async (err, enrolled_info) => {
-							if (err) reject(err);
-							//now run through each of the prospects / campers
-							console.log("RUNNING PROSPECT QUERY?", req.body.prospects);
-							if (req.body.prospects == 1) {
-								try {
-									let prospects = await new Promise((pros_resolve, prosp_reject) => {
-										connection.query("SELECT name, email FROM prospect WHERE subscribed=1", (err, prospects) => {
+				if (req.body.code != code[0].value_str) reject("Failed authentication");
+				if (req.body.weeks.length < 0) reject("Missing the weeks value?");
+				let week_value = "";
+				week_value = " WHERE enrollment.week_id=?";
+				if (req.body.weeks.length > 1) {
+					req.body.weeks.forEach((item, index) => {
+						req.body.weeks[index] = week_meta.get(item).id;
+						week_value += index < req.body.weeks.length - 1 ? " OR enrollment.week_id=?" : "";
+					});
+				}
+				week_value += req.body.applicants == 1 ? " AND approved=0" : "";
+				week_value += req.body.registered == 1 ? " OR approved=1" : "";
+				connection.query("SELECT DISTINCT camper_id, first_name, last_name, email FROM enrollment INNER JOIN camper ON enrollment.camper_id = camper.id" + week_value, req.body.weeks, async (err, enrolled_info) => {
+					if (err) reject(err);
+					//now run through each of the prospects / campers
+					console.log("RUNNING PROSPECT QUERY?", req.body.prospects);
+					if (req.body.prospects == 1) {
+						try {
+							connection.query("SELECT name, email FROM prospect WHERE subscribed=1", (err, prospects) => {
+								if (err) throw err;
+								let each_prosp_email = prospects.map((item, index) => {
+									return new Promise((pros_resolve, pros_reject) => {
+										let temp_text = req.body.message.replace("{{FIRST_NAME}}", item.name.split(" ")[0]);
+										let latter_name = item.name.split(" ")[0] == item.name.split(" ")[item.name.split(" ").length - 1] ? "" : " " + item.name.split(" ")[item.name.split(" ").length - 1];
+										temp_text = temp_text.replace(" {{LAST_NAME}}", latter_name);
+										transporter.sendMail({
+											from: "spark" + getDate + "@cs.stab.org",
+											to: item.email,
+											subject: req.body.subject,
+											text: temp_text
+										}, (err, info) => {
 											if (err) pros_reject(err);
-											let each_prosp_email = prospects.map((item, index) => {
-												let temp_text = req.body.message.replace("{{FIRST_NAME}}", item.name.split(" ")[0]);
-												let latter_name = item.name.split(" ")[0] == item.name.split(" ")[item.name.split(" ").length - 1] ? "" : " " + item.name.split(" ")[item.name.split(" ").length - 1];
-												temp_text = temp_text.replace(" {{LAST_NAME}}", latter_name);
-												transporter.sendMail({
-													from: "spark" + getDate + "@cs.stab.org",
-													to: item.email,
-													subject: req.body.subject,
-													text: temp_text
-												}, (err, info) => {
-													if (err) pros_reject(err);
-													pros_resolve(info);
-												});
-											});
+											pros_resolve(info);
 										});
 									});
-									Promise.all(prospects);
-								} catch (error) {
-									reject(error);
-								}
-							}
-						});
-					} else {
-						reject("Missing the weeks value");
+								});
+								Promise.all(each_prosp_email);
+							});
+						} catch (error) {
+							reject(error);
+						}
 					}
+				});
 
-					function send_mail(first_name, last_name, email) {
-						let temp_text = req.body.message.replace("{{FIRST_NAME}}", first_name);
-						temp_text = temp_text.replace(" {{LAST_NAME}}", last_name);
-						transporter.sendMail({
-							from: "spark" + getDate + "@cs.stab.org",
-							to: email,
-							subject: req.body.subject,
-							text: temp_text
-						}, (err, info) => {
-							err.send_mail_info = info;
-							throw err;
-						});
-					}
+				function send_mail(first_name, last_name, email) {
+					let temp_text = req.body.message.replace("{{FIRST_NAME}}", first_name);
+					temp_text = temp_text.replace(" {{LAST_NAME}}", last_name);
+					transporter.sendMail({
+						from: "spark" + getDate + "@cs.stab.org",
+						to: email,
+						subject: req.body.subject,
+						text: temp_text
+					}, (err, info) => {
+						err.send_mail_info = info;
+						throw err;
+					});
 				}
 			});
 		});
