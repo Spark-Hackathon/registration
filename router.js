@@ -276,17 +276,12 @@ router.post("/camper-register-queueing", async (req, res, next) => {
 							let weeks = [],
 								count = 0;
 							week_meta.forEach((week, index) => {
-								item.weeks_coming.forEach((enroll_week, enroll_index) => {
-									let inner_week = enroll_week.split("-");
-									inner_week[0] = parseInt(inner_week[0], 10);
-									inner_week[1] = parseInt(inner_week[1], 10);
-									if (inner_week[0] == week.id && inner_week[1] > 0) {
-										weeks[count] = [];
-										weeks[count][0] = inner_week[0];
-										weeks[count][1] = inner_week[1];
-										count++;
-									}
-								});
+								if (item[week.id + "-status"] > 0) {
+									weeks[count] = [];
+									weeks[count][0] = week.id;
+									weeks[count][1] = item[week.id + "-status"];
+									count++;
+								}
 							});
 							async function enrollmentInsert(week) {
 								return new Promise((resolve, reject) => {
@@ -1027,6 +1022,37 @@ router.post("/admin/delete-camper", (req, res, next) => {
 	}
 });
 
+
+async function prospect_sendMail_query() {
+	return new Promise((resolve, reject) => {
+		connection.query("SELECT name, email FROM prospect WHERE subscribed=1", async (err, prospects) => {
+			if (err) throw err;
+			let each_prosp_email = prospects.map((item, index) => {
+				return new Promise((pros_resolve, pros_reject) => {
+					let temp_text = req.body.message.replace("{{FIRST_NAME}}", item.name.split(" ")[0]);
+					let latter_name = item.name.split(" ")[0] == item.name.split(" ")[item.name.split(" ").length - 1] ? "" : " " + item.name.split(" ")[item.name.split(" ").length - 1];
+					temp_text = temp_text.replace(" {{LAST_NAME}}", latter_name);
+					transporter.sendMail({
+						from: "spark" + getDate + "@cs.stab.org",
+						to: item.email,
+						subject: req.body.subject,
+						text: temp_text
+					}, (err, info) => {
+						if (err) pros_reject(err);
+						pros_resolve(info);
+					});
+				});
+			});
+			await Promise.all(each_prosp_email).catch((err) => {
+				console.error(err);
+				return;
+			}).then(() => {
+
+			});
+		});
+	});
+}
+
 router.post("/admin/send-mail", async (req, res, next) => { //ADMIN
 	try {
 		let async_send_mail = await new Promise((resolve, reject) => {
@@ -1054,32 +1080,7 @@ router.post("/admin/send-mail", async (req, res, next) => { //ADMIN
 					if (err) reject(err);
 					//now run through each of the prospects / campers
 					console.log("RUNNING PROSPECT QUERY?", req.body.prospects);
-					if (req.body.prospects == 1) {
-						try {
-							connection.query("SELECT name, email FROM prospect WHERE subscribed=1", (err, prospects) => {
-								if (err) throw err;
-								let each_prosp_email = prospects.map((item, index) => {
-									return new Promise((pros_resolve, pros_reject) => {
-										let temp_text = req.body.message.replace("{{FIRST_NAME}}", item.name.split(" ")[0]);
-										let latter_name = item.name.split(" ")[0] == item.name.split(" ")[item.name.split(" ").length - 1] ? "" : " " + item.name.split(" ")[item.name.split(" ").length - 1];
-										temp_text = temp_text.replace(" {{LAST_NAME}}", latter_name);
-										transporter.sendMail({
-											from: "spark" + getDate + "@cs.stab.org",
-											to: item.email,
-											subject: req.body.subject,
-											text: temp_text
-										}, (err, info) => {
-											if (err) pros_reject(err);
-											pros_resolve(info);
-										});
-									});
-								});
-								Promise.all(each_prosp_email);
-							});
-						} catch (error) {
-							reject(error);
-						}
-					}
+					if (req.body.prospects == 1) await prospect_sendMail_query();
 				});
 
 				function send_mail(first_name, last_name, email) {
