@@ -172,7 +172,7 @@ fetch("/open-weeks")
     .then(weeks => {
         let select = new Field("select", "weeks_coming")
             .require()
-            .setLabel("Select the weeks you'll come to.")
+            .setLabel("For which weeks are your registering?")
             .multiple()
             .addNote("Note: you can select multiple")
             .size((weeks.length*3) + weeks.length)
