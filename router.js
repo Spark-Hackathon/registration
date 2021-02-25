@@ -1023,19 +1023,19 @@ router.post("/admin/delete-camper", (req, res, next) => {
 });
 
 
-async function prospect_sendMail_query() {
+async function prospect_sendMail_query(transporter, subject, message) {
 	return new Promise((resolve, reject) => {
 		connection.query("SELECT name, email FROM prospect WHERE subscribed=1", async (err, prospects) => {
 			if (err) throw err;
 			let each_prosp_email = prospects.map((item, index) => {
 				return new Promise((pros_resolve, pros_reject) => {
-					let temp_text = req.body.message.replace("{{FIRST_NAME}}", item.name.split(" ")[0]);
+					let temp_text = message.replace("{{FIRST_NAME}}", item.name.split(" ")[0]);
 					let latter_name = item.name.split(" ")[0] == item.name.split(" ")[item.name.split(" ").length - 1] ? "" : " " + item.name.split(" ")[item.name.split(" ").length - 1];
 					temp_text = temp_text.replace(" {{LAST_NAME}}", latter_name);
 					transporter.sendMail({
 						from: "spark" + getDate + "@cs.stab.org",
 						to: item.email,
-						subject: req.body.subject,
+						subject: subject,
 						text: temp_text
 					}, (err, info) => {
 						if (err) pros_reject(err);
@@ -1047,7 +1047,7 @@ async function prospect_sendMail_query() {
 				console.error(err);
 				return;
 			}).then(() => {
-
+				resolve(each_prosp_email);
 			});
 		});
 	});
@@ -1079,23 +1079,32 @@ router.post("/admin/send-mail", async (req, res, next) => { //ADMIN
 				connection.query("SELECT DISTINCT camper_id, first_name, last_name, email FROM enrollment INNER JOIN camper ON enrollment.camper_id = camper.id" + week_value, req.body.weeks, async (err, enrolled_info) => {
 					if (err) reject(err);
 					//now run through each of the prospects / campers
-					console.log("RUNNING PROSPECT QUERY?", req.body.prospects);
-					if (req.body.prospects == 1) await prospect_sendMail_query();
+					let pros;
+					if (req.body.prospects == 1) pros = await prospect_sendMail_query(transporter, req.body.subject, req.body.message);
+					if (req.body.applicants == 1 || req.body.registered == 1) {
+						let emails = enrolled_info.map((item, index) => {
+							return new Promise((email_resolve, email_reject) => {
+								let temp_text = req.body.message.replace("{{FIRST_NAME}}", item.first_name);
+								temp_text = temp_text.replace(" {{LAST_NAME}}", " " + item.last_name);
+								transporter.sendMail({
+									from: "spark" + getDate + "@cs.stab.org",
+									to: item.email,
+									subject: req.body.subject,
+									text: temp_text
+								}, (err, info) => {
+									if (err) email_reject(err);
+									email_resolve(info);
+								});
+							});
+						});
+						await Promise.all(emails).catch((error) => {
+							console.error(error);
+						}).then(() => {
+							console.log(emails, pros);
+							res.end();
+						});
+					}
 				});
-
-				function send_mail(first_name, last_name, email) {
-					let temp_text = req.body.message.replace("{{FIRST_NAME}}", first_name);
-					temp_text = temp_text.replace(" {{LAST_NAME}}", last_name);
-					transporter.sendMail({
-						from: "spark" + getDate + "@cs.stab.org",
-						to: email,
-						subject: req.body.subject,
-						text: temp_text
-					}, (err, info) => {
-						err.send_mail_info = info;
-						throw err;
-					});
-				}
 			});
 		});
 	} catch (error) {
