@@ -246,7 +246,7 @@ const referral_schema = Joi.object({
 	}).required()
 });
 
-router.post("/camper-register-queueing", async (req, res) => {
+router.post("/camper-register-queueing", async (req, res, next) => {
 	try {
 		if (camper_schema.validate(req.body)) {
 			let item = req.body;
@@ -288,7 +288,6 @@ router.post("/camper-register-queueing", async (req, res) => {
 									}
 								});
 							});
-							console.log(weeks);
 							async function enrollmentInsert(week) {
 								return new Promise((resolve, reject) => {
 									connection.query("INSERT INTO enrollment (camper_id, week_id, signup_time, enrollment_code, person_loc, approved, confirmed) VALUES " +
@@ -385,7 +384,7 @@ router.post("/camper-register-queueing", async (req, res) => {
 	}
 });
 
-router.post("/camper-submit-questions", (req, res) => {
+router.post("/camper-submit-questions", (req, res, next) => {
 	try {
 		async function insertion(question_id, response) {
 			return new Promise((resolve, reject) => {
@@ -411,7 +410,7 @@ router.post("/camper-submit-questions", (req, res) => {
 	}
 });
 
-router.post("/signup-prospect", async (req, res) => {
+router.post("/signup-prospect", async (req, res, next) => {
 	try {
 		if (referral_schema.validate(req.body)) {
 			await prospectSignup(req.body);
@@ -447,7 +446,7 @@ const unsubscribe_schema = Joi.object({
 	email: Joi.string().email().required()
 });
 
-router.post("/unsubscribe", (req, res) => {
+router.post("/unsubscribe", (req, res, next) => {
 	try {
 		if (unsubscribe_schema.validate(req.body)) {
 			connection.query("SELECT * FROM prospect WHERE email=?", req.body.email, (err, prospect_info) => {
@@ -473,7 +472,7 @@ router.post("/unsubscribe", (req, res) => {
 	}
 });
 
-router.get("/admin/get-weeks", (req, res) => {
+router.get("/admin/get-weeks", (req, res, next) => {
 	let weeks = [];
 	let count = 0;
 	week_meta.forEach((week, index) => {
@@ -488,7 +487,7 @@ router.get("/admin/get-weeks", (req, res) => {
 	res.json(weeks);
 });
 
-router.post("/admin/delete-week", async (req, res) => {
+router.post("/admin/delete-week", async (req, res, next) => {
 	try {
 		connection.query("SELECT system_settings.value_str, week.title FROM system_settings system_settings CROSS JOIN week week WHERE system_settings.name='admin_code' AND week.id=?", req.body.id, async (err, code) => {
 			if (err) throw err;
@@ -555,7 +554,7 @@ const add_week_schema = Joi.object({
 	virtual_available: Joi.number().min(1).max(1).required()
 });
 
-router.post("/admin/add-week", (req, res) => {
+router.post("/admin/add-week", (req, res, next) => {
 	try {
 		if (add_week_schema.validate(req.body)) {
 			connection.query("SELECT value_str FROM system_settings WHERE name='admin_code'", async (err, code) => {
@@ -589,7 +588,7 @@ router.post("/admin/add-week", (req, res) => {
 	}
 });
 
-router.get("/admin/get-questions/:code", async (req, res) => {
+router.get("/admin/get-questions/:code", async (req, res, next) => {
 	try {
 		connection.query("SELECT value_str FROM system_settings WHERE name='admin_code'", (err, code) => {
 			if (err) throw err;
@@ -666,7 +665,7 @@ router.get("/admin/get-questions/:code", async (req, res) => {
 	}
 });
 
-router.post("/admin/add-question", (req, res) => {
+router.post("/admin/add-question", (req, res, next) => {
 	try {
 		connection.query("SELECT value_str FROM system_settings WHERE name='admin_code'", (err, code) => {
 			if (err) throw err;
@@ -684,7 +683,7 @@ router.post("/admin/add-question", (req, res) => {
 	}
 });
 
-router.post("/admin/delete-question", (req, res) => {
+router.post("/admin/delete-question", (req, res, next) => {
 	try {
 		connection.query("SELECT value_str FROM system_settings WHERE name='admin_code'", (err, code) => {
 			if (err) throw err;
@@ -702,7 +701,7 @@ router.post("/admin/delete-question", (req, res) => {
 	}
 });
 
-router.post("/admin/delete-response", (req, res) => {
+router.post("/admin/delete-response", (req, res, next) => {
 	try {
 		connection.query("SELECT value_str FROM system_settings WHERE name='admin_code'", (err, code) => {
 			if (err) throw err;
@@ -760,7 +759,7 @@ function partition(array, low, high) {
 	return [i - 1, array];
 }
 
-router.post("/admin/pull-current-campers", async (req, res) => { //ADMIN
+router.post("/admin/pull-current-campers", async (req, res, next) => { //ADMIN
 	try {
 		connection.query("SELECT value_str FROM system_settings WHERE name='admin_code'", async (err, code) => {
 			if (err) throw err;
@@ -849,7 +848,7 @@ function ConvertToCSV(objArray) {
 	return str;
 }
 
-router.post("/admin/export/week", (req, res) => {
+router.post("/admin/export/week", (req, res, next) => {
 	try {
 		connection.query("SELECT value_str FROM system_settings WHERE name='admin_code'", async (err, code) => {
 			if (err) throw err;
@@ -866,7 +865,7 @@ router.post("/admin/export/week", (req, res) => {
 	}
 });
 
-router.get("/admin/export/all/:code", (req, res) => {
+router.get("/admin/export/all/:code", (req, res, next) => {
 	try {
 		connection.query("SELECT value_str FROM system_settings WHERE name='admin_code'", async (err, code) => {
 			if (err) res.render("error", {
@@ -885,43 +884,61 @@ router.get("/admin/export/all/:code", (req, res) => {
 	}
 });
 
+async function apply_camper(id, week) {
+	return new Promise((resolve, reject) => {
+		let transporter = nodemail.createTransport({
+			sendmail: true,
+			newline: 'unix',
+			path: 'user/sbin/sendmail'
+		});
+		connection.query("SELECT first_name, last_name, email FROM camper WHERE id=?", id, (err, email_info) => {
+			if (err) reject(err);
+			if (email_info.length) {
+				let approved_date = new Date();
+				connection.query("UPDATE enrollment SET approved=1, approved_time=? WHERE camper_id=? AND week_id=?", [approved_date, id, week_meta.get(week).id], (err) => {
+					if (err) reject(err);
+					transporter.sendMail({
+						from: "spark" + getDate + "@cs.stab.org",
+						to: email_info[0].email,
+						subject: "You were accepted for " + week,
+						text: "Hey " + email_info.first_name + " " + email_info.last_name + ", "
+					}, (err, info) => {
+						err.send_mail_info = info;
+						reject(err);
+					});
+					resolve();
+				});
+			}
+		});
+	});
+}
+
 const application_schema = Joi.object({
 	code: Joi.string().length(36).required(),
 	camper_id: Joi.number().required(),
 	week_name: Joi.string().required()
 });
 
-router.post("/admin/accept-camper-application", (req, res) => { //ADMIN
+router.post("/admin/accept-camper-application", async (req, res, next) => { //ADMIN
 	try {
 		if (application_schema.validate(req.body)) {
-			connection.query("SELECT value_str FROM system_settings WHERE name='admin_code'", async (err, code) => {
-				if (err) throw err;
-				if (req.body.code == code[0].value_str) {
-					let transporter = nodemail.createTransport({
-						sendmail: true,
-						newline: 'unix',
-						path: 'user/sbin/sendmail'
-					});
-					connection.query("SELECT first_name, last_name, email FROM camper WHERE id=?", req.body.camper_id, (err, email_info) => {
-						if (err) throw err;
-						if (email_info.length) {
-							let approved_date = new Date();
-							connection.query("UPDATE enrollment SET approved=1, approved_time=? WHERE camper_id=? AND week_id=?", [approved_date, req.body.camper_id, week_meta.get(req.body.week_name).id], (err) => {
-								if (err) throw err;
-								transporter.sendMail({
-									from: "spark" + getDate + "@cs.stab.org",
-									to: email_info[0].email,
-									subject: "You were accepted for " + req.body.week_name,
-									text: "Hey " + email_info.first_name + " " + email_info.last_name + ", "
-								}, (err, info) => {
-									err.send_mail_info = info;
-									throw err;
-								});
-								res.end();
-							});
-						}
-					});
-				}
+			let roll_camper_app = await new Promise((resolve, reject) => {
+				connection.query("SELECT value_str FROM system_settings WHERE name='admin_code'", async (err, code) => {
+					if (err) reject(err);
+					if (req.body.code == code[0].value_str) {
+						connection.query("SELECT approved FROM enrollment WHERE camper_id=?", req.body.camper_id, async (err, approved_status) => {
+							if (err) reject(err);
+							if (approved_status[0].approved == 1) {
+								reject("You can't approve a camper that's already approved");
+							} else {
+								await apply_camper(req.body.camper_id, req.body.week_name);
+								resolve();
+							}
+						});
+					} else {
+						reject("Authentication failure");
+					}
+				});
 			});
 		} else {
 			throw application_schema.validate(req.body).error;
@@ -932,14 +949,26 @@ router.post("/admin/accept-camper-application", (req, res) => { //ADMIN
 	}
 });
 
-router.post("/admin/confirm-camper", (req, res) => {
+router.post("/admin/confirm-camper", async (req, res, next) => {
 	try {
-		connection.query("SELECT value_str FROM system_settings WHERE name='admin_code'", (err, code) => {
+		connection.query("SELECT value_str FROM system_settings WHERE name='admin_code'", async (err, code) => {
 			if (err) throw err;
 			if (req.body.code == code[0].value_str) {
-				connection.query("UPDATE enrollment SET confirmed=1, campbrain_completion=? WHERE camper_id=? AND week_id=?", [new Date(), req.body.camper_id, week_meta.get(req.body.week).id], (err) => {
+				connection.query("SELECT approved FROM enrollment WHERE camper_id=? AND week_id=?", [req.body.camper_id, week_meta.get(req.body.week_name).id], async (err, approved_status) => {
 					if (err) throw err;
-					res.end();
+					if (approved_status) {
+						if (approved_status[0].approved == 1) {
+							connection.query("UPDATE enrollment SET confirmed=1, campbrain_completion=? WHERE approved=1 AND camper_id=? AND week_id=?", [new Date(), req.body.camper_id, week_meta.get(req.body.week_name).id], (err) => {
+								if (err) throw err;
+								res.end();
+							});
+						} else {
+							await apply_camper(req.body.camper_id, req.body.week_name);
+							res.end();
+						}
+					} else {
+						throw err;
+					}
 				});
 			}
 		});
@@ -949,7 +978,7 @@ router.post("/admin/confirm-camper", (req, res) => {
 	}
 });
 
-router.post("/admin/delete-enrollment", (req, res) => {
+router.post("/admin/delete-enrollment", (req, res, next) => {
 	try {
 		connection.query("SELECT value_str FROM system_settings WHERE name='admin_code'", (err, code) => {
 			if (err) throw err;
@@ -978,7 +1007,7 @@ router.post("/admin/delete-enrollment", (req, res) => {
 	}
 });
 
-router.post("/admin/delete-camper", (req, res) => {
+router.post("/admin/delete-camper", (req, res, next) => {
 	try {
 		connection.query("SELECT value_str FROM system_settings WHERE name='admin_code'", (err, code) => {
 			if (err) throw err;
@@ -998,82 +1027,79 @@ router.post("/admin/delete-camper", (req, res) => {
 	}
 });
 
-router.post("/admin/send-mail", async (req, res) => { //ADMIN
+router.post("/admin/send-mail", async (req, res, next) => { //ADMIN
 	try {
-		connection.query("SELECT value_str FROM system_settings WHERE name='admin_code'", async (err, code) => {
-			if (err) throw err;
-			let all_campers;
-			let transporter = nodemail.createTransport({
-				sendmail: true,
-				newline: 'unix',
-				path: 'user/sbin/sendmail'
-			});
-			if (req.body.code == code[0].value_str) {
-				async function pull_campers() {
-					return new Promise((resolve, reject) => {
-						if (req.body.weeks.length > 0) {
-							let week_value = "";
-							week_value = " WHERE enrollment.week_id=?";
-							if (req.body.weeks.length > 1) {
-								req.body.weeks.forEach((item, index) => {
-									req.body.weeks[index] = week_meta.get(item).id;
-									week_value += index < req.body.weeks.length - 1 ? " OR enrollment.week_id=?" : "";
-								});
-							}
-							week_value += req.body.applicants == 1 ? " AND approved=0" : "";
-							week_value += req.body.registered == 1 ? " OR approved=1" : "";
-							connection.query("SELECT DISTINCT camper_id, first_name, last_name, email FROM enrollment INNER JOIN camper ON enrollment.camper_id = camper.id" + week_value, req.body.weeks, (err, enrolled_info) => {
-								if (err) reject(err);
-								resolve(enrolled_info);
-							});
-						} else {
-							resolve(0);
-						}
-					});
-				}
-
-				function send_mail(first_name, last_name, email) {
-					let temp_text = req.body.message.replace("{{FIRST_NAME}}", first_name);
-					temp_text = temp_text.replace(" {{LAST_NAME}}", last_name);
-					transporter.sendMail({
-						from: "spark" + getDate + "@cs.stab.org",
-						to: email,
-						subject: req.body.subject,
-						text: temp_text
-					}, (err, info) => {
-						err.send_mail_info = info;
-						throw err;
-					});
-				}
-				let all_campers = await pull_campers();
-				if (req.body.prospects == 1) {
-					connection.query("SELECT name, email FROM prospect WHERE subscribed=1", (err, prospect_info) => {
-						if (err) throw err;
-						//run through each of these, then send emails for each of them
-						if (all_campers.length) {
-							all_campers.forEach((item, index) => {
-								send_mail(item.first_name, " " + item.last_name, item.email);
+		let async_send_mail = await new Promise((resolve, reject) => {
+			connection.query("SELECT value_str FROM system_settings WHERE name='admin_code'", async (err, code) => {
+				if (err) reject(err);
+				let all_campers;
+				let transporter = nodemail.createTransport({
+					sendmail: true,
+					newline: 'unix',
+					path: 'user/sbin/sendmail'
+				});
+				if (req.body.code == code[0].value_str) {
+					if (req.body.weeks.length > 0) {
+						let week_value = "";
+						week_value = " WHERE enrollment.week_id=?";
+						if (req.body.weeks.length > 1) {
+							req.body.weeks.forEach((item, index) => {
+								req.body.weeks[index] = week_meta.get(item).id;
+								week_value += index < req.body.weeks.length - 1 ? " OR enrollment.week_id=?" : "";
 							});
 						}
-						if (prospect_info.length) {
-							prospect_info.forEach((item, index) => {
-								if (item.name.indexOf(" ") > 0) {
-									let name = item.name.split(" ");
-									send_mail(name[0], " " + name[name.length - 1], item.email);
-								} else {
-									send_mail(item.name, "", item.email)
+						week_value += req.body.applicants == 1 ? " AND approved=0" : "";
+						week_value += req.body.registered == 1 ? " OR approved=1" : "";
+						connection.query("SELECT DISTINCT camper_id, first_name, last_name, email FROM enrollment INNER JOIN camper ON enrollment.camper_id = camper.id" + week_value, req.body.weeks, async (err, enrolled_info) => {
+							if (err) reject(err);
+							//now run through each of the prospects / campers
+							console.log("RUNNING PROSPECT QUERY?", req.body.prospects);
+							if (req.body.prospects == 1) {
+								try {
+									let prospects = await new Promise((pros_resolve, prosp_reject) => {
+										connection.query("SELECT name, email FROM prospect WHERE subscribed=1", (err, prospects) => {
+											if (err) pros_reject(err);
+											let each_prosp_email = prospects.map((item, index) => {
+												let temp_text = req.body.message.replace("{{FIRST_NAME}}", item.name.split(" ")[0]);
+												let latter_name = item.name.split(" ")[0] == item.name.split(" ")[item.name.split(" ").length - 1] ? "" : " " + item.name.split(" ")[item.name.split(" ").length - 1];
+												temp_text = temp_text.replace(" {{LAST_NAME}}", latter_name);
+												transporter.sendMail({
+													from: "spark" + getDate + "@cs.stab.org",
+													to: item.email,
+													subject: req.body.subject,
+													text: temp_text
+												}, (err, info) => {
+													if (err) pros_reject(err);
+													pros_resolve(info);
+												});
+											});
+										});
+									});
+									Promise.all(prospects);
+								} catch (error) {
+									reject(error);
 								}
-							});
-						}
-					});
-				} else {
-					if (all_campers.length) {
-						all_campers.forEach((item, index) => {
-							send_mail(item.first_name, item.last_name, item.email);
+							}
+						});
+					} else {
+						reject("Missing the weeks value");
+					}
+
+					function send_mail(first_name, last_name, email) {
+						let temp_text = req.body.message.replace("{{FIRST_NAME}}", first_name);
+						temp_text = temp_text.replace(" {{LAST_NAME}}", last_name);
+						transporter.sendMail({
+							from: "spark" + getDate + "@cs.stab.org",
+							to: email,
+							subject: req.body.subject,
+							text: temp_text
+						}, (err, info) => {
+							err.send_mail_info = info;
+							throw err;
 						});
 					}
 				}
-			}
+			});
 		});
 	} catch (error) {
 		error.message = "Hmm... Looks like sending mail didn't work, try reloading?";

@@ -79,6 +79,7 @@ app.get("/unsubscribe", (req, res) => {
 });
 
 app.use((error, req, res, next) => {
+	console.log("RUNNING ERROR");
 	console.error(error);
 	res.render("error", {
 		title: `Help! – Summer Camp ${getDate()}`,
