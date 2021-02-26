@@ -337,7 +337,7 @@ router.post("/camper-register-queueing", async (req, res, next) => {
 							}
 							pull_campers_airtable();
 							tranporter.sendMail({
-								from: "spark" + getDate() + "@cs.stab.org",
+								from: '"Summer Spark ' + getDate() + '"<spark' + getDate().substring(1) + '@cs.stab.org>',
 								to: item.email,
 								subject: "You've signed up!",
 								text: "Hey " + item.first_name + " " + item.last_name + ", we've received your signup, we'll go and check out the application in just a bit!"
@@ -876,7 +876,7 @@ async function apply_camper(id, week) {
 				connection.query("UPDATE enrollment SET approved=1, approved_time=? WHERE camper_id=? AND week_id=?", [approved_date, id, week_meta.get(week).id], (err) => {
 					if (err) reject(err);
 					transporter.sendMail({
-						from: '"Summer Spark ' + getDate() + '"<spark' + getDate() + '@cs.stab.org>',
+						from: '"Summer Spark ' + getDate() + '"<spark' + getDate().substring(1) + '@cs.stab.org>',
 						to: email_info[0].email,
 						subject: "You were accepted for " + week,
 						text: "Hey " + email_info.first_name + " " + email_info.last_name + ", "
@@ -1019,11 +1019,12 @@ async function prospect_sendMail_query(transporter, subject, message) {
 			if (err) throw err;
 			let each_prosp_email = prospects.map((item, index) => {
 				return new Promise((pros_resolve, pros_reject) => {
-					let temp_text = message.replace(/{{FIRST_NAME}}/g, item.name.split(" ")[0]);
-					let latter_name = item.name.split(" ")[0] == item.name.split(" ")[item.name.split(" ").length - 1] ? "" : " " + item.name.split(" ")[item.name.split(" ").length - 1];
+					let split_name = item.name.split(" ");
+					let temp_text = message.replace(/{{FIRST_NAME}}/g, split_name[0]);
+					let latter_name = split_name[0] == split_name[split_name.length - 1] ? "" : split_name[split_boys.length - 1];
 					temp_text = temp_text.replace(/{{LAST_NAME}}/g, latter_name);
 					transporter.sendMail({
-						from: '"Summer Spark ' + getDate() + '"<spark' + getDate() + '@cs.stab.org>',
+						from: '"Summer Spark ' + getDate() + '"<spark' + getDate().substring(1) + '@cs.stab.org>',
 						to: item.email,
 						subject: subject,
 						text: temp_text
@@ -1072,7 +1073,7 @@ router.post("/admin/send-mail", async (req, res, next) => { //ADMIN
 								let temp_text = req.body.message.replace(/{{FIRST_NAME}}/g, item.first_name);
 								temp_text = temp_text.replace(/{{LAST_NAME}}/g, item.last_name);
 								transporter.sendMail({
-									from: '"Summer Spark ' + getDate() + '"<spark' + getDate() + '@cs.stab.org>',
+									from: '"Summer Spark ' + getDate() + '"<spark' + getDate().substring(1) + '@cs.stab.org>',
 									to: item.email,
 									subject: req.body.subject,
 									text: temp_text
