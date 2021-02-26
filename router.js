@@ -329,21 +329,23 @@ router.post("/camper-register-queueing", async (req, res, next) => {
 								user_data.name = item.refer_name;;
 								user_data.email = item.refer_email;
 								user_data.correlation = 1;
-							}
-							if (referral_schema.validate(user_data) && user_data.correlation == 1) {
-								await prospectSignup(user_data);
-							} else {
-								console.error(referral_schema.validate(user_data).error);
+								if (referral_schema.validate(user_data) && user_data.correlation == 1) {
+									await prospectSignup(user_data);
+								} else {
+									console.error(referral_schema.validate(user_data).error);
+								}
 							}
 							pull_campers_airtable();
-							tranporter.sendMail({
+							transporter.sendMail({
 								from: '"Summer Spark ' + getDate() + '"<spark' + getDate().substring(1) + '@cs.stab.org>',
 								to: item.email,
 								subject: "You've signed up!",
 								text: "Hey " + item.first_name + " " + item.last_name + ", we've received your signup, we'll go and check out the application in just a bit!"
 							}, (err, info) => {
-								err.send_mail_info = info;
-								throw err;
+								if (err) {
+									err.send_mail_info = info;
+									throw err;
+								}
 							});
 							await connection.query("DELETE FROM prospect WHERE email=?", item.email, (err) => {
 								if (err) throw err;
