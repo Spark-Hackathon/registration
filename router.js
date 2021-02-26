@@ -876,7 +876,7 @@ async function apply_camper(id, week) {
 				connection.query("UPDATE enrollment SET approved=1, approved_time=? WHERE camper_id=? AND week_id=?", [approved_date, id, week_meta.get(week).id], (err) => {
 					if (err) reject(err);
 					transporter.sendMail({
-						from: '"Summer Spark \'' + getDate() + '"<spark' + getDate() + '@cs.stab.org>',
+						from: '"Summer Spark ' + getDate() + '"<spark' + getDate() + '@cs.stab.org>',
 						to: email_info[0].email,
 						subject: "You were accepted for " + week,
 						text: "Hey " + email_info.first_name + " " + email_info.last_name + ", "
@@ -1023,7 +1023,7 @@ async function prospect_sendMail_query(transporter, subject, message) {
 					let latter_name = item.name.split(" ")[0] == item.name.split(" ")[item.name.split(" ").length - 1] ? "" : " " + item.name.split(" ")[item.name.split(" ").length - 1];
 					temp_text = temp_text.replace(" {{LAST_NAME}}", latter_name);
 					transporter.sendMail({
-						from: '"Summer Spark \'' + getDate() + '"<spark' + getDate() + '@cs.stab.org>',
+						from: '"Summer Spark ' + getDate() + '"<spark' + getDate() + '@cs.stab.org>',
 						to: item.email,
 						subject: subject,
 						text: temp_text
@@ -1072,7 +1072,7 @@ router.post("/admin/send-mail", async (req, res, next) => { //ADMIN
 								let temp_text = req.body.message.replace("{{FIRST_NAME}}", item.first_name);
 								temp_text = temp_text.replace(" {{LAST_NAME}}", " " + item.last_name);
 								transporter.sendMail({
-									from: '"Summer Spark \'' + getDate() + '"<spark' + getDate() + '@cs.stab.org>',
+									from: '"Summer Spark ' + getDate() + '"<spark' + getDate() + '@cs.stab.org>',
 									to: item.email,
 									subject: req.body.subject,
 									text: temp_text
