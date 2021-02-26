@@ -5,8 +5,7 @@ const spans = "text-red-500 inline-block";
 const submitStyle = "block text-center py-4 w-full bg-yellow font-semibold hover:bg-yellow-dark transition duration-200 md:text-xl cursor-pointer";
 const form = "md:w-100 md:mx-auto";
 
-// let application = new Smartform("/camper-register-queueing", "POST");
-let application = new Smartform("/", "POST");
+let application = new Smartform("/camper-register-queueing", "POST");
 
 let weekIds = [];
 
