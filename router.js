@@ -1013,7 +1013,7 @@ router.post("/admin/delete-enrollment", async (req, res, next) => {
 	}
 });
 
-router.post("/admin/delete-camper", (req, res, next) => {
+router.post("/admin/delete-camper", async (req, res, next) => {
 	try {
 		let camper_value = await new Promise((resolve, reject) => {
 			connection.query("SELECT value_str FROM system_settings WHERE name='admin_code'", (err, code) => {
