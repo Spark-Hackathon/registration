@@ -25,6 +25,12 @@ const {
 	v4: uuidv4
 } = require("uuid");
 
+let transporter = nodemail.createTransport({
+	sendmail: true,
+	newline: 'unix',
+	path: '/usr/sbin/sendmail'
+});
+
 //connect to db
 const connection = mysql.createConnection({
 	host: process.env.HOST,
@@ -255,11 +261,12 @@ const referral_schema = Joi.object({
 
 router.post("/camper-register-queueing", async (req, res, next) => {
 	try {
-		if (camper_schema.validate(req.body)) {
+		let camper_register = await new Promise((resolve, reject) => {
+			if (!camper_schema.validate(req.body)) reject(camper_schema.validate(req.body).error);
 			let item = req.body;
 			item.type = type_meta[item.type];
 			connection.query("SELECT id FROM camper WHERE first_name=? AND last_name=? AND email=?", [item.first_name, item.last_name, item.email], (err, pre_id) => {
-				if (err) throw err;
+				if (err) reject(err);
 				let camper_writeup;
 				let extra_camper_info = [];
 				extra_camper_info.push(item.first_name, item.last_name, item.email, item.dob, item.school, item.grade, item.gender, item.type, item.race_ethnicity,
@@ -274,114 +281,88 @@ router.post("/camper-register-queueing", async (req, res, next) => {
 				}
 				// add them to the camper database, then enrollment based on their weeks
 				connection.query(camper_writeup, extra_camper_info, async (err) => {
-					if (err) {
-						throw err;
-					} else {
-						connection.query("SELECT id FROM camper WHERE first_name=? AND last_name=? AND email=?", [item.first_name, item.last_name, item.email], async (err, camper_id) => {
-							if (err) throw err;
-							//insert for each week they signed up for
-							let weeks = [],
-								count = 0;
-							week_meta.forEach((week, index) => {
-								if (item[week.id + "-status"] > 0) {
-									weeks[count] = [];
-									weeks[count][0] = week.id;
-									weeks[count][1] = item[week.id + "-status"];
-									count++;
-								}
-							});
-							async function enrollmentInsert(week) {
-								return new Promise((resolve, reject) => {
-									connection.query("INSERT INTO enrollment (camper_id, week_id, signup_time, enrollment_code, person_loc, approved, confirmed) VALUES " +
-										"(?, ?, ?, ?, ?, ?, ?)", [camper_id[0].id, week[0], new Date(), uuidv4(), week[1] - 1, 0, 0], (err) => {
-											if (err) reject(err);
-											connection.query("SELECT id, question_text FROM question_meta WHERE week_id=?", week[0], (err, questions) => {
-												if (err) reject(err);
-												if (questions.length) resolve(questions);
-												resolve([]);
-											});
-										});
-								});
-							}
-							let questions = [];
-							let question_position = 0;
-							if (weeks.length) {
-								let transporter = nodemail.createTransport({
-									sendmail: true,
-									newline: 'unix',
-									path: 'user/sbin/sendmail'
-								});
-								for (let weeks_db = 0; weeks_db < weeks.length; weeks_db++) {
-									let any_questions = await enrollmentInsert(weeks[weeks_db]);
-									//each week sends back questions for the specific person - need to build up an array
-									for (let question = 0; question < any_questions.length; question++) {
-										questions[question_position] = {
-											question_text: any_questions[question].question_text,
-											id: any_questions[question].id
-										}
-										question_position++;
-									}
-									if (weeks_db == weeks.length - 1) {
-										if (item.refer_name && item.refer_email) {
-											let user_data = {}
-											user_data.refer_id = camper_id[0].id;
-											user_data.name = item.refer_name;;
-											user_data.email = item.refer_email;
-											if (referral_schema.validate(user_data)) {
-												await prospectSignup(user_data);
-												pull_campers_airtable();
-												tranporter.sendMail({
-													from: "spark" + getDate() + "@cs.stab.org",
-													to: item.email,
-													subject: "You've signed up!",
-													text: "Hey " + item.first_name + " " + item.last_name + ", we've received your signup, we'll go and check out the application in just a bit!"
-												}, (err, info) => {
-													err.send_mail_info = info;
-													throw err;
-												});
-												connection.query("DELETE FROM prospect WHERE email=?", item.email, (err) => {
-													if (err) throw err;
-													res.render("question.hbs", {
-														title: `Application Questions – Summer Spark ${getDate()}`,
-														year: getDate(),
-														camper_id: camper_id[0].id,
-														questions: questions
-													});
-												});
-											} else {
-												throw camper_schema.validate(req.body).error;
-											}
-										} else {
-											//send finish email, done
-											pull_campers_airtable();
-											transporter.sendMail({
-												from: 'spark' + getDate() + '@cs.stab.org',
-												to: item.email,
-												subject: "You've signed up!",
-												text: "Hey " + item.first_name + " " + item.last_name + ", we've received your signup, we'll go and check out the application in just a bit!"
-											}, (err, info) => {
-												err.send_mail_info = info;
-												throw err;
-											});
-											res.render("question.hbs", {
-												title: `Application Questions – Summer Spark ${getDate()}`,
-												year: getDate(),
-												camper_id: camper_id[0].id,
-												questions: questions
-											});
-										}
-									}
-								}
+					if (err) reject(err);
+					connection.query("SELECT id FROM camper WHERE first_name=? AND last_name=? AND email=?", [item.first_name, item.last_name, item.email], async (err, camper_id) => {
+						if (err) reject(err);
+						//insert for each week they signed up for
+						let weeks = [],
+							count = 0;
+						week_meta.forEach((week, index) => {
+							if (item[week.id + "-status"] > 0) {
+								weeks[count] = [];
+								weeks[count][0] = week.id;
+								weeks[count][1] = item[week.id + "-status"];
+								count++;
 							}
 						});
-					}
+						async function enrollmentInsert(week) {
+							return new Promise((enroll_resolve, enroll_reject) => {
+								connection.query("INSERT INTO enrollment (camper_id, week_id, signup_time, enrollment_code, person_loc, approved, confirmed) VALUES " +
+									"(?, ?, ?, ?, ?, ?, ?)", [camper_id[0].id, week[0], new Date(), uuidv4(), week[1] - 1, 0, 0], (err) => {
+										if (err) enroll_reject(err);
+										connection.query("SELECT id, question_text FROM question_meta WHERE week_id=?", week[0], (err, questions) => {
+											if (err) enroll_reject(err);
+											if (questions.length) enroll_resolve(questions);
+											enroll_resolve([]);
+										});
+									});
+							});
+						}
+						let questions = [];
+						let question_position = 0;
+						if (weeks.length == 0) reject("no camper value");
+						try {
+							for (let weeks_db = 0; weeks_db < weeks.length; weeks_db++) {
+								let any_questions = await enrollmentInsert(weeks[weeks_db]);
+								//each week sends back questions for the specific person - need to build up an array
+								for (let question = 0; question < any_questions.length; question++) {
+									questions[question_position] = {
+										question_text: any_questions[question].question_text,
+										id: any_questions[question].id
+									}
+									question_position++;
+								}
+							}
+							let user_data = {};
+							if (item.refer_name && item.refer_email) {
+								user_data.refer_id = camper_id[0].id;
+								user_data.name = item.refer_name;;
+								user_data.email = item.refer_email;
+								user_data.correlation = 1;
+							}
+							if (referral_schema.validate(user_data) && user_data.correlation == 1) {
+								await prospectSignup(user_data);
+							} else {
+								console.error(referral_schema.validate(user_data).error);
+							}
+							pull_campers_airtable();
+							tranporter.sendMail({
+								from: '"Summer Spark ' + getDate() + '"<spark' + getDate().substring(1) + '@cs.stab.org>',
+								to: item.email,
+								subject: "You've signed up!",
+								text: "Hey " + item.first_name + " " + item.last_name + ", we've received your signup, we'll go and check out the application in just a bit!"
+							}, (err, info) => {
+								err.send_mail_info = info;
+								throw err;
+							});
+							await connection.query("DELETE FROM prospect WHERE email=?", item.email, (err) => {
+								if (err) throw err;
+								res.render("question.hbs", {
+									title: `Application Questions – Summer Spark ${getDate()}`,
+									year: getDate(),
+									camper_id: camper_id[0].id,
+									questions: questions
+								});
+							});
+						} catch (error) {
+							reject(error);
+						}
+					});
 				});
 			});
-		} else {
-			throw camper_schema.validate(req.body).error;
-		}
+		});
 	} catch (error) {
-		error.message = "Hmm... Looks like registering didn't work, try reloading?"
+		error.message = "Looks like there was an error applying, try reloading?";
 		next(error);
 	}
 });
@@ -888,11 +869,6 @@ router.get("/admin/export/all/:code", (req, res, next) => {
 
 async function apply_camper(id, week) {
 	return new Promise((resolve, reject) => {
-		let transporter = nodemail.createTransport({
-			sendmail: true,
-			newline: 'unix',
-			path: 'user/sbin/sendmail'
-		});
 		connection.query("SELECT first_name, last_name, email FROM camper WHERE id=?", id, (err, email_info) => {
 			if (err) reject(err);
 			if (email_info.length) {
@@ -900,7 +876,7 @@ async function apply_camper(id, week) {
 				connection.query("UPDATE enrollment SET approved=1, approved_time=? WHERE camper_id=? AND week_id=?", [approved_date, id, week_meta.get(week).id], (err) => {
 					if (err) reject(err);
 					transporter.sendMail({
-						from: "spark" + getDate + "@cs.stab.org",
+						from: '"Summer Spark ' + getDate() + '"<spark' + getDate().substring(1) + '@cs.stab.org>',
 						to: email_info[0].email,
 						subject: "You were accepted for " + week,
 						text: "Hey " + email_info.first_name + " " + email_info.last_name + ", "
@@ -972,6 +948,7 @@ router.post("/admin/confirm-camper", async (req, res, next) => {
 						throw err;
 					}
 				});
+				res.end();
 			}
 		});
 	} catch (error) {
@@ -980,7 +957,7 @@ router.post("/admin/confirm-camper", async (req, res, next) => {
 	}
 });
 
-router.post("/admin/delete-enrollment", (req, res, next) => {
+router.post("/admin/delete-enrollment", async (req, res, next) => {
 	try {
 		let camper_value = await new Promise((resolve, reject) => {
 			connection.query("SELECT value_str FROM system_settings WHERE name='admin_code'", (err, code) => {
@@ -1012,7 +989,7 @@ router.post("/admin/delete-enrollment", (req, res, next) => {
 	}
 });
 
-router.post("/admin/delete-camper", (req, res, next) => {
+router.post("/admin/delete-camper", async (req, res, next) => {
 	try {
 		let camper_value = await new Promise((resolve, reject) => {
 			connection.query("SELECT value_str FROM system_settings WHERE name='admin_code'", (err, code) => {
@@ -1042,11 +1019,13 @@ async function prospect_sendMail_query(transporter, subject, message) {
 			if (err) throw err;
 			let each_prosp_email = prospects.map((item, index) => {
 				return new Promise((pros_resolve, pros_reject) => {
-					let temp_text = message.replace("{{FIRST_NAME}}", item.name.split(" ")[0]);
-					let latter_name = item.name.split(" ")[0] == item.name.split(" ")[item.name.split(" ").length - 1] ? "" : " " + item.name.split(" ")[item.name.split(" ").length - 1];
-					temp_text = temp_text.replace(" {{LAST_NAME}}", latter_name);
+					let split_name = item.name.split(" ");
+					let temp_text = message.replace(/{{FIRST_NAME}}/g, split_name[0]);
+					let latter_name = split_name[0] == split_name[split_name.length - 1] ? "" : split_name[split_name.length - 1];
+					temp_text = temp_text.replace(/{{LAST_NAME}}/g, latter_name);
+					temp_text = temp_text.replace(/{{URL}}/g, process.env.URL + "/unsubscribe");
 					transporter.sendMail({
-						from: "spark" + getDate + "@cs.stab.org",
+						from: '"Summer Spark ' + getDate() + '"<spark' + getDate().substring(1) + '@cs.stab.org>',
 						to: item.email,
 						subject: subject,
 						text: temp_text
@@ -1072,11 +1051,6 @@ router.post("/admin/send-mail", async (req, res, next) => { //ADMIN
 			connection.query("SELECT value_str FROM system_settings WHERE name='admin_code'", async (err, code) => {
 				if (err) reject(err);
 				let all_campers;
-				let transporter = nodemail.createTransport({
-					sendmail: true,
-					newline: 'unix',
-					path: 'user/sbin/sendmail'
-				});
 				if (req.body.code != code[0].value_str) reject("Failed authentication");
 				if (req.body.weeks.length < 0) reject("Missing the weeks value?");
 				let week_value = "";
@@ -1097,10 +1071,10 @@ router.post("/admin/send-mail", async (req, res, next) => { //ADMIN
 					if (req.body.applicants == 1 || req.body.registered == 1) {
 						let emails = enrolled_info.map((item, index) => {
 							return new Promise((email_resolve, email_reject) => {
-								let temp_text = req.body.message.replace("{{FIRST_NAME}}", item.first_name);
-								temp_text = temp_text.replace(" {{LAST_NAME}}", " " + item.last_name);
+								let temp_text = req.body.message.replace(/{{FIRST_NAME}}/g, item.first_name);
+								temp_text = temp_text.replace(/{{LAST_NAME}}/g, item.last_name);
 								transporter.sendMail({
-									from: "spark" + getDate + "@cs.stab.org",
+									from: '"Summer Spark ' + getDate() + '"<spark' + getDate().substring(1) + '@cs.stab.org>',
 									to: item.email,
 									subject: req.body.subject,
 									text: temp_text
