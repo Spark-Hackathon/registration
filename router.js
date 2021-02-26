@@ -25,6 +25,12 @@ const {
 	v4: uuidv4
 } = require("uuid");
 
+let transporter = nodemail.createTransport({
+	sendmail: true,
+	newline: 'unix',
+	path: '/usr/sbin/sendmail'
+});
+
 //connect to db
 const connection = mysql.createConnection({
 	host: process.env.HOST,
@@ -305,11 +311,6 @@ router.post("/camper-register-queueing", async (req, res, next) => {
 						let questions = [];
 						let question_position = 0;
 						if (weeks.length == 0) reject("no camper value");
-						let transporter = nodemail.createTransport({
-							sendmail: true,
-							newline: 'unix',
-							path: 'user/sbin/sendmail'
-						});
 						try {
 							for (let weeks_db = 0; weeks_db < weeks.length; weeks_db++) {
 								let any_questions = await enrollmentInsert(weeks[weeks_db]);
@@ -868,11 +869,6 @@ router.get("/admin/export/all/:code", (req, res, next) => {
 
 async function apply_camper(id, week) {
 	return new Promise((resolve, reject) => {
-		let transporter = nodemail.createTransport({
-			sendmail: true,
-			newline: 'unix',
-			path: 'user/sbin/sendmail'
-		});
 		connection.query("SELECT first_name, last_name, email FROM camper WHERE id=?", id, (err, email_info) => {
 			if (err) reject(err);
 			if (email_info.length) {
@@ -1053,11 +1049,6 @@ router.post("/admin/send-mail", async (req, res, next) => { //ADMIN
 			connection.query("SELECT value_str FROM system_settings WHERE name='admin_code'", async (err, code) => {
 				if (err) reject(err);
 				let all_campers;
-				let transporter = nodemail.createTransport({
-					sendmail: true,
-					newline: 'unix',
-					path: 'user/sbin/sendmail'
-				});
 				if (req.body.code != code[0].value_str) reject("Failed authentication");
 				if (req.body.weeks.length < 0) reject("Missing the weeks value?");
 				let week_value = "";
