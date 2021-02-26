@@ -329,11 +329,11 @@ router.post("/camper-register-queueing", async (req, res, next) => {
 								user_data.name = item.refer_name;;
 								user_data.email = item.refer_email;
 								user_data.correlation = 1;
-							}
-							if (referral_schema.validate(user_data) && user_data.correlation == 1) {
-								await prospectSignup(user_data);
-							} else {
-								console.error(referral_schema.validate(user_data).error);
+								if (referral_schema.validate(user_data) && user_data.correlation == 1) {
+									await prospectSignup(user_data);
+								} else {
+									console.error(referral_schema.validate(user_data).error);
+								}
 							}
 							pull_campers_airtable();
 							tranporter.sendMail({
