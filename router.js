@@ -312,48 +312,57 @@ router.post("/camper-register-queueing", async (req, res, next) => {
 						let question_position = 0;
 						if (weeks.length == 0) reject("no camper value");
 						try {
-							for (let weeks_db = 0; weeks_db < weeks.length; weeks_db++) {
-								let any_questions = await enrollmentInsert(weeks[weeks_db]);
-								//each week sends back questions for the specific person - need to build up an array
-								for (let question = 0; question < any_questions.length; question++) {
-									questions[question_position] = {
-										question_text: any_questions[question].question_text,
-										id: any_questions[question].id
+							await new Promise((enrolling_resolve, enrolling_reject) => {
+								connection.query("DELETE FROM enrollment WHERE camper_id=?", pre_id[0].id, async (err) => {
+									if (err) enrolling_reject(err);
+									for (let weeks_db = 0; weeks_db < weeks.length; weeks_db++) {
+										let any_questions = await enrollmentInsert(weeks[weeks_db], 0);
+										//each week sends back questions for the specific person - need to build up an array
+										for (let question = 0; question < any_questions.length; question++) {
+											questions[question_position] = {
+												question_text: any_questions[question].question_text,
+												id: any_questions[question].id
+											}
+											question_position++;
+										}
 									}
-									question_position++;
-								}
-							}
-							let user_data = {};
-							if (item.refer_name && item.refer_email) {
-								user_data.refer_id = camper_id[0].id;
-								user_data.name = item.refer_name;;
-								user_data.email = item.refer_email;
-								user_data.correlation = 1;
-								if (referral_schema.validate(user_data) && user_data.correlation == 1) {
-									await prospectSignup(user_data);
-								} else {
-									console.error(referral_schema.validate(user_data).error);
-								}
-							}
-							pull_campers_airtable();
-							transporter.sendMail({
-								from: '"Summer Spark ' + getDate() + '"<spark' + getDate().substring(1) + '@cs.stab.org>',
-								to: item.email,
-								subject: "You've signed up!",
-								text: "Hey " + item.first_name + " " + item.last_name + ", we've received your signup, we'll go and check out the application in just a bit!"
-							}, (err, info) => {
-								if (err) {
-									err.send_mail_info = info;
-									throw err;
-								}
-							});
-							await connection.query("DELETE FROM prospect WHERE email=?", item.email, (err) => {
-								if (err) throw err;
-								res.render("question.hbs", {
-									title: `Application Questions – Summer Spark ${getDate()}`,
-									year: getDate(),
-									camper_id: camper_id[0].id,
-									questions: questions
+									let user_data = {};
+									if (item.refer_name && item.refer_email) {
+										user_data.refer_id = camper_id[0].id;
+										user_data.name = item.refer_name;;
+										user_data.email = item.refer_email;
+										user_data.correlation = 1;
+										if (referral_schema.validate(user_data) && user_data.correlation == 1) {
+											await prospectSignup(user_data);
+										} else {
+											enrolling_reject(referral_schema.validate(user_data).error);
+										}
+									}
+									pull_campers_airtable();
+									let transporter_promise = await new Promise((transport_resolve, transport_reject) => {
+										transporter.sendMail({
+											from: '"Summer Spark ' + getDate() + '"<spark' + getDate().substring(1) + '@cs.stab.org>',
+											to: item.email,
+											subject: "You've signed up!",
+											text: "Hey " + item.first_name + " " + item.last_name + ", we've received your signup, we'll go and check out the application in just a bit!"
+										}, (err, info) => {
+											if (err) {
+												err.send_mail_info = info;
+												transport_reject(err);
+											}
+											transport_resolve(info);
+										});
+									});
+									console.log(transporter_promise);
+									connection.query("DELETE FROM prospect WHERE email=?", item.email, (err) => {
+										if (err) enrolling_reject(err);
+										enrolling_resolve(res.render("question.hbs", {
+											title: `Application Questions – Summer Spark ${getDate()}`,
+											year: getDate(),
+											camper_id: camper_id[0].id,
+											questions: questions
+										}));
+									});
 								});
 							});
 						} catch (error) {
@@ -369,26 +378,25 @@ router.post("/camper-register-queueing", async (req, res, next) => {
 	}
 });
 
-router.post("/camper-submit-questions", (req, res, next) => {
+router.post("/camper-submit-questions", async (req, res, next) => {
 	try {
-		async function insertion(question_id, response) {
-			return new Promise((resolve, reject) => {
-				connection.query("INSERT INTO questions (camper_id, question_meta_id, question_response) VALUES (?, ?, ?)", [req.body.camper_id, question_id, response], (err) => {
-					if (err) reject(err);
-					resolve();
+		connection.query("DELETE FROM questions WHERE camper_id=?", req.body.camper_id, async (err) => {
+			if (err) {
+				err.message = "Hmm... submitting these questions didn't work, try reloading?";
+				next(err);
+			}
+			if (!req.body.responses.length) res.end();
+			let all_responses = req.body.responses.map((item, index) => {
+				return new Promise((resolve, reject) => {
+					connection.query("INSERT INTO questions (camper_id, question_meta_id, question_response) VALUES (?, ?, ?)", [req.body.camper_id, item.question_id, item.response], (err) => {
+						if (err) reject(err);
+						resolve(1);
+					});
 				});
 			});
-		}
-		if (req.body.responses.length) {
-			req.body.responses.forEach(async (item, index) => {
-				await insertion(item.question_id, item.response);
-				if (index = req.body.responses.length - 1) {
-					res.end();
-				}
-			});
-		} else {
+			await Promise.all(all_responses);
 			res.end();
-		}
+		});
 	} catch (error) {
 		error.message = "Hmm... submitting these questions didn't work, try reloading?";
 		next(error);
@@ -938,7 +946,7 @@ router.post("/admin/confirm-camper", async (req, res, next) => {
 					if (err) throw err;
 					if (approved_status) {
 						if (approved_status[0].approved == 1) {
-							connection.query("UPDATE enrollment SET confirmed=1, campbrain_completion=? WHERE approved=1 AND camper_id=? AND week_id=?", [new Date(), req.body.camper_id, week_meta.get(req.body.week_name).id], async (err) => {
+							connection.query("UPDATE enrollment SET confirmed=1, campbrain_completion=? WHERE approved=1 AND camper_id=? AND week_id=?", [new Date(), req.body.camper_id, week_meta.get(req.body.week_name).id], (err) => {
 								if (err) throw err;
 								res.end();
 							});
@@ -950,7 +958,6 @@ router.post("/admin/confirm-camper", async (req, res, next) => {
 						throw err;
 					}
 				});
-				res.end();
 			}
 		});
 	} catch (error) {
@@ -1013,7 +1020,6 @@ router.post("/admin/delete-camper", async (req, res, next) => {
 		next(error);
 	}
 });
-
 
 async function prospect_sendMail_query(transporter, subject, message) {
 	return new Promise((resolve, reject) => {
