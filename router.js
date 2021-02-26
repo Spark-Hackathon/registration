@@ -936,7 +936,7 @@ router.post("/admin/confirm-camper", async (req, res, next) => {
 					if (err) throw err;
 					if (approved_status) {
 						if (approved_status[0].approved == 1) {
-							connection.query("UPDATE enrollment SET confirmed=1, campbrain_completion=? WHERE approved=1 AND camper_id=? AND week_id=?", [new Date(), req.body.camper_id, week_meta.get(req.body.week_name).id], (err) => {
+							connection.query("UPDATE enrollment SET confirmed=1, campbrain_completion=? WHERE approved=1 AND camper_id=? AND week_id=?", [new Date(), req.body.camper_id, week_meta.get(req.body.week_name).id], async (err) => {
 								if (err) throw err;
 								res.end();
 							});
