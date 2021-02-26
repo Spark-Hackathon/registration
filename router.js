@@ -1023,6 +1023,7 @@ async function prospect_sendMail_query(transporter, subject, message) {
 					let temp_text = message.replace(/{{FIRST_NAME}}/g, split_name[0]);
 					let latter_name = split_name[0] == split_name[split_name.length - 1] ? "" : split_name[split_name.length - 1];
 					temp_text = temp_text.replace(/{{LAST_NAME}}/g, latter_name);
+					temp_text = temp_text.replace(/{{URL}}/g, process.env.URL + "/unsubscribe");
 					transporter.sendMail({
 						from: '"Summer Spark ' + getDate() + '"<spark' + getDate().substring(1) + '@cs.stab.org>',
 						to: item.email,
