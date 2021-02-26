@@ -1019,9 +1019,9 @@ async function prospect_sendMail_query(transporter, subject, message) {
 			if (err) throw err;
 			let each_prosp_email = prospects.map((item, index) => {
 				return new Promise((pros_resolve, pros_reject) => {
-					let temp_text = message.replace("{{FIRST_NAME}}", item.name.split(" ")[0]);
+					let temp_text = message.replaceAll("{{FIRST_NAME}}", item.name.split(" ")[0]);
 					let latter_name = item.name.split(" ")[0] == item.name.split(" ")[item.name.split(" ").length - 1] ? "" : " " + item.name.split(" ")[item.name.split(" ").length - 1];
-					temp_text = temp_text.replace(" {{LAST_NAME}}", latter_name);
+					temp_text = temp_text.replaceAll(" {{LAST_NAME}}", latter_name);
 					transporter.sendMail({
 						from: '"Summer Spark ' + getDate() + '"<spark' + getDate() + '@cs.stab.org>',
 						to: item.email,
@@ -1069,8 +1069,8 @@ router.post("/admin/send-mail", async (req, res, next) => { //ADMIN
 					if (req.body.applicants == 1 || req.body.registered == 1) {
 						let emails = enrolled_info.map((item, index) => {
 							return new Promise((email_resolve, email_reject) => {
-								let temp_text = req.body.message.replace("{{FIRST_NAME}}", item.first_name);
-								temp_text = temp_text.replace(" {{LAST_NAME}}", " " + item.last_name);
+								let temp_text = req.body.message.replaceAll("{{FIRST_NAME}}", item.first_name);
+								temp_text = temp_text.replaceAll(" {{LAST_NAME}}", " " + item.last_name);
 								transporter.sendMail({
 									from: '"Summer Spark ' + getDate() + '"<spark' + getDate() + '@cs.stab.org>',
 									to: item.email,
