@@ -1021,7 +1021,7 @@ async function prospect_sendMail_query(transporter, subject, message) {
 				return new Promise((pros_resolve, pros_reject) => {
 					let split_name = item.name.split(" ");
 					let temp_text = message.replace(/{{FIRST_NAME}}/g, split_name[0]);
-					let latter_name = split_name[0] == split_name[split_name.length - 1] ? "" : split_name[split_boys.length - 1];
+					let latter_name = split_name[0] == split_name[split_name.length - 1] ? "" : split_name[split_name.length - 1];
 					temp_text = temp_text.replace(/{{LAST_NAME}}/g, latter_name);
 					transporter.sendMail({
 						from: '"Summer Spark ' + getDate() + '"<spark' + getDate().substring(1) + '@cs.stab.org>',
