@@ -312,57 +312,63 @@ router.post("/camper-register-queueing", async (req, res, next) => {
 						let question_position = 0;
 						if (weeks.length == 0) reject("no camper value");
 						try {
-							await new Promise((enrolling_resolve, enrolling_reject) => {
-								connection.query("DELETE FROM enrollment WHERE camper_id=?", pre_id[0].id, async (err) => {
-									if (err) enrolling_reject(err);
-									for (let weeks_db = 0; weeks_db < weeks.length; weeks_db++) {
-										let any_questions = await enrollmentInsert(weeks[weeks_db], 0);
-										//each week sends back questions for the specific person - need to build up an array
-										for (let question = 0; question < any_questions.length; question++) {
-											questions[question_position] = {
-												question_text: any_questions[question].question_text,
-												id: any_questions[question].id
-											}
-											question_position++;
-										}
-									}
-									let user_data = {};
-									if (item.refer_name && item.refer_email) {
-										user_data.refer_id = camper_id[0].id;
-										user_data.name = item.refer_name;;
-										user_data.email = item.refer_email;
-										user_data.correlation = 1;
-										if (referral_schema.validate(user_data) && user_data.correlation == 1) {
-											await prospectSignup(user_data);
-										} else {
-											enrolling_reject(referral_schema.validate(user_data).error);
-										}
-									}
-									pull_campers_airtable();
-									let transporter_promise = await new Promise((transport_resolve, transport_reject) => {
-										transporter.sendMail({
-											from: '"Summer Spark ' + getDate() + '"<spark' + getDate().substring(1) + '@cs.stab.org>',
-											to: item.email,
-											subject: "You've signed up!",
-											text: "Hey " + item.first_name + " " + item.last_name + ", we've received your signup, we'll go and check out the application in just a bit!"
-										}, (err, info) => {
-											if (err) {
-												err.send_mail_info = info;
-												transport_reject(err);
-											}
-											transport_resolve(info);
+							await new Promise(async (enrolling_resolve, enrolling_reject) => {
+								if (pre_id.length) {
+									await new Promise((quick_resolve, quick_reject) => {
+										connection.query("DELETE FROM enrollment WHERE camper_id=?", pre_id[0].id, async (err) => {
+											if (err) quick_reject(err);
+											quick_resolve();
 										});
 									});
-									console.log(transporter_promise);
-									connection.query("DELETE FROM prospect WHERE email=?", item.email, (err) => {
-										if (err) enrolling_reject(err);
-										enrolling_resolve(res.render("question.hbs", {
-											title: `Application Questions – Summer Spark ${getDate()}`,
-											year: getDate(),
-											camper_id: camper_id[0].id,
-											questions: questions
-										}));
+								}
+								if (err) enrolling_reject(err);
+								for (let weeks_db = 0; weeks_db < weeks.length; weeks_db++) {
+									let any_questions = await enrollmentInsert(weeks[weeks_db], 0);
+									//each week sends back questions for the specific person - need to build up an array
+									for (let question = 0; question < any_questions.length; question++) {
+										questions[question_position] = {
+											question_text: any_questions[question].question_text,
+											id: any_questions[question].id
+										}
+										question_position++;
+									}
+								}
+								let user_data = {};
+								if (item.refer_name && item.refer_email) {
+									user_data.refer_id = camper_id[0].id;
+									user_data.name = item.refer_name;;
+									user_data.email = item.refer_email;
+									user_data.correlation = 1;
+									if (referral_schema.validate(user_data) && user_data.correlation == 1) {
+										await prospectSignup(user_data);
+									} else {
+										enrolling_reject(referral_schema.validate(user_data).error);
+									}
+								}
+								pull_campers_airtable();
+								let transporter_promise = await new Promise((transport_resolve, transport_reject) => {
+									transporter.sendMail({
+										from: '"Summer Spark ' + getDate() + '"<spark' + getDate().substring(1) + '@cs.stab.org>',
+										to: item.email,
+										subject: "You've signed up!",
+										text: "Hey " + item.first_name + " " + item.last_name + ", we've received your signup, we'll go and check out the application in just a bit!"
+									}, (err, info) => {
+										if (err) {
+											err.send_mail_info = info;
+											transport_reject(err);
+										}
+										transport_resolve(info);
 									});
+								});
+								console.log(transporter_promise);
+								connection.query("DELETE FROM prospect WHERE email=?", item.email, (err) => {
+									if (err) enrolling_reject(err);
+									enrolling_resolve(res.render("question.hbs", {
+										title: `Application Questions – Summer Spark ${getDate()}`,
+										year: getDate(),
+										camper_id: camper_id[0].id,
+										questions: questions
+									}));
 								});
 							});
 						} catch (error) {
