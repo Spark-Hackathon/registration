@@ -37,22 +37,12 @@
     </div>
 </div>
 
-<div class="mt-20 md:mt-36 md:grid md:grid-cols-3">
-    <div class="md:pr-2">
-        <p class="mt-2 italic">June xx-July xx</p>
-        <p class="font-semibold text-xl underline">Web Design & Development</p>
-        <p class="mt-1 text-lg text-gray-500 md:mt-4">Ever wanted to learn about HTML, CSS, &amp; JavaScript? No matter your skill level, you're bound to learn something new. By the time you're finished, you'll have the tools and knowledge to make your own amazing websites.</p>
-    </div>
-
-    <div class="mt-6 md:mt-0 md:px-2">
-        <p class="mt-2 italic">June xx-July xx</p>
-        <p class="font-semibold text-xl underline">Creative Coding</p>
-        <p class="mt-1 text-lg text-gray-500 md:mt-4">How can coding be traditionally "creative?" Unlike other art forms, you don't see the code itself, but the result of it. Join us in learning how to make digital art with code, and unlock your inner artist.</p>
-    </div>
-
-    <div class="mt-6 md:mt-0 md:pl-2">
-        <p class="mt-2 italic">June xx-July xx</p>
-        <p class="font-semibold text-xl underline">Art of Games</p>
-        <p class="mt-1 text-lg text-gray-500 md:mt-4">If you like to play or make games, this is the week for you! Learn the elements of game design–from the initial idea to storyboarding–and how to produce it! Never be bored again.</p>
-    </div>
+<div class="mt-20 md:mt-36 md:grid md:grid-cols-2 md:gap-x-8">
+    {{#each weeks}}
+        <div class="mt-6">
+            <p class="mt-2 italic">{{start_date}}–{{end_date}}</p>
+            <p class="font-semibold text-xl underline">{{title}}</p>
+            <p class="mt-1 text-lg text-gray-500 md:mt-4">{{description}}</p>
+        </div>
+    {{/each}}
 </div>
