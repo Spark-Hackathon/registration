@@ -831,20 +831,24 @@ router.post("/admin/pull-current-campers", async (req, res, next) => { //ADMIN
 });
 
 function ConvertToCSV(objArray) {
-	var array = typeof objArray != 'object' ? JSON.parse(objArray) : objArray;
-	var str = '';
-
+	let array = typeof objArray != 'object' ? JSON.parse(objArray) : objArray;
+	let str = '';
 	for (var i = 0; i < array.length; i++) {
-		var line = '';
-		for (var index in array[i]) {
+		if (i == 0) {
+			let key_line = '';
+			Object.keys(array[0]).forEach((item, index) => {
+				if (item != '' && index != 0) key_line += ',';
+				key_line += item;
+			});
+			str += key_line + '\r\n';
+		}
+		let line = '';
+		for (let index in array[i]) {
 			if (line != '') line += ','
-
 			line += array[i][index];
 		}
-
 		str += line + '\r\n';
 	}
-
 	return str;
 }
 
@@ -855,6 +859,11 @@ router.post("/admin/export/week", (req, res, next) => {
 			if (req.body.code == code[0].value_str) {
 				connection.query("SELECT * FROM camper INNER JOIN enrollment ON enrollment.camper_id = camper.id WHERE enrollment.week_id=?", week_meta.get(req.body.week_name).id, (err, week_campers) => {
 					if (err) throw err;
+					for (i in week_campers) {
+						Object.keys(type_meta).forEach((item, index) => {
+							week_campers[i].type = type_meta[item] == week_campers[i].type ? item : week_campers[i].type;
+						});
+					}
 					res.end(ConvertToCSV(week_campers));
 				});
 			}
