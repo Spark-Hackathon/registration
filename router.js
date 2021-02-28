@@ -943,6 +943,7 @@ router.post("/admin/accept-camper-application", async (req, res, next) => { //AD
 					}
 				});
 			});
+			res.end();
 		} else {
 			throw application_schema.validate(req.body).error;
 		}
