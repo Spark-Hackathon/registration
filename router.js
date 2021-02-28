@@ -600,7 +600,7 @@ router.get("/admin/get-questions/:code", async (req, res, next) => {
 						return new Promise((resolve, reject) => {
 							async function pull_responses(question_meta_id) {
 								return new Promise((resolve_res, reject_rej) => {
-									connection.query("SELECT camper_id, question_response FROM questions WHERE question_meta_id=?", question_meta_id, (err, response) => {
+									connection.query("SELECT first_name, last_name, camper_id, question_response FROM questions INNER JOIN camper ON questions.camper_id = camper.id WHERE question_meta_id=?", question_meta_id, (err, response) => {
 										if (err) reject_res(err);
 										resolve_res(response);
 									});
@@ -611,8 +611,8 @@ router.get("/admin/get-questions/:code", async (req, res, next) => {
 								let inner_full = [];
 								if (question_meta_info.length >= 1) {
 									question_meta_info.forEach(async (question, index) => {
-										let responses = await pull_responses(question.id);
 										try {
+											let responses = await pull_responses(question.id);
 											let inner = {};
 											inner.week = week_name;
 											inner.id = question.id;
@@ -621,7 +621,7 @@ router.get("/admin/get-questions/:code", async (req, res, next) => {
 											responses.forEach((response, response_index) => {
 												inner.responses.push({
 													id: response.camper_id,
-													response: response.question_response
+													response: response.first_name + " " + response.last_name + " (" + response.camper_id + "): " + response.question_response
 												});
 											});
 											inner_full.push(inner);
