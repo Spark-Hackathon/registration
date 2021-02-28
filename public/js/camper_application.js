@@ -63,7 +63,8 @@ let grade = new Field("select", "grade")
         [8, "I will be in 8th grade"],
         [9, "I will be in 9th grade"],
         [10, "I will be in 10th grade"],
-        [11, "I will be in 11th grade"]
+        [11, "I will be in 11th grade"],
+        [12, "I will be in 12th grade"]
     ]);
 let genderList = new Field("datalist", "gender")
     .removeName()
@@ -132,8 +133,7 @@ let parentEmail = new Field("input:email", "guardian_email")
 let parentNumber = new Field("input:tel", "guardian_number")
     .require()
     .setLabel("Parent/Guardian Phone Number")
-    .pattern("[0-9]{10}")
-    .placeholder("ex. 1112223333");
+    .placeholder("ex. (111) 222-3333");
 let participationStatus = new Field("select", "participated")
     .require()
     .setLabel("Have you participated in a Spark event before?")
