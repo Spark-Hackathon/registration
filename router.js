@@ -227,7 +227,6 @@ const camper_schema = Joi.object({
 			allow: true
 		}
 	}).required(),
-	guardian_phone: Joi.number().min(10).max(10).required(),
 	participated: Joi.number().max(1).required(),
 });
 
@@ -418,7 +417,9 @@ router.post("/signup-prospect", async (req, res, next) => {
 			throw pros_schema.validate(user_data).error;
 		}
 	} catch (error) {
-		error.message = "Hmm... Looks like deleting week didn't work, try reloading?";
+		error.message = "Hmm... Looks like signing up didn't work, try reloading?";
+		if (error.code == 'ER_DUP_ENTRY') error.message = "This email is already connected to another user, try picking a different one, or get in contact with us";
+		if (error.code == 'ER_DATA_TOO_LONG') error.message = "Your name or email was to long, try a shorter one";
 		next(error);
 	}
 });
