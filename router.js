@@ -1064,10 +1064,11 @@ router.post("/admin/send-mail", async (req, res, next) => { //ADMIN
 	try {
 		let async_send_mail = await new Promise((resolve, reject) => {
 			connection.query("SELECT value_str FROM system_settings WHERE name='admin_code'", async (err, code) => {
-				if (err) reject(err);
+				if (err) return reject(err);
 				let all_campers;
-				if (req.body.code != code[0].value_str) reject("Failed authentication");
-				if (req.body.weeks.length < 0) reject("Missing the weeks value?");
+				console.log(req.body.code, code);
+				if (req.body.code != code[0].value_str) return reject("Failed authentication");
+				if (req.body.weeks.length < 0) return reject("Missing the weeks value?");
 				let week_value = "";
 				week_value = " WHERE enrollment.week_id=?";
 				if (req.body.weeks.length > 1) {
@@ -1079,7 +1080,7 @@ router.post("/admin/send-mail", async (req, res, next) => { //ADMIN
 				week_value += req.body.applicants == 1 ? " AND approved=0" : "";
 				week_value += req.body.registered == 1 ? " OR approved=1" : "";
 				connection.query("SELECT DISTINCT camper_id, first_name, last_name, email FROM enrollment INNER JOIN camper ON enrollment.camper_id = camper.id" + week_value, req.body.weeks, async (err, enrolled_info) => {
-					if (err) reject(err);
+					if (err) return reject(err);
 					//now run through each of the prospects / campers
 					let pros;
 					if (req.body.prospects == 1) pros = await prospect_sendMail_query(transporter, req.body.subject, req.body.message);
@@ -1094,13 +1095,14 @@ router.post("/admin/send-mail", async (req, res, next) => { //ADMIN
 									subject: req.body.subject,
 									text: temp_text
 								}, (err, info) => {
-									if (err) email_reject(err);
-									email_resolve(info);
+									if (err) return email_reject(err);
+									return email_resolve(info);
 								});
 							});
 						});
 						await Promise.all(emails).catch((error) => {
 							console.error(error);
+							return reject(error);
 						}).then(() => {
 							console.log(emails, pros);
 							res.end();
