@@ -227,7 +227,6 @@ const camper_schema = Joi.object({
 			allow: true
 		}
 	}).required(),
-	guardian_phone: Joi.number().min(10).max(10).required(),
 	participated: Joi.number().max(1).required(),
 });
 
@@ -418,7 +417,9 @@ router.post("/signup-prospect", async (req, res, next) => {
 			throw pros_schema.validate(user_data).error;
 		}
 	} catch (error) {
-		error.message = "Hmm... Looks like deleting week didn't work, try reloading?";
+		error.message = "Hmm... Looks like signing up didn't work, try reloading?";
+		if (error.code == 'ER_DUP_ENTRY') error.message = "This email is already connected to another user, try picking a different one, or get in contact with us";
+		if (error.code == 'ER_DATA_TOO_LONG') error.message = "Your name or email was to long, try a shorter one";
 		next(error);
 	}
 });
@@ -830,20 +831,24 @@ router.post("/admin/pull-current-campers", async (req, res, next) => { //ADMIN
 });
 
 function ConvertToCSV(objArray) {
-	var array = typeof objArray != 'object' ? JSON.parse(objArray) : objArray;
-	var str = '';
-
+	let array = typeof objArray != 'object' ? JSON.parse(objArray) : objArray;
+	let str = '';
 	for (var i = 0; i < array.length; i++) {
-		var line = '';
-		for (var index in array[i]) {
+		if (i == 0) {
+			let key_line = '';
+			Object.keys(array[0]).forEach((item, index) => {
+				if (item != '' && index != 0) key_line += ',';
+				key_line += item;
+			});
+			str += key_line + '\r\n';
+		}
+		let line = '';
+		for (let index in array[i]) {
 			if (line != '') line += ','
-
 			line += array[i][index];
 		}
-
 		str += line + '\r\n';
 	}
-
 	return str;
 }
 
@@ -854,6 +859,11 @@ router.post("/admin/export/week", (req, res, next) => {
 			if (req.body.code == code[0].value_str) {
 				connection.query("SELECT * FROM camper INNER JOIN enrollment ON enrollment.camper_id = camper.id WHERE enrollment.week_id=?", week_meta.get(req.body.week_name).id, (err, week_campers) => {
 					if (err) throw err;
+					for (i in week_campers) {
+						Object.keys(type_meta).forEach((item, index) => {
+							week_campers[i].type = type_meta[item] == week_campers[i].type ? item : week_campers[i].type;
+						});
+					}
 					res.end(ConvertToCSV(week_campers));
 				});
 			}
@@ -897,10 +907,9 @@ async function apply_camper(id, week) {
 						subject: "You were accepted for " + week,
 						text: "Hey " + email_info.first_name + " " + email_info.last_name + ", "
 					}, (err, info) => {
-						err.send_mail_info = info;
-						reject(err);
+						if (err) reject(err);
+						resolve(info);
 					});
-					resolve();
 				});
 			}
 		});
@@ -920,7 +929,7 @@ router.post("/admin/accept-camper-application", async (req, res, next) => { //AD
 				connection.query("SELECT value_str FROM system_settings WHERE name='admin_code'", async (err, code) => {
 					if (err) reject(err);
 					if (req.body.code == code[0].value_str) {
-						connection.query("SELECT approved FROM enrollment WHERE camper_id=?", req.body.camper_id, async (err, approved_status) => {
+						connection.query("SELECT approved FROM enrollment WHERE camper_id=? AND week_id=?", [req.body.camper_id, week_meta.get(req.body.week_name).id], async (err, approved_status) => {
 							if (err) reject(err);
 							if (approved_status[0].approved == 1) {
 								reject("You can't approve a camper that's already approved");
@@ -1063,10 +1072,11 @@ router.post("/admin/send-mail", async (req, res, next) => { //ADMIN
 	try {
 		let async_send_mail = await new Promise((resolve, reject) => {
 			connection.query("SELECT value_str FROM system_settings WHERE name='admin_code'", async (err, code) => {
-				if (err) reject(err);
+				if (err) return reject(err);
 				let all_campers;
-				if (req.body.code != code[0].value_str) reject("Failed authentication");
-				if (req.body.weeks.length < 0) reject("Missing the weeks value?");
+				console.log(req.body.code, code);
+				if (req.body.code != code[0].value_str) return reject("Failed authentication");
+				if (req.body.weeks.length < 0) return reject("Missing the weeks value?");
 				let week_value = "";
 				week_value = " WHERE enrollment.week_id=?";
 				if (req.body.weeks.length > 1) {
@@ -1078,7 +1088,7 @@ router.post("/admin/send-mail", async (req, res, next) => { //ADMIN
 				week_value += req.body.applicants == 1 ? " AND approved=0" : "";
 				week_value += req.body.registered == 1 ? " OR approved=1" : "";
 				connection.query("SELECT DISTINCT camper_id, first_name, last_name, email FROM enrollment INNER JOIN camper ON enrollment.camper_id = camper.id" + week_value, req.body.weeks, async (err, enrolled_info) => {
-					if (err) reject(err);
+					if (err) return reject(err);
 					//now run through each of the prospects / campers
 					let pros;
 					if (req.body.prospects == 1) pros = await prospect_sendMail_query(transporter, req.body.subject, req.body.message);
@@ -1093,13 +1103,14 @@ router.post("/admin/send-mail", async (req, res, next) => { //ADMIN
 									subject: req.body.subject,
 									text: temp_text
 								}, (err, info) => {
-									if (err) email_reject(err);
-									email_resolve(info);
+									if (err) return email_reject(err);
+									return email_resolve(info);
 								});
 							});
 						});
 						await Promise.all(emails).catch((error) => {
 							console.error(error);
+							return reject(error);
 						}).then(() => {
 							console.log(emails, pros);
 							res.end();
