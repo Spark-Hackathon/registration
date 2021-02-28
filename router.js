@@ -907,10 +907,9 @@ async function apply_camper(id, week) {
 						subject: "You were accepted for " + week,
 						text: "Hey " + email_info.first_name + " " + email_info.last_name + ", "
 					}, (err, info) => {
-						err.send_mail_info = info;
-						reject(err);
+						if (err) reject(err);
+						resolve(info);
 					});
-					resolve();
 				});
 			}
 		});
@@ -930,7 +929,7 @@ router.post("/admin/accept-camper-application", async (req, res, next) => { //AD
 				connection.query("SELECT value_str FROM system_settings WHERE name='admin_code'", async (err, code) => {
 					if (err) reject(err);
 					if (req.body.code == code[0].value_str) {
-						connection.query("SELECT approved FROM enrollment WHERE camper_id=?", req.body.camper_id, async (err, approved_status) => {
+						connection.query("SELECT approved FROM enrollment WHERE camper_id=? AND week_id=?", [req.body.camper_id, week_meta.get(req.body.week_name).id], async (err, approved_status) => {
 							if (err) reject(err);
 							if (approved_status[0].approved == 1) {
 								reject("You can't approve a camper that's already approved");
