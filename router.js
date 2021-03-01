@@ -56,7 +56,6 @@ connection.query("SELECT * FROM week", (err, row) => {
 			start_date: row[row_number].start_date,
 			end_date: row[row_number].end_date,
 			description: row[row_number].description,
-			unique_airtable_id: row[row_number].unique_airtable_id
 		});
 	}
 	week_meta = pre_week;
@@ -222,7 +221,6 @@ router.post("/camper-register-queueing", async (req, res, next) => {
 										enrolling_reject(referral_schema.validate(user_data).error);
 									}
 								}
-								pull_campers_airtable();
 								let transporter_promise = await new Promise((transport_resolve, transport_reject) => {
 									transporter.sendMail({
 										from: '"Summer Spark ' + getDate() + '"<spark' + getDate().substring(1) + '@cs.stab.org>',
@@ -449,7 +447,6 @@ router.post("/admin/add-week", (req, res, next) => {
 								start_date: req.body.start_date,
 								end_date: req.body.end_date
 							});
-							pull_campers_airtable();
 							res.end();
 						});
 					});
