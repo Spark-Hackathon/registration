@@ -54,13 +54,12 @@ async function sheet() {
 						});
 						if (index == 0) await first_row.delete();
 						//now run through the campers, and drop all of their info into that specific week - NEED TO LOOK AT ENROLLMENT VALUES
-						let camper_push = camper_meta.map((camper_item, camper_index) => {
+						await Promise.all(camper_meta.map((camper_item, camper_index) => {
 							return new Promise((camper_resolve, camper_reject) => {
 								if (camper_item.approved == 1) camper_resolve(registered_sheet.addRow(camper_item));
 								if (camper_item.approved == 0) camper_resolve(applicants_sheet.addRow(camper_item));
 							});
-						});
-						await Promise.all(camper_push);
+						}));
 						full_resolve(["done", id, title, index]);
 					});
 				}, (0.001 * length + 1) * 5000 * index);

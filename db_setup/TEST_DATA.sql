@@ -1,6 +1,6 @@
 USE registration;
 
-INSERT INTO system_settings (name, value_str) VALUES ("admin_code", "7e135d92-10d3-4a20-8e1d-4028d0587f99");
+INSERT INTO system_settings (name, value_str) VALUES ("admin_code", "test");
 
 INSERT INTO week (title, start_date, end_date, cb_code, inClass_available, virtual_available, description) VALUES ("Web Design & Development", "2021-06-28", "2021-07-02", "RANDOM_CODE1", 1, 1, 
 	"Web Dev & Development: Ever wanted to learn about HTML, CSS, & JavaScript? No matter your skill level, you're bound to learn something new. By the time you're finished, you'll have the tools and knowledge to make your own amazing websites.");
