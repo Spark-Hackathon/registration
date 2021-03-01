@@ -37,13 +37,13 @@ async function sheet() {
 	//start from page one --go through each week (from registered, then to applicants)
 	connection.query("SELECT * FROM week", async (err, week_meta) => {
 		if (err) throw err;
-		async function setup_week(id, title, index) {
+		async function setup_week(id, title, index, length) {
 			return new Promise(async (full_resolve, full_reject) => {
 				//going through each week -- make registered, then applicants sheet, then roll from there
 				//select the campers for that week
-				connection.query("SELECT * FROM camper INNER JOIN enrollment ON camper.id = enrollment.camper_id && enrollment.week_id=?", id, async (err, camper_meta) => {
-					if (err) full_reject(err);
-					setTimeout(async () => {
+				setTimeout(async () => {
+					connection.query("SELECT * FROM camper INNER JOIN enrollment ON camper.id = enrollment.camper_id && enrollment.week_id=?", id, async (err, camper_meta) => {
+						if (err) console.log(err);
 						const registered_sheet = await doc.addSheet({
 							title: id + " " + title + " Registered",
 							headerValues: Object.keys(camper_meta[0])
@@ -63,12 +63,15 @@ async function sheet() {
 						});
 						await Promise.all(camper_push);
 						full_resolve(["done", id, title, index]);
-					}, (0.001 * camper_meta.length + 1) * 5000 * index);
-				});
+					});
+				}, (0.001 * length + 1) * 5000 * index);
 			});
 		}
 		week_meta.forEach(async (item, index) => {
-			let week_value = await setup_week(item.id, item.title, index);
+			connection.query("SELECT * FROM camper INNER JOIN enrollment ON camper.id = enrollment.camper_id && enrollment.week_id=?", id, async (err, camper_meta) => {
+				if (err) console.log(err);
+				let week_value = await setup_week(item.id, item.title, index, camper_meta.length);
+			});
 			if (index == week_meta.length - 1) {
 				console.log("sheet? dun");
 			}
