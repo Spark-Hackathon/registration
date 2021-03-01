@@ -19,7 +19,6 @@ CREATE TABLE camper (
 	guardian_email VARCHAR(255) NOT NULL,
 	guardian_phone BIGINT NOT NULL,
 	participated TINYINT(1) NOT NULL,
-	unique_airtable_id VARCHAR(255),
 	PRIMARY KEY(id),
 	UNIQUE INDEX `unique_camper` (`first_name`, `last_name`, `email`)
 );
@@ -32,7 +31,6 @@ CREATE TABLE week (
 	inClass_available TINYINT(1) NOT NULL,
 	virtual_available TINYINT(1) NOT NULL,
 	description LONGTEXT NOT NULL,
-	unique_airtable_id VARCHAR(255),
 	PRIMARY KEY(id),
 	UNIQUE INDEX `unique_week` (`title`, `start_date`, `end_date`)
 );
