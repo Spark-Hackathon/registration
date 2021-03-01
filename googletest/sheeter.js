@@ -68,7 +68,7 @@ async function sheet() {
 			});
 		}
 		week_meta.forEach(async (item, index) => {
-			connection.query("SELECT * FROM camper INNER JOIN enrollment ON camper.id = enrollment.camper_id && enrollment.week_id=?", id, async (err, camper_meta) => {
+			connection.query("SELECT * FROM camper INNER JOIN enrollment ON camper.id = enrollment.camper_id && enrollment.week_id=?", item.id, async (err, camper_meta) => {
 				if (err) console.log(err);
 				let week_value = await setup_week(item.id, item.title, index, camper_meta.length);
 			});
