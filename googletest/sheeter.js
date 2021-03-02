@@ -35,7 +35,8 @@ async function sheet() {
 		title: "Spacing"
 	});
 	//start from page one --go through each week (from registered, then to applicants)
-	connection.query("SELECT * FROM week", async (err, week_meta) => {
+	return new Promise((resolve_query, reject_reject) => {
+	connection.query("SELECT * FROM week ORDER BY id ASC", async (err, week_meta) => {
 		if (err) throw err;
 		async function setup_week(id, title, index, length) {
 			return new Promise(async (full_resolve, full_reject) => {
@@ -53,25 +54,32 @@ async function sheet() {
 							headerValues: Object.keys(camper_meta[0])
 						});
 						if (index == 0) await first_row.delete();
+						let campers = camper_meta.filter(camper => camper.approved == 1);
+						let applicants = camper_meta.filter(applicant => applicant.approved == 0);
+						await registered_sheet.addRows(campers);
+						await applicants_sheet.addRows(applicants);
 						//now run through the campers, and drop all of their info into that specific week - NEED TO LOOK AT ENROLLMENT VALUES
-						await Promise.all(camper_meta.map((camper_item, camper_index) => {
-							return new Promise((camper_resolve, camper_reject) => {
-								if (camper_item.approved == 1) camper_resolve(registered_sheet.addRow(camper_item));
-								if (camper_item.approved == 0) camper_resolve(applicants_sheet.addRow(camper_item));
-							});
-						}));
 						full_resolve(["done", id, title, index]);
 					});
 				}, (0.001 * length + 1) * 5000 * index);
 			});
 		}
-		await Promise.all(week_meta.map((item, index) => {
+		Promise.all(week_meta.map((item, index) => {
+			return new Promise((camper_enrollment_resolve, camper_enrollment_reject) => {
 			connection.query("SELECT id FROM camper INNER JOIN enrollment ON camper.id = enrollment.camper_id && enrollment.week_id=?", item.id, async (err, camper_meta) => {
 				if (err) console.log(err);
-				return setup_week(item.id, item.title, index, camper_meta.length);
+				if (camper_meta) setup_week(item.id, item.title, index, camper_meta.length).then(() => {
+					camper_enrollment_resolve();
+				});
 			});
-		}));
+			});
+		})).then(() => {
+			resolve_query();
+		});
 	});
+});
 }
 
-sheet();
+sheet().then(() => {
+	console.log("dun");
+});
