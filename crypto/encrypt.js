@@ -1,12 +1,11 @@
 const crypto = require('crypto');
 const fs = require('fs');
 
-const publicKey = fs.readFileSync('pubkey.pub', 'utf8');
 const chunk_size = 64;
 
 module.exports = {
 	chunk_encrypt: (item_encrypt) => {
-		return crypto.publicEncrypt(publicKey, Buffer.from(item_encrypt)).toString('base64');
+		return crypto.publicEncrypt(process.env.CRYPTO_PUBLIC, Buffer.from(item_encrypt)).toString('base64');
 	},
 	encrypt: (item_encrypt) => {
 		let cryptoString = '';
@@ -15,5 +14,3 @@ module.exports = {
 		return cryptoString;
 	}
 };
-
-console.log(module.exports.encrypt("Hey there!"));
