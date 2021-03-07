@@ -169,7 +169,6 @@ router.post("/camper-register-queueing", async (req, res, next) => {
 			item.type = type_meta[item.type];
 			connection.query("SELECT id FROM camper WHERE first_name=? AND last_name=? AND email=?", [item.first_name, item.last_name, item.email], (err, pre_id) => {
 				if (err) reject(err);
-				let new_uuid = uuidv4();
 				let camper_writeup;
 				let extra_camper_info = [];
 				extra_camper_info.push(item.first_name, item.last_name, item.email, item.dob, item.school, item.grade, item.gender, item.type, item.race_ethnicity,
@@ -179,6 +178,7 @@ router.post("/camper-register-queueing", async (req, res, next) => {
 						"hopes_dreams=?, tshirt_size=?, borrow_laptop=?, guardian_name=?, guardian_email=?, guardian_phone=?, participated=? WHERE first_name=? AND last_name=? AND email=?";
 					extra_camper_info.push(item.first_name, item.last_name, item.email);
 				} else {
+					let new_uuid = uuidv4();
 					camper_writeup = "INSERT INTO camper (first_name, last_name, email, dob, school, grade, gender, type, race_ethnicity, " +
 						"hopes_dreams, tshirt_size, borrow_laptop, guardian_name, guardian_email, guardian_phone, participated, camper_unique_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 					extra_camper_info.push(new_uuid);
@@ -787,7 +787,7 @@ router.get("/admin/export/all/:code", (req, res, next) => {
 	}
 });
 
-function apply_camper(id, week) {
+function application_accept(id, week) {
 	return new Promise((resolve, reject) => {
 		connection.query("SELECT camper_unique_id, first_name, last_name, email FROM camper WHERE id=?", id, async (err, email_info) => {
 			if (err) reject(err);
@@ -819,29 +819,19 @@ const application_schema = Joi.object({
 
 router.post("/admin/accept-camper-application", async (req, res, next) => { //ADMIN
 	try {
-		if (application_schema.validate(req.body)) {
-			let roll_camper_app = await new Promise((resolve, reject) => {
-				connection.query("SELECT value_str FROM system_settings WHERE name='admin_code'", async (err, code) => {
+		if (!application_schema.validate(req.body)) throw application_schema.validate(req.body).error;
+		let roll_camper_app = await new Promise((resolve, reject) => {
+			connection.query("SELECT value_str FROM system_settings WHERE name='admin_code'", async (err, code) => {
+				if (err) reject(err);
+				if (req.body.code != code[0].value_str) reject("Authentication failure");
+				connection.query("SELECT approved FROM enrollment WHERE camper_id=? AND week_id=?", [req.body.camper_id, week_meta.get(req.body.week_name).id], async (err, approved_status) => {
 					if (err) reject(err);
-					if (req.body.code == code[0].value_str) {
-						connection.query("SELECT approved FROM enrollment WHERE camper_id=? AND week_id=?", [req.body.camper_id, week_meta.get(req.body.week_name).id], async (err, approved_status) => {
-							if (err) reject(err);
-							if (approved_status[0].approved == 1) {
-								reject("You can't approve a camper that's already approved");
-							} else {
-								console.log(await apply_camper(req.body.camper_id, req.body.week_name));
-								resolve();
-							}
-						});
-					} else {
-						reject("Authentication failure");
-					}
+					if (approved_status[0].approved == 1) reject("You can't approve a camper that's already approved");
+					resolve(await application_accept(req.body.camper_id, req.body.week_name));
 				});
 			});
-			res.end();
-		} else {
-			throw application_schema.validate(req.body).error;
-		}
+		});
+		res.end();
 	} catch (error) {
 		error.message = "Hmm... Looks like accepting the campers didn't work, try reloading?";
 		next(error);
