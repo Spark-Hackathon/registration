@@ -225,7 +225,6 @@ router.post("/camper-register-queueing", async (req, res, next) => {
 										});
 									});
 								}
-								if (err) enrolling_reject(err);
 								for (let weeks_db = 0; weeks_db < weeks.length; weeks_db++) {
 									let any_questions = await enrollmentInsert(weeks[weeks_db], 0);
 									//each week sends back questions for the specific person - need to build up an array
