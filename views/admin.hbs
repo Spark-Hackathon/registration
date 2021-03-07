@@ -444,7 +444,15 @@
             event.preventDefault();
             $("#week-data").empty();
 
-            fetch("/admin/get-weeks")
+            fetch("/admin/get-weeks", {
+                method: "POST",
+                cache: "no-cache",
+                headers: { "Content-Type": "application/json" },
+                redirect: "manual",
+                body: JSON.stringify({
+                    code: passwordå
+                })
+            })
                 .then(response => response.json())
                 .then(weeks => {
                     $("select#week_title").empty();
@@ -488,7 +496,15 @@
             event.preventDefault();
             $("#question-data").empty();
 
-            fetch(`/admin/get-questions/${password}`)
+            fetch(`/admin/get-questions/`, {
+                method: "POST",
+                cache: "no-cache",
+                headers: { "Content-Type": "application/json" },
+                redirect: "manual",
+                body: JSON.stringify({
+                    code: password
+                })
+            })
                 .then(response => response.json())
                 .then(questions => {
                     for(let question of questions) {
@@ -619,7 +635,15 @@
         $("#export-all").on("submit", event => {
             event.preventDefault();
 
-            fetch(`/admin/export/all/${password}`)
+            fetch(`/admin/export/all/`, {
+                method: "POST",
+                cache: "no-cache",
+                headers: { "Content-Type": "application/json" },
+                redirect: "manual",
+                body: JSON.stringify({
+                    code: password
+                })
+            })
                 .then(response => response.text())
                 .then(data => {
                     alert("Successfully exported campers to CSV. Dismiss to download.");
