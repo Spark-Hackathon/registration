@@ -2,7 +2,8 @@ DROP DATABASE IF EXISTS registration;
 CREATE DATABASE registration;
 USE registration;
 CREATE TABLE camper (
-	id INT NOT NULL AUTO_INCREMENT, 
+	id INT NOT NULL AUTO_INCREMENT,
+	camper_unique_id CHAR(36) NOT NULL,
 	first_name VARCHAR(255) NOT NULL,
 	last_name VARCHAR(255) NOT NULL,
 	email VARCHAR(255) NOT NULL,
@@ -38,7 +39,6 @@ CREATE TABLE enrollment (
 	camper_id INT NOT NULL,
 	week_id INT NOT NULL,
 	signup_time DATETIME NOT NULL,
-	enrollment_code VARCHAR(255) NOT NULL,
 	person_loc TINYINT(1) NOT NULL,
 	approved TINYINT(1) NOT NULL,
 	approved_time DATETIME,
