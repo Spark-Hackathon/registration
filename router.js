@@ -800,7 +800,7 @@ function apply_camper(id, week) {
 						first_name: email_info[0].first_name,
 						last_name: email_info[0].last_name,
 						week_name: week,
-						url: process.env.CURRENT_URL + "/" + email_info[0].camper_unique_id
+						url: process.env.CURRENT_URL + "reg-status?camper_id=" +  email_info[0].camper_unique_id
 					};
 					resolve(await full_sendmail(email_info[0].email, "You were accepted for " + week + " week", apply_camper_file, email_obj));
 				});
