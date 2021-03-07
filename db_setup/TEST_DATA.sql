@@ -2,11 +2,11 @@ USE registration;
 
 INSERT INTO system_settings (name, value_str) VALUES ("admin_code", "test");
 
-INSERT INTO week (title, start_date, end_date, cb_code, inClass_available, virtual_available, description) VALUES ("Web Design & Development", "2021-06-28", "2021-07-02", "RANDOM_CODE1", 1, 1, 
+INSERT INTO week (title, start_date, end_date, inClass_available, virtual_available, description) VALUES ("Web Design & Development", "2021-06-28", "2021-07-02", 1, 1, 
 	"Web Dev & Development: Ever wanted to learn about HTML, CSS, & JavaScript? No matter your skill level, you're bound to learn something new. By the time you're finished, you'll have the tools and knowledge to make your own amazing websites.");
-INSERT INTO week (title, start_date, end_date, cb_code, inClass_available, virtual_available, description) VALUES ("Creative Coding", "2021-07-12", "2021-07-16", "RANDOM_CODE2", 1, 1,
+INSERT INTO week (title, start_date, end_date, inClass_available, virtual_available, description) VALUES ("Creative Coding", "2021-07-12", "2021-07-16", 1, 1,
 	"Creative Coding: How can coding be traditionally 'creative?' Unlike other art forms, you don't see the code itself, but the result of it. Join us in learning how to make digital art with code, and unlock your inner artist.");
-INSERT INTO week (title, start_date, end_date, cb_code, inClass_available, virtual_available, description) VALUES ("Art of Games", "2021-07-19", "2021-07-23", "RANDOM_CODE3", 1, 1,
+INSERT INTO week (title, start_date, end_date, inClass_available, virtual_available, description) VALUES ("Art of Games", "2021-07-19", "2021-07-23", 1, 1,
 	"Art of Games: If you like to play or make games, this is the week for you! Learn the elements of game design–from the initial idea to storyboarding–and how to produce it! Never be bored again.");
 
 INSERT INTO question_meta (week_id, question_text) VALUES (1, "Why do you think web should be an important component of school life?");

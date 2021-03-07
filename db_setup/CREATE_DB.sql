@@ -28,7 +28,6 @@ CREATE TABLE week (
 	title VARCHAR(255) NOT NULL,
 	start_date DATE NOT NULL,
 	end_date DATE NOT NULL,
-	cb_code VARCHAR(255) NOT NULL,
 	inClass_available TINYINT(1) NOT NULL,
 	virtual_available TINYINT(1) NOT NULL,
 	description LONGTEXT NOT NULL,

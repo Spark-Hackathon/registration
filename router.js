@@ -66,7 +66,8 @@ connection.query("SELECT * FROM week", (err, row) => {
 function full_sendmail(to, subject, text, replacement) {
 	Object.keys(replacement).forEach((item, index) => {
 		let string = "{{" + item.toUpperCase() + "}}";
-		text = text.replace(string, replacement[item]);
+		let replacer = new RegExp(string, "g");
+		text = text.replace(replacer, replacement[item]);
 	});
 	console.log(text);
 	return new Promise((transport_resolve, transport_reject) => {
@@ -454,7 +455,7 @@ router.post("/admin/add-week", (req, res, next) => {
 			connection.query("SELECT value_str FROM system_settings WHERE name='admin_code'", async (err, code) => {
 				if (err) throw err;
 				if (req.body.code == code[0].value_str) {
-					connection.query("INSERT INTO week (title, start_date, end_date, cb_code, inClass_available, virtual_available) VALUES (?, ?, ?, ?, ?, ?)", [req.body.week_name, req.body.start_date, req.body.end_date, req.body.cb_code, req.body.inclass_available, req.body.virtual_available], (err) => {
+					connection.query("INSERT INTO week (title, start_date, end_date, inClass_available, virtual_available) VALUES (?, ?, ?, ?, ?)", [req.body.week_name, req.body.start_date, req.body.end_date, req.body.inclass_available, req.body.virtual_available], (err) => {
 						if (err) throw err;
 						connection.query("SELECT id FROM week WHERE title=? AND start_date=? AND end_date=?", [req.body.week_name, req.body.start_date, req.body.end_date], (err, row) => {
 							if (err) throw err;
@@ -939,7 +940,7 @@ function prospect_query() {
 			prospects.forEach((item, index) => {
 				let split_name = item.name.split(" ");
 				let latter_name = split_name[0] == split_name[split_name.length - 1] ? "" : split_name[split_name.length - 1];
-				full_obj.push({ email: prospects[0].email, first_name: split_name[0], last_name: latter_name, url: "To unsubscribe, click here: " + process.env.CURRENT_URL + "/unsubcribe" });
+				full_obj.push({ email: prospects[0].email, first_name: split_name[0], last_name: latter_name, url: "To unsubscribe, click here: " + process.env.CURRENT_URL + "unsubcribe" });
 			});
 			resolve(full_obj);
 		});
@@ -971,7 +972,7 @@ router.post("/admin/send-mail", async (req, res, next) => { //ADMIN
 					if (req.body.prospects == 1) full_email_obj = await prospect_query(req.body.subject, req.body.message);
 					if ((req.body.applicants == 1 || req.body.registered == 1) && enrolled_info) {
 						enrolled_info.forEach((item, index) => {
-							full_email_obj.push({ email: item.email, first_name: item.first_name, last_name: item.last_name, url: "Check out your week statuses here: " + process.env.CURRENT_URL + "/reg-status?camper_id=" + item.camper_unique_id });
+							full_email_obj.push({ email: item.email, first_name: item.first_name, last_name: item.last_name, url: "Check out your week statuses here: " + process.env.CURRENT_URL + "reg-status?camper_id=" + item.camper_unique_id });
 						});
 					}
 					let all_emails = full_email_obj.map((item, index) => {
