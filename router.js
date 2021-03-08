@@ -343,7 +343,7 @@ router.post("/signup-prospect", async (req, res, next) => {
 });
 
 // this will work for all the needed inserts into prospect, just change subscribed
-async function prospectSignup(user_data) {
+function prospectSignup(user_data) {
 	return new Promise((resolve, reject) => {
 		let build = "INSERT INTO prospect (name, email, subscribed) VALUES (?, ?, ?)";
 		let array_build = [user_data.name, user_data.email, 1];
@@ -885,7 +885,7 @@ function prospect_query() {
 				let split_name = item.name.trim().split(" ");
 				let latter_name = split_name[0] == split_name[split_name.length - 1] ? "" : split_name[split_name.length - 1];
 				full_obj.push({
-					email: prospects[0].email,
+					email: item.email,
 					first_name: split_name[0],
 					last_name: latter_name,
 					url: "To unsubscribe, click here: " + process.env.CURRENT_URL + "unsubscribe"
@@ -939,6 +939,7 @@ router.post("/admin/send-mail", async (req, res, next) => { //ADMIN
 						});
 					});
 				}
+				console.log(full_email_obj);
 				let all_emails = full_email_obj.map((item, index) => {
 					return full_sendmail(item.email, req.body.subject, req.body.message, item);
 				});
