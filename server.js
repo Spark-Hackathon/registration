@@ -10,10 +10,12 @@ const exphbs = require("express-handlebars");
 
 const { getDate } = require("./utils");
 const router = require("./router");
+const client = require("./client_status");
 
 // application setup
 app.use(express.static(__dirname + "/public"));
 app.use("/", router);
+app.use("/", client);
 
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());

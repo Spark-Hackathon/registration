@@ -1,6 +1,5 @@
 const bodyParser = require("body-parser");
 const nodemail = require("nodemailer");
-const airtable = require("airtable");
 const sendmail = require("sendmail");
 const express = require("express");
 const mysql = require("mysql2");
@@ -62,126 +61,20 @@ router.use(bodyParser.urlencoded({
 }));
 router.use(bodyParser.json());
 
-airtable.configure({
-	endpointUrl: 'https://api.airtable.com',
-	apiKey: 'keyzS7iqImZMJtnd0'
-})
-const base = airtable.base('appdB4qX865H9wetS');
-
-async function pull_weeks_airtable() {
-	week_meta.forEach(async (week, index) => {
-		let fields = {};
-		fields.Name = index;
-		fields.ID = week.id;
-		fields.start_date = week.start_date;
-		fields.end_date = week.end_date;
-		fields.inClass_available = week.inclass_available;
-		fields.virtual_available = week.virtual_available;
-		console.log(JSON.stringify(fields));
-		if (week.unique_airtable_id) {
-			await base('Weeks').destroy(week.unique_airtable_id, function(err, deletedRecords) {
-				if (err) {
-					console.error(err);
-					return;
-				}
-				console.log('Deleted', deletedRecords.length, 'records');
-			});
-		}
-		await base('Weeks').create([{
-			"fields": fields
-		}], (err, records) => {
-			if (err) {
-				console.error(err);
-				return;
-			}
-			records.forEach((record) => {
-				connection.query("UPDATE week SET unique_airtable_id=? WHERE id=?", [record.getId(), week.id], (err) => {
-					if (err) {
-						console.error(err);
-						base('Weeks').destroy([week.unique_airtable_id], function(err, deletedRecords) {
-							if (err) {
-								console.error(err);
-								return;
-							}
-							console.log('Deleted', deletedRecords.length, 'records');
-						});
-					}
-					week.unique_airtable_id = record.getId();
-				});
-			});
+function admin_validate(code) {
+	return new Promise((resolve, reject) => {
+		connection.query("SELECT value_str FROM system_settings WHERE name='admin_code'", (err, admin_code) => {
+			if (err) reject(err);
+			if (code != admin_code[0].value_str) reject("Authentication failure");
+			resolve(true);
 		});
 	});
 }
 
-async function pull_campers_airtable() {
-	connection.query("SELECT * FROM camper", (err, campers) => {
-		if (err) {
-			console.error(err);
-		}
-		campers.forEach(async (camper, index) => {
-			let fields = {};
-			fields.ID = camper.id;
-			fields.first_name = camper.first_name;
-			fields.last_name = camper.last_name;
-			fields.email = camper.email;
-			fields.dob = camper.dob;
-			fields.school = camper.school;
-			fields.grade = camper.grade;
-			fields.gender = camper.gender;
-			fields.type = camper.type;
-			fields.race_ethnicity = camper.race_ethnicity;
-			fields.hopes_dreams = camper.hopes_dreams;
-			fields.tshirt_size = camper.tshirt_size;
-			fields.borrow_laptop = camper.borrow_laptop;
-			fields.guardian_name = camper.guardian_name;
-			fields.guardian_email = camper.guardian_email;
-			fields.guardian_phone = camper.guardian_phone;
-			fields.participated = camper.participated;
-			console.log("INSERTION");
-			console.log(JSON.stringify(fields));
-			if (camper.unique_airtable_id) {
-				await base('Applicants').destroy(camper.unique_airtable_id, function(err, deletedRecords) {
-					if (err) {
-						console.error(err);
-						return;
-					}
-					console.log('Deleted', deletedRecords.length, 'records');
-				});
-			}
-			await base('Applicants').create([{
-				"fields": fields
-			}], (err, records) => {
-				if (err) {
-					console.error(err);
-					return;
-				}
-				records.forEach((record) => {
-					connection.query("UPDATE camper SET unique_airtable_id=? WHERE id=?", [record.getId(), camper.id], (err) => {
-						if (err) {
-							console.error(err);
-							base('Weeks').destroy([camper.unique_airtable_id], function(err, deletedRecords) {
-								if (err) {
-									console.error(err);
-									return;
-								}
-								console.log('Deleted', deletedRecords.length, 'records');
-							});
-						}
-					});
-				});
-			});
-		});
-	});
-}
-
-router.get("/pull-weeks-airtable", (req, res) => {
-	pull_weeks_airtable();
-});
-
-router.get("/pull-campers-airtable", (req, res) => {
-	pull_campers_airtable();
-});
-
+router.use(bodyParser.urlencoded({
+	extended: false
+}));
+router.use(bodyParser.json());
 
 const basic_schema = Joi.object({
 	first_name: Joi.string().min(1).max(255).required(),
@@ -474,71 +367,71 @@ router.post("/unsubscribe", (req, res, next) => {
 	}
 });
 
-router.get("/admin/get-weeks", (req, res, next) => {
-	let weeks = [];
-	let count = 0;
-	week_meta.forEach((week, index) => {
-		weeks[count] = {
-			name: index,
-			week_id: week.id,
-			inclass_available: week.inclass_available,
-			virtual_available: week.virtual_available
-		};
-		count++;
-	});
-	res.json(weeks);
+router.post("/admin/get-weeks", async (req, res, next) => {
+	try {
+		await admin_validate(req.body.code);
+		let weeks = [];
+		let count = 0;
+		week_meta.forEach((week, index) => {
+			weeks[count] = {
+				name: index,
+				week_id: week.id,
+				inclass_available: week.inclass_available,
+				virtual_available: week.virtual_available
+			};
+			count++;
+		});
+		res.json(weeks);
+	} catch (error) {
+		error.message = "Hmm.. Looks like getting weeks didn't work, try reloading?";
+		next(error);
+	}
 });
 
 router.post("/admin/delete-week", async (req, res, next) => {
 	try {
-		connection.query("SELECT system_settings.value_str, week.title FROM system_settings system_settings CROSS JOIN week week WHERE system_settings.name='admin_code' AND week.id=?", req.body.id, async (err, code) => {
+		await admin_validate(req.body.code);
+		let obj = {
+			week_question: []
+		};
+		connection.query("SELECT id, question_text FROM question_meta WHERE week_id=?", req.body.id, async (err, question_meta_info) => {
 			if (err) throw err;
-			if (req.body.code == code[0].value_str) {
-				let obj = {
-					week_question: []
-				};
-				connection.query("SELECT id, question_text FROM question_meta WHERE week_id=?", req.body.id, async (err, question_meta_info) => {
-					if (err) throw err;
-					async function pull_questions(id) {
-						return new Promise((resolve, reject) => {
-							connection.query("SELECT first_name, last_name, question_response FROM questions INNER JOIN camper ON questions.camper_id = camper.id WHERE question_meta_id=?", id, (err, question_res) => {
-								if (err) reject(err);
-								resolve(question_res);
-							});
+			async function pull_questions(id) {
+				return new Promise((resolve, reject) => {
+					connection.query("SELECT first_name, last_name, question_response FROM questions INNER JOIN camper ON questions.camper_id = camper.id WHERE question_meta_id=?", id, (err, question_res) => {
+						if (err) reject(err);
+						resolve(question_res);
+					});
+				});
+			}
+			if (question_meta_info.length) {
+				question_meta_info.forEach(async (item, index) => {
+					let questions = await pull_questions(item.id);
+					obj.week_question.push({
+						question_text: item.question_text,
+						question_answer: []
+					});
+					questions.forEach((question, ind) => {
+						obj.week_question[index].question_answer.push({
+							camper_name: question.first_name + " " + question.last_name,
+							response: question.question_response
 						});
-					}
-					if (question_meta_info.length) {
-						question_meta_info.forEach(async (item, index) => {
-							let questions = await pull_questions(item.id);
-							obj.week_question.push({
-								question_text: item.question_text,
-								question_answer: []
-							});
-							questions.forEach((question, ind) => {
-								obj.week_question[index].question_answer.push({
-									camper_name: question.first_name + " " + question.last_name,
-									response: question.question_response
-								});
-							});
-							if (obj.week_question.length == question_meta_info.length) {
-								//grab all of the info for the questions about this week, drop that and make it into an obj to send to user
-								connection.query("DELETE FROM week WHERE id=?", req.body.id, (err) => {
-									if (err) throw err;
-									week_meta.delete(code[0].title);
-									res.json(obj);
-								});
-							}
-						});
-					} else {
+					});
+					if (obj.week_question.length == question_meta_info.length) {
+						//grab all of the info for the questions about this week, drop that and make it into an obj to send to user
 						connection.query("DELETE FROM week WHERE id=?", req.body.id, (err) => {
 							if (err) throw err;
 							week_meta.delete(code[0].title);
-							res.end();
+							res.json(obj);
 						});
 					}
 				});
 			} else {
-				throw "Failure to login to admin";
+				connection.query("DELETE FROM week WHERE id=?", req.body.id, (err) => {
+					if (err) throw err;
+					week_meta.delete(code[0].title);
+					res.end();
+				});
 			}
 		});
 	} catch (error) {
@@ -556,110 +449,96 @@ const add_week_schema = Joi.object({
 	virtual_available: Joi.number().min(1).max(1).required()
 });
 
-router.post("/admin/add-week", (req, res, next) => {
+router.post("/admin/add-week", async (req, res, next) => {
 	try {
-		if (add_week_schema.validate(req.body)) {
-			connection.query("SELECT value_str FROM system_settings WHERE name='admin_code'", async (err, code) => {
+		await admin_validate(req.body.code);
+		if (!add_week_schema.validate(req.body)) throw add_week_schema.validate(req.body).error;
+		connection.query("INSERT INTO week (title, start_date, end_date, inClass_available, virtual_available) VALUES (?, ?, ?, ?, ?)", [req.body.week_name, req.body.start_date, req.body.end_date, req.body.inclass_available, req.body.virtual_available], (err) => {
+			if (err) throw err;
+			connection.query("SELECT id FROM week WHERE title=? AND start_date=? AND end_date=?", [req.body.week_name, req.body.start_date, req.body.end_date], (err, row) => {
 				if (err) throw err;
-				if (req.body.code == code[0].value_str) {
-					connection.query("INSERT INTO week (title, start_date, end_date, cb_code, inClass_available, virtual_available) VALUES (?, ?, ?, ?, ?, ?)", [req.body.week_name, req.body.start_date, req.body.end_date, req.body.cb_code, req.body.inclass_available, req.body.virtual_available], (err) => {
-						if (err) throw err;
-						connection.query("SELECT id FROM week WHERE title=? AND start_date=? AND end_date=?", [req.body.week_name, req.body.start_date, req.body.end_date], (err, row) => {
-							if (err) throw err;
-							week_meta.set(req.body.week_name, {
-								id: row[0].id,
-								inclass_available: req.body.inclass_available,
-								virtual_available: req.body.virtual_available,
-								start_date: req.body.start_date,
-								end_date: req.body.end_date
-							});
-							pull_campers_airtable();
-							res.end();
-						});
-					});
-				} else {
-					throw "The admin login didn't work";
-				}
+				week_meta.set(req.body.week_name, {
+					id: row[0].id,
+					inclass_available: req.body.inclass_available,
+					virtual_available: req.body.virtual_available,
+					start_date: req.body.start_date,
+					end_date: req.body.end_date
+				});
+				res.end();
 			});
-		} else {
-			throw add_week_schema.validate(req.body).error;
-		}
+		});
 	} catch (error) {
 		error.message = "Failure to add the week " + req.body.week_name;
 		next(error);
 	}
 });
 
-router.get("/admin/get-questions/:code", async (req, res, next) => {
+router.post("/admin/get-questions", async (req, res, next) => {
 	try {
-		connection.query("SELECT value_str FROM system_settings WHERE name='admin_code'", (err, code) => {
+		await admin_validate(req.body.code);
+		connection.query("SELECT COUNT(id) AS question_count FROM question_meta", (err, question_length) => {
 			if (err) throw err;
-			if (req.params.code == code[0].value_str) {
-				connection.query("SELECT COUNT(id) AS question_count FROM question_meta", (err, question_length) => {
-					if (err) throw err;
-					let question_obj = [];
-					async function pull_questions(week_name, week_id) {
-						return new Promise((resolve, reject) => {
-							async function pull_responses(question_meta_id) {
-								return new Promise((resolve_res, reject_rej) => {
-									connection.query("SELECT camper_id, question_response FROM questions WHERE question_meta_id=?", question_meta_id, (err, response) => {
-										if (err) reject_res(err);
-										resolve_res(response);
-									});
-								});
-							}
-							connection.query("SELECT id, question_text FROM question_meta WHERE week_id=?", week_id, async (err, question_meta_info) => {
-								if (err) reject(err);
-								let inner_full = [];
-								if (question_meta_info.length >= 1) {
-									question_meta_info.forEach(async (question, index) => {
-										let responses = await pull_responses(question.id);
-										try {
-											let inner = {};
-											inner.week = week_name;
-											inner.id = question.id;
-											inner.question = question.question_text;
-											inner.responses = [];
-											responses.forEach((response, response_index) => {
-												inner.responses.push({
-													id: response.camper_id,
-													response: response.question_response
-												});
-											});
-											inner_full.push(inner);
-											if (index == question_meta_info.length - 1) {
-												resolve(inner_full);
-											}
-										} catch (error) {
-											reject(error);
-										}
-									});
-								} else {
-									resolve(1);
-								}
+			let question_obj = [];
+			async function pull_questions(week_name, week_id) {
+				return new Promise((resolve, reject) => {
+					async function pull_responses(question_meta_id) {
+						return new Promise((resolve_res, reject_rej) => {
+							connection.query("SELECT first_name, last_name, camper_id, question_response FROM questions INNER JOIN camper ON questions.camper_id = camper.id WHERE question_meta_id=?", question_meta_id, (err, response) => {
+								if (err) reject_res(err);
+								resolve_res(response);
 							});
 						});
 					}
-					let questions = [];
-					let count = -1;
-					week_meta.forEach(async (week, index) => {
-						try {
-							let inner_array = await pull_questions(index, week.id);
-							if (inner_array != 1) {
-								for (num in inner_array) {
-									questions.push(inner_array[num]);
+					connection.query("SELECT id, question_text FROM question_meta WHERE week_id=?", week_id, async (err, question_meta_info) => {
+						if (err) reject(err);
+						let inner_full = [];
+						if (question_meta_info.length >= 1) {
+							question_meta_info.forEach(async (question, index) => {
+								try {
+									let responses = await pull_responses(question.id);
+									let inner = {};
+									inner.week = week_name;
+									inner.id = question.id;
+									inner.question = question.question_text;
+									inner.responses = [];
+									responses.forEach((response, response_index) => {
+										inner.responses.push({
+											id: response.camper_id,
+											response: response.first_name + " " + response.last_name + " (" + response.camper_id + "): " + response.question_response
+										});
+									});
+									inner_full.push(inner);
+									if (index == question_meta_info.length - 1) {
+										resolve(inner_full);
+									}
+								} catch (error) {
+									reject(error);
 								}
-							}
-							count++;
-							if (count == week_meta.size - 1) {
-								res.json(questions);
-							}
-						} catch (error) {
-							throw error;
+							});
+						} else {
+							resolve(1);
 						}
 					});
 				});
 			}
+			let questions = [];
+			let count = -1;
+			week_meta.forEach(async (week, index) => {
+				try {
+					let inner_array = await pull_questions(index, week.id);
+					if (inner_array != 1) {
+						for (num in inner_array) {
+							questions.push(inner_array[num]);
+						}
+					}
+					count++;
+					if (count == week_meta.size - 1) {
+						res.json(questions);
+					}
+				} catch (error) {
+					throw error;
+				}
+			});
 		});
 	} catch (error) {
 		error.message = "Hmm... Looks like adding your question didn't work, try reloading?";
@@ -667,17 +546,13 @@ router.get("/admin/get-questions/:code", async (req, res, next) => {
 	}
 });
 
-router.post("/admin/add-question", (req, res, next) => {
+router.post("/admin/add-question", async (req, res, next) => {
 	try {
-		connection.query("SELECT value_str FROM system_settings WHERE name='admin_code'", (err, code) => {
+		await admin_validate(req.body.code);
+		let week_id = week_meta.get(req.body.week).id;
+		connection.query("INSERT INTO question_meta (week_id, question_text) VALUE (?, ?)", [week_id, req.body.question], (err) => {
 			if (err) throw err;
-			if (req.body.code == code[0].value_str) {
-				let week_id = week_meta.get(req.body.week).id;
-				connection.query("INSERT INTO question_meta (week_id, question_text) VALUE (?, ?)", [week_id, req.body.question], (err) => {
-					if (err) throw err;
-					res.end();
-				});
-			}
+			res.end();
 		});
 	} catch (error) {
 		error.message = "Hmm... Looks like adding your question didn't work, try reloading?";
@@ -685,17 +560,13 @@ router.post("/admin/add-question", (req, res, next) => {
 	}
 });
 
-router.post("/admin/delete-question", (req, res, next) => {
+router.post("/admin/delete-question", async (req, res, next) => {
 	try {
-		connection.query("SELECT value_str FROM system_settings WHERE name='admin_code'", (err, code) => {
+		await admin_validate(req.body.code);
+		let week_id = week_meta.get(req.body.week).id;
+		connection.query("DELETE FROM question_meta WHERE id=? AND week_id=?", [req.body.id, week_id], (err) => {
 			if (err) throw err;
-			if (req.body.code == code[0].value_str) {
-				let week_id = week_meta.get(req.body.week).id;
-				connection.query("DELETE FROM question_meta WHERE id=? AND week_id=?", [req.body.id, week_id], (err) => {
-					if (err) throw err;
-					res.end();
-				});
-			}
+			res.end();
 		});
 	} catch (error) {
 		error.message = "Hmm... Looks like deleting your question didn't work, try reloading?";
@@ -703,16 +574,12 @@ router.post("/admin/delete-question", (req, res, next) => {
 	}
 });
 
-router.post("/admin/delete-response", (req, res, next) => {
+router.post("/admin/delete-response", async (req, res, next) => {
 	try {
-		connection.query("SELECT value_str FROM system_settings WHERE name='admin_code'", (err, code) => {
+		await admin_validate(req.body.code);
+		connection.query("DELETE FROM questions WHERE camper_id=? AND question_meta_id=?", [req.body.camper_id, req.body.question_id], (err) => {
 			if (err) throw err;
-			if (req.body.code == code[0].value_str) {
-				connection.query("DELETE FROM questions WHERE camper_id=? AND question_meta_id=?", [req.body.camper_id, req.body.question_id], (err) => {
-					if (err) throw err;
-					res.end();
-				});
-			}
+			res.end();
 		});
 	} catch (error) {
 		error.message = "Hmm... Looks like deleting this response didn't work, try reloading?";
@@ -763,68 +630,62 @@ function partition(array, low, high) {
 
 router.post("/admin/pull-current-campers", async (req, res, next) => { //ADMIN
 	try {
-		connection.query("SELECT value_str FROM system_settings WHERE name='admin_code'", async (err, code) => {
+		await admin_validate(req.body.code);
+		//throw all currently pending campers - run through and see which ones are still waiting in enrollment
+		let addition_on_camper = req.body['applicants-or-registered'] == 1 ? ", confirmed" : "";
+		connection.query("SELECT camper_id, week_id" + addition_on_camper + " FROM enrollment WHERE approved=?", req.body['applicants-or-registered'], async (err, camper_ids) => {
 			if (err) throw err;
-			if (req.body.code == code[0].value_str) {
-				//throw all currently pending campers - run through and see which ones are still waiting in enrollment
-				let addition_on_camper = req.body['applicants-or-registered'] == 1 ? ", confirmed" : "";
-				connection.query("SELECT camper_id, week_id" + addition_on_camper + " FROM enrollment WHERE approved=?", req.body['applicants-or-registered'], async (err, camper_ids) => {
-					if (err) throw err;
-					let obj = {
-						campers: []
-					};
-					let id = [];
-					let camper_pos = [];
-					for (ids in camper_ids) {
-						camper_pos[ids] = [];
-						camper_pos[ids][0] = camper_ids[ids].week_id;
-						camper_pos[ids][1] = camper_ids[ids].camper_id;
-						camper_pos[ids][2] = camper_ids[ids].confirmed;
-					}
-					camper_pos = quicksort(camper_pos, 0, camper_pos.length - 1);
-
-					function allCampers() {
-						return new Promise((resolve, reject) => {
-							//build up the week object
-							let inner = {};
-							connection.query("SELECT title FROM week WHERE id=?", id[1], (err, week_title) => {
-								if (err) reject(err);
-								inner.week = week_title[0].title;
-								connection.query("SELECT id, first_name, last_name, type, hopes_dreams, participated FROM camper WHERE id=?", id, (err, camper) => {
-									if (err) reject(err);
-									inner.camper_id = camper[0].id;
-									inner.first_name = camper[0].first_name;
-									inner.last_name = camper[0].last_name;
-									inner.type = camper[0].type;
-									inner.hopes_dreams = camper[0].hopes_dreams;
-									inner.participated = camper[0].participated == 1 ? "Participated before" : "Has not participated";
-									if (id[2] == 0 || id[2] == 1) {
-										inner.confirmed = id[2];
-									}
-									resolve(inner);
-								});
-							});
-						});
-					}
-					let each_week_rolling = [];
-					for (let each_id = 0; each_id < camper_ids.length; each_id++) {
-						id[0] = camper_pos[each_id][1];
-						id[1] = camper_pos[each_id][0];
-						id[2] = camper_pos[each_id][2];
-						try {
-							obj.campers.push(await allCampers());
-							if (each_id == camper_ids.length - 1) {
-								res.json(obj);
-							}
-						} catch (error) {
-							throw error;
-						}
-					}
-					res.end();
-				});
-			} else {
-				throw "incorrect date";
+			let obj = {
+				campers: []
+			};
+			let id = [];
+			let camper_pos = [];
+			for (ids in camper_ids) {
+				camper_pos[ids] = [];
+				camper_pos[ids][0] = camper_ids[ids].week_id;
+				camper_pos[ids][1] = camper_ids[ids].camper_id;
+				camper_pos[ids][2] = camper_ids[ids].confirmed;
 			}
+			camper_pos = quicksort(camper_pos, 0, camper_pos.length - 1);
+
+			function allCampers() {
+				return new Promise((resolve, reject) => {
+					//build up the week object
+					let inner = {};
+					connection.query("SELECT title FROM week WHERE id=?", id[1], (err, week_title) => {
+						if (err) reject(err);
+						inner.week = week_title[0].title;
+						connection.query("SELECT id, first_name, last_name, type, hopes_dreams, participated FROM camper WHERE id=?", id, (err, camper) => {
+							if (err) reject(err);
+							inner.camper_id = camper[0].id;
+							inner.first_name = camper[0].first_name;
+							inner.last_name = camper[0].last_name;
+							inner.type = camper[0].type;
+							inner.hopes_dreams = camper[0].hopes_dreams;
+							inner.participated = camper[0].participated == 1 ? "Participated before" : "Has not participated";
+							if (id[2] == 0 || id[2] == 1) {
+								inner.confirmed = id[2];
+							}
+							resolve(inner);
+						});
+					});
+				});
+			}
+			let each_week_rolling = [];
+			for (let each_id = 0; each_id < camper_ids.length; each_id++) {
+				id[0] = camper_pos[each_id][1];
+				id[1] = camper_pos[each_id][0];
+				id[2] = camper_pos[each_id][2];
+				try {
+					obj.campers.push(await allCampers());
+					if (each_id == camper_ids.length - 1) {
+						res.json(obj);
+					}
+				} catch (error) {
+					throw error;
+				}
+			}
+			res.end();
 		});
 	} catch (error) {
 		error.message = "Hmm... Looks like selecting the campers didn't work, try reloading?";
@@ -850,16 +711,17 @@ function ConvertToCSV(objArray) {
 	return str;
 }
 
-router.post("/admin/export/week", (req, res, next) => {
+router.post("/admin/export/week", async (req, res, next) => {
 	try {
-		connection.query("SELECT value_str FROM system_settings WHERE name='admin_code'", async (err, code) => {
+		await admin_validate(req.body.code);
+		connection.query("SELECT * FROM camper INNER JOIN enrollment ON enrollment.camper_id = camper.id WHERE enrollment.week_id=?", week_meta.get(req.body.week_name).id, (err, week_campers) => {
 			if (err) throw err;
-			if (req.body.code == code[0].value_str) {
-				connection.query("SELECT * FROM camper INNER JOIN enrollment ON enrollment.camper_id = camper.id WHERE enrollment.week_id=?", week_meta.get(req.body.week_name).id, (err, week_campers) => {
-					if (err) throw err;
-					res.end(ConvertToCSV(week_campers));
+			for (i in week_campers) {
+				Object.keys(type_meta).forEach((item, index) => {
+					week_campers[i].type = type_meta[item] == week_campers[i].type ? item : week_campers[i].type;
 				});
 			}
+			res.end(ConvertToCSV(week_campers));
 		});
 	} catch (error) {
 		error.message = "Failed to export the campers of " + week_meta.get(req.body.week_name).id;
@@ -867,22 +729,19 @@ router.post("/admin/export/week", (req, res, next) => {
 	}
 });
 
-router.get("/admin/export/all/:code", (req, res, next) => {
+router.post("/admin/export/all", async (req, res, next) => {
 	try {
-		connection.query("SELECT value_str FROM system_settings WHERE name='admin_code'", async (err, code) => {
-			if (err) res.render("error", {
-				title: `Help! – Summer Camp ${getDate()}`,
-				error: "Hmm... Looks like accepting the campers didn't work, try reloading?"
+		await admin_validate(req.body.code);
+		let query_net = new Promise((resolve, reject) => {
+			connection.query("SELECT * FROM camper", (err, all_campers) => {
+				if (err) reject(err);
+				res.end(ConvertToCSV(all_campers));
 			});
-			if (req.params.code == code[0].value_str) {
-				connection.query("SELECT * FROM camper", (err, all_campers) => {
-					if (err) throw err;
-					res.end(ConvertToCSV(all_campers));
-				});
-			}
 		});
+		await query_net;
 	} catch (error) {
 		error.message = "Failed to export all campers";
+		next(error);
 	}
 });
 
@@ -893,22 +752,20 @@ async function apply_camper(id, week) {
 			newline: 'unix',
 			path: 'user/sbin/sendmail'
 		});
-		connection.query("SELECT first_name, last_name, email FROM camper WHERE id=?", id, (err, email_info) => {
+		connection.query("SELECT first_name, last_name, email FROM camper WHERE id=?", id, async (err, email_info) => {
 			if (err) reject(err);
 			if (email_info.length) {
 				let approved_date = new Date();
-				connection.query("UPDATE enrollment SET approved=1, approved_time=? WHERE camper_id=? AND week_id=?", [approved_date, id, week_meta.get(week).id], (err) => {
+				connection.query("UPDATE enrollment SET approved=1, approved_time=? WHERE camper_id=? AND week_id=?", [approved_date, id, week_meta.get(week).id], async (err) => {
 					if (err) reject(err);
-					transporter.sendMail({
-						from: "spark" + getDate + "@cs.stab.org",
-						to: email_info[0].email,
-						subject: "You were accepted for " + week,
-						text: "Hey " + email_info.first_name + " " + email_info.last_name + ", "
-					}, (err, info) => {
-						err.send_mail_info = info;
-						reject(err);
-					});
-					resolve();
+					let apply_camper_file = fs.readFileSync(path.join(__dirname, "emailTemplates", "accepting_camper_app")).toString();
+					let email_obj = {
+						first_name: email_info[0].first_name,
+						last_name: email_info[0].last_name,
+						week_name: week,
+						url: process.env.CURRENT_URL + "reg-status?camper_id=" + email_info[0].camper_unique_id
+					};
+					resolve(await full_sendmail(email_info[0].email, "You were accepted for " + week + " week", apply_camper_file, email_obj));
 				});
 			}
 		});
@@ -923,109 +780,58 @@ const application_schema = Joi.object({
 
 router.post("/admin/accept-camper-application", async (req, res, next) => { //ADMIN
 	try {
-		if (application_schema.validate(req.body)) {
-			let roll_camper_app = await new Promise((resolve, reject) => {
-				connection.query("SELECT value_str FROM system_settings WHERE name='admin_code'", async (err, code) => {
-					if (err) reject(err);
-					if (req.body.code == code[0].value_str) {
-						connection.query("SELECT approved FROM enrollment WHERE camper_id=?", req.body.camper_id, async (err, approved_status) => {
-							if (err) reject(err);
-							if (approved_status[0].approved == 1) {
-								reject("You can't approve a camper that's already approved");
-							} else {
-								await apply_camper(req.body.camper_id, req.body.week_name);
-								resolve();
-							}
-						});
-					} else {
-						reject("Authentication failure");
-					}
-				});
+		if (!application_schema.validate(req.body)) throw application_schema.validate(req.body).error;
+		await admin_validate(req.body.code);
+		let roll_camper_app = await new Promise((resolve, reject) => {
+			connection.query("SELECT approved FROM enrollment WHERE camper_id=? AND week_id=?", [req.body.camper_id, week_meta.get(req.body.week_name).id], async (err, approved_status) => {
+				if (err) reject(err);
+				if (approved_status[0].approved == 1) reject("You can't approve a camper that's already approved");
+				resolve(await application_accept(req.body.camper_id, req.body.week_name));
 			});
-		} else {
-			throw application_schema.validate(req.body).error;
-		}
-	} catch (error) {
-		error.message = "Hmm... Looks like accepting the campers didn't work, try reloading?";
-		next(error);
-	}
-});
-
-router.post("/admin/confirm-camper", async (req, res, next) => {
-	try {
-		connection.query("SELECT value_str FROM system_settings WHERE name='admin_code'", async (err, code) => {
-			if (err) throw err;
-			if (req.body.code == code[0].value_str) {
-				connection.query("SELECT approved FROM enrollment WHERE camper_id=? AND week_id=?", [req.body.camper_id, week_meta.get(req.body.week_name).id], async (err, approved_status) => {
-					if (err) throw err;
-					if (approved_status) {
-						if (approved_status[0].approved == 1) {
-							connection.query("UPDATE enrollment SET confirmed=1, campbrain_completion=? WHERE approved=1 AND camper_id=? AND week_id=?", [new Date(), req.body.camper_id, week_meta.get(req.body.week_name).id], async (err) => {
-								if (err) throw err;
-								res.end();
-							});
-						} else {
-							await apply_camper(req.body.camper_id, req.body.week_name);
-							res.end();
-						}
-					} else {
-						throw err;
-					}
-				});
-			}
 		});
 	} catch (error) {
-		error.message = "Hmm... Looks like confirming a camper enrollment didn't work, try reloading?";
+		error.message = "Looks like accepting the camper didn't work, try again?";
 		next(error);
 	}
 });
 
-router.post("/admin/delete-enrollment", (req, res, next) => {
+router.post("/admin/delete-enrollment", async (req, res, next) => {
 	try {
+		await admin_validate(req.body.code);
 		let camper_value = await new Promise((resolve, reject) => {
-			connection.query("SELECT value_str FROM system_settings WHERE name='admin_code'", (err, code) => {
+			//check for if their an applicant or a regisered camper
+			req.body.week_id = week_meta.get(req.body.week_name).id;
+			connection.query("SELECT approved FROM enrollment WHERE camper_id=? AND week_id=?", [req.body.camper_id, req.body.week_id], (err, approved) => {
 				if (err) reject(err);
-				if (req.body.code == code[0].value_str) {
-					//check for if their an applicant or a regisered camper
-					req.body.week_id = week_meta.get(req.body.week_name).id;
-					connection.query("SELECT approved FROM enrollment WHERE camper_id=? AND week_id=?", [req.body.camper_id, req.body.week_id], (err, approved) => {
+				if (approved[0].approved == 1) {
+					connection.query("UPDATE enrollment SET approved=0 WHERE camper_id=? AND week_id=?", [req.body.camper_id, req.body.week_id], (err) => {
 						if (err) reject(err);
-						if (approved[0].approved == 1) {
-							connection.query("UPDATE enrollment SET approved=0 WHERE camper_id=? AND week_id=?", [req.body.camper_id, req.body.week_id], (err) => {
-								if (err) reject(err);
-								resolve(null);
-							});
-						} else {
-							connection.query("DELETE FROM enrollment WHERE camper_id=? AND week_id=?", [req.body.camper_id, req.body.week_id], (err) => {
-								if (err) reject(err);
-								resolve(null);
-							});
-						}
+						res.end();
+					});
+				} else {
+					connection.query("DELETE FROM enrollment WHERE camper_id=? AND week_id=?", [req.body.camper_id, req.body.week_id], (err) => {
+						if (err) reject(err);
+						res.end();
 					});
 				}
 			});
 		});
-		res.redirect("/admin");
 	} catch (error) {
 		error.message = "Hmm... Looks like deleting a camper enrollment didn't work, try reloading?";
 		next(error);
 	}
 });
 
-router.post("/admin/delete-camper", (req, res, next) => {
+router.post("/admin/delete-camper", async (req, res, next) => {
 	try {
+		await admin_validate(req.body.code);
 		let camper_value = await new Promise((resolve, reject) => {
-			connection.query("SELECT value_str FROM system_settings WHERE name='admin_code'", (err, code) => {
+			connection.query("SELECT * FROM camper WHERE first_name=? AND last_name=? AND email=?", [req.body.first_name, req.body.last_name, req.body.email], (err, camper_value) => {
 				if (err) reject(err);
-				if (req.body.code == code[0].value_str) {
-					connection.query("SELECT * FROM camper WHERE first_name=? AND last_name=? AND email=?", [req.body.first_name, req.body.last_name, req.body.email], (err, camper_value) => {
-						if (err) reject(err);
-						connection.query("DELETE FROM camper WHERE first_name=? AND last_name=? AND email=?", [req.body.first_name, req.body.last_name, req.body.email], (err) => {
-							if (err) reject(err);
-							resolve(camper_value);
-						});
-					});
-				}
+				connection.query("DELETE FROM camper WHERE first_name=? AND last_name=? AND email=?", [req.body.first_name, req.body.last_name, req.body.email], (err) => {
+					if (err) reject(err);
+					resolve(camper_value);
+				});
 			});
 		});
 		res.json(camper_value);
@@ -1040,27 +846,16 @@ async function prospect_sendMail_query(transporter, subject, message) {
 	return new Promise((resolve, reject) => {
 		connection.query("SELECT name, email FROM prospect WHERE subscribed=1", async (err, prospects) => {
 			if (err) throw err;
-			let each_prosp_email = prospects.map((item, index) => {
-				return new Promise((pros_resolve, pros_reject) => {
-					let temp_text = message.replace("{{FIRST_NAME}}", item.name.split(" ")[0]);
-					let latter_name = item.name.split(" ")[0] == item.name.split(" ")[item.name.split(" ").length - 1] ? "" : " " + item.name.split(" ")[item.name.split(" ").length - 1];
-					temp_text = temp_text.replace(" {{LAST_NAME}}", latter_name);
-					transporter.sendMail({
-						from: "spark" + getDate + "@cs.stab.org",
-						to: item.email,
-						subject: subject,
-						text: temp_text
-					}, (err, info) => {
-						if (err) pros_reject(err);
-						pros_resolve(info);
-					});
+			let full_obj = [];
+			prospects.forEach((item, index) => {
+				let split_name = item.name.split(" ");
+				let latter_name = split_name[0] == split_name[split_name.length - 1] ? "" : split_name[split_name.length - 1];
+				full_obj.push({
+					email: prospects[0].email,
+					first_name: split_name[0],
+					last_name: latter_name,
+					url: "To unsubscribe, click here: " + process.env.CURRENT_URL + "unsubcribe"
 				});
-			});
-			await Promise.all(each_prosp_email).catch((err) => {
-				console.error(err);
-				return;
-			}).then(() => {
-				resolve(each_prosp_email);
 			});
 		});
 	});
@@ -1068,55 +863,43 @@ async function prospect_sendMail_query(transporter, subject, message) {
 
 router.post("/admin/send-mail", async (req, res, next) => { //ADMIN
 	try {
+		await admin_validate(req.body.code);
 		let async_send_mail = await new Promise((resolve, reject) => {
-			connection.query("SELECT value_str FROM system_settings WHERE name='admin_code'", async (err, code) => {
-				if (err) reject(err);
-				let all_campers;
-				let transporter = nodemail.createTransport({
-					sendmail: true,
-					newline: 'unix',
-					path: 'user/sbin/sendmail'
+			let all_campers;
+			if (req.body.weeks.length == 0) return reject("Missing the weeks value?");
+			let week_value = " WHERE (enrollment.week_id=?";
+			if (req.body.weeks.length > 1) {
+				req.body.weeks.forEach((item, index) => {
+					req.body.weeks[index] = week_meta.get(item).id;
+					week_value += index < req.body.weeks.length - 1 ? " OR enrollment.week_id=?" : "";
 				});
-				if (req.body.code != code[0].value_str) reject("Failed authentication");
-				if (req.body.weeks.length < 0) reject("Missing the weeks value?");
-				let week_value = "";
-				week_value = " WHERE enrollment.week_id=?";
-				if (req.body.weeks.length > 1) {
-					req.body.weeks.forEach((item, index) => {
-						req.body.weeks[index] = week_meta.get(item).id;
-						week_value += index < req.body.weeks.length - 1 ? " OR enrollment.week_id=?" : "";
+			}
+			week_value += ")"
+			week_value += req.body.applicants == 1 && req.body.registered == 0 ? " AND approved=0" : "";
+			week_value += req.body.registered == 1 && req.body.applicants == 0 ? " AND approved=1" : "";
+			connection.query("SELECT DISTINCT camper_unique_id, first_name, last_name, email FROM enrollment INNER JOIN camper ON enrollment.camper_id = camper.id" + week_value, req.body.weeks, async (err, enrolled_info) => {
+				if (err) return reject(err);
+				//now run through each of the prospects / campers
+				let full_email_obj = [];
+				if (req.body.prospects == 1) full_email_obj = await prospect_query(req.body.subject, req.body.message);
+				if ((req.body.applicants == 1 || req.body.registered == 1) && enrolled_info) {
+					enrolled_info.forEach((item, index) => {
+						full_email_obj.push({
+							email: item.email,
+							first_name: item.first_name,
+							last_name: item.last_name,
+							url: "Check out your week statuses here: " + process.env.CURRENT_URL + "reg-status?camper_id=" + item.camper_unique_id
+						});
 					});
 				}
-				week_value += req.body.applicants == 1 ? " AND approved=0" : "";
-				week_value += req.body.registered == 1 ? " OR approved=1" : "";
-				connection.query("SELECT DISTINCT camper_id, first_name, last_name, email FROM enrollment INNER JOIN camper ON enrollment.camper_id = camper.id" + week_value, req.body.weeks, async (err, enrolled_info) => {
-					if (err) reject(err);
-					//now run through each of the prospects / campers
-					let pros;
-					if (req.body.prospects == 1) pros = await prospect_sendMail_query(transporter, req.body.subject, req.body.message);
-					if (req.body.applicants == 1 || req.body.registered == 1) {
-						let emails = enrolled_info.map((item, index) => {
-							return new Promise((email_resolve, email_reject) => {
-								let temp_text = req.body.message.replace("{{FIRST_NAME}}", item.first_name);
-								temp_text = temp_text.replace(" {{LAST_NAME}}", " " + item.last_name);
-								transporter.sendMail({
-									from: "spark" + getDate + "@cs.stab.org",
-									to: item.email,
-									subject: req.body.subject,
-									text: temp_text
-								}, (err, info) => {
-									if (err) email_reject(err);
-									email_resolve(info);
-								});
-							});
-						});
-						await Promise.all(emails).catch((error) => {
-							console.error(error);
-						}).then(() => {
-							console.log(emails, pros);
-							res.end();
-						});
-					}
+				let all_emails = full_email_obj.map((item, index) => {
+					return full_sendmail(item.email, req.body.subject, req.body.message, item);
+				});
+				Promise.all(all_emails).catch((err) => {
+					console.log(err);
+				}).then((email) => {
+					console.log(email);
+					res.end();
 				});
 			});
 		});
