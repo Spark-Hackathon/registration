@@ -336,14 +336,13 @@ router.post("/signup-prospect", async (req, res, next) => {
 // this will work for all the needed inserts into prospect, just change subscribed
 async function prospectSignup(user_data) {
 	return new Promise((resolve, reject) => {
-		let unique_retrieval = uuidv4();
 		if (user_data.refer_id) {
-			connection.query("INSERT INTO prospect (camper_refer_id, name, email, unique_retrieval, subscribed) VALUES (?, ?, ?, ?, ?)", [user_data.refer_id, user_data.name, user_data.email, unique_retrieval, 1], (err) => {
+			connection.query("INSERT INTO prospect (camper_refer_id, name, email, subscribed) VALUES (?, ?, ?, ?)", [user_data.refer_id, user_data.name, user_data.email, 1], (err) => {
 				if (err) reject(err);
 				resolve(false);
 			});
 		} else {
-			connection.query("INSERT INTO prospect (name, email, unique_retrieval, subscribed) VALUES (?, ?, ?, ?)", [user_data.name, user_data.email, unique_retrieval, 1], (err) => {
+			connection.query("INSERT INTO prospect (name, email, subscribed) VALUES (?, ?, ?)", [user_data.name, user_data.email, 1], (err) => {
 				if (err) reject(err); //chat with bre about error handle
 				resolve(false);
 			});
