@@ -791,7 +791,7 @@ function application_accept(id, week) {
 					};
 					await full_sendmail(email_info[0].email, "You were accepted for " + week + " week", apply_camper_file, email_obj);
 					let apply_guardian_file = fs.readFileSync(path.join(__dirname, "emailTemplates", "accepting_camper_app_guardian")).toString();
-					let split_name = item.name.trim().split(" ");
+					let split_name = email_info[0].guardian_name.trim().split(" ");
 					let latter_name = split_name[0] == split_name[split_name.length - 1] ? "" : split_name[split_name.length - 1];
 					email_obj = {
 						first_name: split_name[0],
