@@ -53,7 +53,8 @@ CREATE TABLE prospect (
 	email VARCHAR(255) NOT NULL,
 	subscribed TINYINT(1) NOT NULL DEFAULT 1,
 	FOREIGN KEY (`camper_refer_id`) REFERENCES camper (`id`) ON DELETE CASCADE,
-	UNIQUE KEY `unique_prospect` (`name`, `email`)
+	UNIQUE KEY `unique_prospect_email` (`email`),
+	UNIQUE KEY `unique_prospect_name` (`name`)
 );
 CREATE TABLE question_meta (
 	id INT NOT NULL AUTO_INCREMENT,

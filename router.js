@@ -227,8 +227,7 @@ router.post("/camper-register-queueing", async (req, res, next) => {
 									let approved_value = camper_enroll_value && camper_enroll_value.length && camper_enroll_value[0].approved == 1 ? 1 : 0;
 									let confirmed_value = camper_enroll_value && camper_enroll_value.length && camper_enroll_value[0].confirmed == 1 ? 1 : 0;
 									connection.query("INSERT INTO enrollment (camper_id, week_id, signup_time, person_loc, approved, confirmed) VALUES " +
-										"(?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE signup_time=?, person_loc=?, approved=?, confirmed=?", 
-										[camper_id[0].id, week[0], new Date(), week[1] - 1, 0, 0, new Date(), week[1] - 1, approved_value, confirmed_value], (err) => {
+										"(?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE signup_time=?, person_loc=?, approved=?, confirmed=?", [camper_id[0].id, week[0], new Date(), week[1] - 1, 0, 0, new Date(), week[1] - 1, approved_value, confirmed_value], (err) => {
 											if (err) enroll_reject(err);
 											connection.query("SELECT id, question_text FROM question_meta WHERE week_id=?", week[0], (err, questions) => {
 												if (err) enroll_reject(err);
@@ -267,7 +266,7 @@ router.post("/camper-register-queueing", async (req, res, next) => {
 								let user_data = {};
 								if (item.refer_name && item.refer_email) {
 									user_data.refer_id = camper_id[0].id;
-									user_data.name = item.refer_name;;
+									user_data.name = item.refer_name;
 									user_data.email = item.refer_email;
 									user_data.correlation = 1;
 									if (referral_schema.validate(user_data) && user_data.correlation == 1) {
@@ -346,31 +345,16 @@ router.post("/signup-prospect", async (req, res, next) => {
 // this will work for all the needed inserts into prospect, just change subscribed
 async function prospectSignup(user_data) {
 	return new Promise((resolve, reject) => {
-		connection.query("SELECT * FROM prospect WHERE name=? AND email=?", [user_data.name, user_data.email], (err, prospect_existence) => {
+		let build = "INSERT INTO prospect (name, email, subscribed) VALUES (?, ?, ?)";
+		let array_build = [user_data.name, user_data.email, 1];
+		if (user_data.refer_id) {
+			build = "INSERT INTO prospect (name, email, subscribed, camper_refer_id) VALUES (?, ?, ?, ?)";
+			array_build.push(user_data.refer_id);
+		}
+		build += " ON DUPLICATE KEY UPDATE subscribed=1";
+		connection.query(build, array_build, (err) => {
 			if (err) reject(err);
-			if (prospect_existence && prospect_existence.length) {
-				let build = "UPDATE prospect SET name=?, email=?";
-				let array_build = [user_data.name, user_data.email];
-				if (user_data.refer_id) {
-					build += ", camper_refer_id=?";
-					array_build.push(user_data.refer_id);
-				}
-				connection.query(build, array_build, (err) => {
-					if (err) reject(err);
-					resolve();
-				});
-			} else {
-				let build = "INSERT INTO prospect (name, email, subscribed) VALUES (?, ?, ?)";
-				let array_build = [user_data.name, user_data.email, 1];
-				if (user_data.refer_id) {
-					build = "INSERT INTO prospect (name, email, subscribed, camper_refer_id) VALUES (?, ?, ?, ?)";
-					array_build.push(user_data.refer_id);
-				}
-				connection.query(build, array_build, (err) => {
-					if (err) reject(err);
-					resolve();
-				});
-			}
+			resolve();
 		});
 	});
 }
@@ -928,7 +912,7 @@ router.post("/admin/send-mail", async (req, res, next) => { //ADMIN
 			week_value += ")"
 			week_value += req.body.applicants == 1 && req.body.registered == 0 ? " AND approved=0" : "";
 			week_value += req.body.registered == 1 && req.body.applicants == 0 ? " AND approved=1" : "";
-			connection.query("SELECT DISTINCT camper_unique_id, first_name, last_name, email FROM enrollment INNER JOIN camper ON enrollment.camper_id = camper.id" + week_value, req.body.weeks, async (err, enrolled_info) => {
+			connection.query("SELECT DISTINCT camper_unique_id, first_name, last_name, email, guardian_name, guardian_email FROM enrollment INNER JOIN camper ON enrollment.camper_id = camper.id" + week_value, req.body.weeks, async (err, enrolled_info) => {
 				if (err) return reject(err);
 				//now run through each of the prospects / campers
 				let full_email_obj = [];
@@ -939,6 +923,18 @@ router.post("/admin/send-mail", async (req, res, next) => { //ADMIN
 							email: item.email,
 							first_name: item.first_name,
 							last_name: item.last_name,
+							url: "Check out your week statuses here: " + process.env.CURRENT_URL + "reg-status?camper_id=" + item.camper_unique_id
+						});
+					});
+				}
+				if (req.body.guardians == 1) {
+					enrolled_info.forEach((item, index) => {
+						let split_name = email_info[0].guardian_name.trim().split(" ");
+						let latter_name = split_name[0] == split_name[split_name.length - 1] ? "" : split_name[split_name.length - 1];
+						full_email_obj.push({
+							email: item.guardian.email,
+							first_name: split_name,
+							last_name: latter_name,
 							url: "Check out your week statuses here: " + process.env.CURRENT_URL + "reg-status?camper_id=" + item.camper_unique_id
 						});
 					});
