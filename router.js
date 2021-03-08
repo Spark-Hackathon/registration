@@ -354,7 +354,34 @@ async function prospectSignup(user_data) {
 		build += " ON DUPLICATE KEY UPDATE subscribed=1";
 		connection.query(build, array_build, (err) => {
 			if (err) reject(err);
-			resolve();
+			console.log(prospect_existence);
+			console.log(prospect_existence.length);
+			if (prospect_existence && prospect_existence.length) {
+				console.log("if statement");
+				let build = "UPDATE prospect SET name=?, email=?";
+				let array_build = [user_data.name, user_data.email];
+				if (user_data.refer_id) {
+					build += ", camper_refer_id=?";
+					array_build.push(user_data.refer_id);
+				}
+				build += " WHERE name=? AND email=?";
+				array_build.push(user_data.name, user_data.email);
+				connection.query(build, array_build, (err) => {
+					if (err) reject(err);
+					resolve();
+				});
+			} else {
+				let build = "INSERT INTO prospect (name, email, subscribed) VALUES (?, ?, ?)";
+				let array_build = [user_data.name, user_data.email, 1];
+				if (user_data.refer_id) {
+					build = "INSERT INTO prospect (name, email, subscribed, camper_refer_id) VALUES (?, ?, ?, ?)";
+					array_build.push(user_data.refer_id);
+				}
+				connection.query(build, array_build, (err) => {
+					if (err) reject(err);
+					resolve();
+				});
+			}
 		});
 	});
 }
@@ -885,7 +912,7 @@ function prospect_query() {
 				let split_name = item.name.trim().split(" ");
 				let latter_name = split_name[0] == split_name[split_name.length - 1] ? "" : split_name[split_name.length - 1];
 				full_obj.push({
-					email: prospects[0].email,
+					email: item.email,
 					first_name: split_name[0],
 					last_name: latter_name,
 					url: "To unsubscribe, click here: " + process.env.CURRENT_URL + "unsubcribe"
@@ -939,6 +966,7 @@ router.post("/admin/send-mail", async (req, res, next) => { //ADMIN
 						});
 					});
 				}
+				console.log(full_email_obj);
 				let all_emails = full_email_obj.map((item, index) => {
 					return full_sendmail(item.email, req.body.subject, req.body.message, item);
 				});
