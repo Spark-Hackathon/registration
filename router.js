@@ -800,7 +800,7 @@ function application_accept(id, week) {
 						week_name: week,
 						url: process.env.CURRENT_URL + "reg-status?camper_id=" + email_info[0].camper_unique_id
 					}
-					resolve(await full_sendmail(email_info[0].guardian_email, email_info[0].first_name + " was accepted for " + week + " week", email_obj));
+					resolve(await full_sendmail(email_info[0].guardian_email, email_info[0].first_name + " was accepted for " + week + " week", apply_guardian_file, email_obj));
 				});
 			} else {
 				reject();
