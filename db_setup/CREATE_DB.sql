@@ -44,7 +44,8 @@ CREATE TABLE enrollment (
 	confirmed TINYINT(1) NOT NULL,
 	campbrain_completion DATETIME,
 	FOREIGN KEY (`camper_id`) REFERENCES camper (`id`) ON DELETE CASCADE,
-	FOREIGN KEY (`week_id`) REFERENCES week (`id`) ON DELETE CASCADE
+	FOREIGN KEY (`week_id`) REFERENCES week (`id`) ON DELETE CASCADE,
+	UNIQUE INDEX `unique_enrollment` (`camper_id`, `week_id`)
 );
 CREATE TABLE prospect (
 	camper_refer_id INT,
