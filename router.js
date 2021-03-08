@@ -888,7 +888,7 @@ function prospect_query() {
 					email: prospects[0].email,
 					first_name: split_name[0],
 					last_name: latter_name,
-					url: "To unsubscribe, click here: " + process.env.CURRENT_URL + "unsubcribe"
+					url: "To unsubscribe, click here: " + process.env.CURRENT_URL + "unsubscribe"
 				});
 			});
 			resolve(full_obj);
