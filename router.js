@@ -217,11 +217,11 @@ router.post("/camper-register-queueing", async (req, res, next) => {
 						});
 						async function enrollmentInsert(week) {
 							return new Promise((enroll_resolve, enroll_reject) => {
-								console.log(week, camper_id);
-								connection.query("SELECT approved FROM enrollment WHERE week_id=? AND camper_id=?", [week[0], camper_id[0].id], (err, pre_approve) => {
-									if (err) enroll_reject(err);
-									console.log(pre_approve);
-									let approved_value = pre_approve && pre_approve.length && pre_approve[0].approved == 1 ? 1 : 0;
+								console.log(week[0], camper_id[0].id);
+								connection.query("SELECT approved FROM enrollment WHERE week_id=? AND camper_id=?", [week[0], camper_id[0].id], (err, camper_enroll_value) => {
+									if (err) console.log(err);
+									console.log("PULLING APPROVE VALUE", week[0], camper_id[0].id, "value:", camper_enroll_value);
+									let approved_value = camper_enroll_value && camper_enroll_value.length && camper_enroll_value[0].approved == 1 ? 1 : 0;
 									connection.query("INSERT INTO enrollment (camper_id, week_id, signup_time, person_loc, approved, confirmed) VALUES " +
 										"(?, ?, ?, ?, ?, ?)", [camper_id[0].id, week[0], new Date(), week[1] - 1, approved_value, 0], (err) => {
 											if (err) enroll_reject(err);
@@ -239,14 +239,6 @@ router.post("/camper-register-queueing", async (req, res, next) => {
 						if (weeks.length == 0) reject("no camper value");
 						try {
 							await new Promise(async (enrolling_resolve, enrolling_reject) => {
-								if (pre_id.length) {
-									await new Promise((quick_resolve, quick_reject) => {
-										connection.query("DELETE FROM enrollment WHERE camper_id=?", pre_id[0].id, async (err) => {
-											if (err) quick_reject(err);
-											quick_resolve();
-										});
-									});
-								}
 								for (let weeks_db = 0; weeks_db < weeks.length; weeks_db++) {
 									let any_questions = await enrollmentInsert(weeks[weeks_db], 0);
 									//each week sends back questions for the specific person - need to build up an array
