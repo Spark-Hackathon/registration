@@ -2,7 +2,8 @@ DROP DATABASE IF EXISTS registration;
 CREATE DATABASE registration;
 USE registration;
 CREATE TABLE camper (
-	id INT NOT NULL AUTO_INCREMENT, 
+	id INT NOT NULL AUTO_INCREMENT,
+	camper_unique_id CHAR(36) NOT NULL,
 	first_name VARCHAR(255) NOT NULL,
 	last_name VARCHAR(255) NOT NULL,
 	email VARCHAR(255) NOT NULL,
@@ -19,7 +20,6 @@ CREATE TABLE camper (
 	guardian_email VARCHAR(255) NOT NULL,
 	guardian_phone BIGINT NOT NULL,
 	participated TINYINT(1) NOT NULL,
-	unique_airtable_id VARCHAR(255),
 	PRIMARY KEY(id),
 	UNIQUE INDEX `unique_camper` (`first_name`, `last_name`, `email`)
 );
@@ -28,11 +28,9 @@ CREATE TABLE week (
 	title VARCHAR(255) NOT NULL,
 	start_date DATE NOT NULL,
 	end_date DATE NOT NULL,
-	cb_code VARCHAR(255) NOT NULL,
 	inClass_available TINYINT(1) NOT NULL,
 	virtual_available TINYINT(1) NOT NULL,
 	description LONGTEXT NOT NULL,
-	unique_airtable_id VARCHAR(255),
 	PRIMARY KEY(id),
 	UNIQUE INDEX `unique_week` (`title`, `start_date`, `end_date`)
 );
@@ -40,7 +38,6 @@ CREATE TABLE enrollment (
 	camper_id INT NOT NULL,
 	week_id INT NOT NULL,
 	signup_time DATETIME NOT NULL,
-	enrollment_code VARCHAR(255) NOT NULL,
 	person_loc TINYINT(1) NOT NULL,
 	approved TINYINT(1) NOT NULL,
 	approved_time DATETIME,

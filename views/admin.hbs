@@ -415,7 +415,6 @@
                         let participated = $(`<td class="text-gray-500 py-4 px-2">${(camper.participated) == "Participated before" ? "Yes" : "No"}</td>`);
                         let accept_decline = `<td class="py-6 text-center mx-auto">
                             <button class="outline-none text-green-400 cursor-pointer hover:text-green-600 transition duration-200" onclick="accept_camper('${camper.week}', ${camper.camper_id})">Accept Camper</button><br/>
-                            <button class="outline-none mt-2 text-blue-400 cursor-pointer hover:text-blue-600 transition duration-200" onclick="confirm_camper('${camper.week}', ${camper.camper_id})">Confirm Camper</button><br/>
                             <button class="outline-none mt-2 text-red-400 cursor-pointer hover:text-red-600 transition duration-200" onclick="delete_camper('${camper.week}', ${camper.camper_id})">Delete Camper</button>
                             </td>`;
 
@@ -444,7 +443,15 @@
             event.preventDefault();
             $("#week-data").empty();
 
-            fetch("/admin/get-weeks")
+            fetch("/admin/get-weeks", {
+                method: "POST",
+                cache: "no-cache",
+                headers: { "Content-Type": "application/json" },
+                redirect: "manual",
+                body: JSON.stringify({
+                    code: password
+                })
+            })
                 .then(response => response.json())
                 .then(weeks => {
                     $("select#week_title").empty();
@@ -488,7 +495,15 @@
             event.preventDefault();
             $("#question-data").empty();
 
-            fetch(`/admin/get-questions/${password}`)
+            fetch(`/admin/get-questions/`, {
+                method: "POST",
+                cache: "no-cache",
+                headers: { "Content-Type": "application/json" },
+                redirect: "manual",
+                body: JSON.stringify({
+                    code: password
+                })
+            })
                 .then(response => response.json())
                 .then(questions => {
                     for(let question of questions) {
@@ -619,7 +634,15 @@
         $("#export-all").on("submit", event => {
             event.preventDefault();
 
-            fetch(`/admin/export/all/${password}`)
+            fetch(`/admin/export/all/`, {
+                method: "POST",
+                cache: "no-cache",
+                headers: { "Content-Type": "application/json" },
+                redirect: "manual",
+                body: JSON.stringify({
+                    code: password
+                })
+            })
                 .then(response => response.text())
                 .then(data => {
                     alert("Successfully exported campers to CSV. Dismiss to download.");
