@@ -30,7 +30,7 @@ CREATE TABLE week (
 	end_date DATE NOT NULL,
 	inClass_available TINYINT(1) NOT NULL,
 	virtual_available TINYINT(1) NOT NULL,
-	description LONGTEXT NOT NULL,
+	description LONGTEXT,
 	PRIMARY KEY(id),
 	UNIQUE INDEX `unique_week` (`title`, `start_date`, `end_date`)
 );
