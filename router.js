@@ -343,7 +343,7 @@ router.post("/signup-prospect", async (req, res, next) => {
 });
 
 // this will work for all the needed inserts into prospect, just change subscribed
-async function prospectSignup(user_data) {
+function prospectSignup(user_data) {
 	return new Promise((resolve, reject) => {
 		let build = "INSERT INTO prospect (name, email, subscribed) VALUES (?, ?, ?)";
 		let array_build = [user_data.name, user_data.email, 1];
@@ -354,34 +354,7 @@ async function prospectSignup(user_data) {
 		build += " ON DUPLICATE KEY UPDATE subscribed=1";
 		connection.query(build, array_build, (err) => {
 			if (err) reject(err);
-			console.log(prospect_existence);
-			console.log(prospect_existence.length);
-			if (prospect_existence && prospect_existence.length) {
-				console.log("if statement");
-				let build = "UPDATE prospect SET name=?, email=?";
-				let array_build = [user_data.name, user_data.email];
-				if (user_data.refer_id) {
-					build += ", camper_refer_id=?";
-					array_build.push(user_data.refer_id);
-				}
-				build += " WHERE name=? AND email=?";
-				array_build.push(user_data.name, user_data.email);
-				connection.query(build, array_build, (err) => {
-					if (err) reject(err);
-					resolve();
-				});
-			} else {
-				let build = "INSERT INTO prospect (name, email, subscribed) VALUES (?, ?, ?)";
-				let array_build = [user_data.name, user_data.email, 1];
-				if (user_data.refer_id) {
-					build = "INSERT INTO prospect (name, email, subscribed, camper_refer_id) VALUES (?, ?, ?, ?)";
-					array_build.push(user_data.refer_id);
-				}
-				connection.query(build, array_build, (err) => {
-					if (err) reject(err);
-					resolve();
-				});
-			}
+			resolve();
 		});
 	});
 }
