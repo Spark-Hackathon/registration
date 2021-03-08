@@ -361,7 +361,7 @@ async function prospectSignup(user_data) {
 				});
 			} else {
 				let build = "INSERT INTO prospect (name, email, subscribed) VALUES (?, ?, ?)";
-				let array_build = [user_data.refer_id, user_data.name, user_data.email];
+				let array_build = [user_data.name, user_data.email, 1];
 				if (user_data.refer_id) {
 					build = "INSERT INTO prospect (name, email, subscribed, camper_refer_id) VALUES (?, ?, ?, ?)";
 					array_build.push(user_data.refer_id);
