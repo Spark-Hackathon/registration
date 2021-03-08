@@ -337,7 +337,7 @@ async function prospectSignup(user_data) {
 			if (err) reject(err);
 			if (prospect_existence) {
 				let build = "UPDATE prospect SET name=?, email=?";
-				let array_build = [user_data.refer_id, user_data.name, user_data.email];
+				let array_build = [user_data.name, user_data.email];
 				if (user_data.refer_id) {
 					build += ", camper_refer_id=?";
 					array_build.push(user_data.refer_id);
