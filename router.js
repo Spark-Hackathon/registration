@@ -217,15 +217,19 @@ router.post("/camper-register-queueing", async (req, res, next) => {
 						});
 						async function enrollmentInsert(week) {
 							return new Promise((enroll_resolve, enroll_reject) => {
-								connection.query("INSERT INTO enrollment (camper_id, week_id, signup_time, person_loc, approved, confirmed) VALUES " +
-									"(?, ?, ?, ?, ?, ?)", [camper_id[0].id, week[0], new Date(), week[1] - 1, 0, 0], (err) => {
-										if (err) enroll_reject(err);
-										connection.query("SELECT id, question_text FROM question_meta WHERE week_id=?", week[0], (err, questions) => {
+								connection.query("SELECT approved FROM enrollment WHERE week_id=? AND camper_id=?", [week[0], camper[0].id], (err, pre_approve) => {
+									if (err) enroll_reject(err);
+									let approved_value = pre_approve && pre_approved[0].approved == 1 ? 1 : 0;
+									connection.query("INSERT INTO enrollment (camper_id, week_id, signup_time, person_loc, approved, confirmed) VALUES " +
+										"(?, ?, ?, ?, ?, ?)", [camper_id[0].id, week[0], new Date(), week[1] - 1, approved_value, 0], (err) => {
 											if (err) enroll_reject(err);
-											if (questions.length) enroll_resolve(questions);
-											enroll_resolve([]);
+											connection.query("SELECT id, question_text FROM question_meta WHERE week_id=?", week[0], (err, questions) => {
+												if (err) enroll_reject(err);
+												if (questions.length) enroll_resolve(questions);
+												enroll_resolve([]);
+											});
 										});
-									});
+								});
 							});
 						}
 						let questions = [];
