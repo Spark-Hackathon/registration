@@ -348,7 +348,7 @@ async function prospectSignup(user_data) {
 	return new Promise((resolve, reject) => {
 		connection.query("SELECT * FROM prospect WHERE name=? AND email=?", [user_data.name, user_data.email], (err, prospect_existence) => {
 			if (err) reject(err);
-			if (prospect_existence) {
+			if (prospect_existence && prospect_existence.length) {
 				let build = "UPDATE prospect SET name=?, email=?";
 				let array_build = [user_data.name, user_data.email];
 				if (user_data.refer_id) {
