@@ -319,12 +319,9 @@ router.post("/camper-submit-questions", async (req, res, next) => {
 
 router.post("/signup-prospect", async (req, res, next) => {
 	try {
-		if (referral_schema.validate(req.body)) {
-			await prospectSignup(req.body);
-			res.redirect("/updates/thank-you");
-		} else {
-			throw pros_schema.validate(user_data).error;
-		}
+		if (!referral_schema.validate(req.body)) throw pros_schema.validate(user_data).error;
+		await prospectSignup(req.body);
+		res.redirect("/updates/thank-you");
 	} catch (error) {
 		error.message = "Hmm... Looks like signing up didn't work, try reloading?";
 		if (error.code == 'ER_DUP_ENTRY') error.message = "This email is already connected to another user, try picking a different one, or get in contact with us";
@@ -336,17 +333,32 @@ router.post("/signup-prospect", async (req, res, next) => {
 // this will work for all the needed inserts into prospect, just change subscribed
 async function prospectSignup(user_data) {
 	return new Promise((resolve, reject) => {
-		if (user_data.refer_id) {
-			connection.query("INSERT INTO prospect (camper_refer_id, name, email, subscribed) VALUES (?, ?, ?, ?)", [user_data.refer_id, user_data.name, user_data.email, 1], (err) => {
-				if (err) reject(err);
-				resolve(false);
-			});
-		} else {
-			connection.query("INSERT INTO prospect (name, email, subscribed) VALUES (?, ?, ?)", [user_data.name, user_data.email, 1], (err) => {
-				if (err) reject(err); //chat with bre about error handle
-				resolve(false);
-			});
-		}
+		connection.query("SELECT * FROM prospect WHERE name=? AND email=?", [user_data.name, user_data.email], (err, prospect_existence) => {
+			if (err) reject(err);
+			if (prospect_existence) {
+				let build = "UPDATE prospect SET name=?, email=?";
+				let array_build = [user_data.refer_id, user_data.name, user_data.email];
+				if (user_data.refer_id) {
+					build += ", camper_refer_id=?";
+					array_build.push(user_data.refer_id);
+				}
+				connection.query(build, array_build, (err) => {
+					if (err) reject(err);
+					resolve();
+				});
+			} else {
+				let build = "INSERT INTO prospect (name, email, subscribed) VALUES (?, ?, ?)";
+				let array_build = [user_data.refer_id, user_data.name, user_data.email];
+				if (user_data.refer_id) {
+					build = "INSERT INTO prospect (name, email, subscribed, camper_refer_id) VALUES (?, ?, ?, ?)";
+					array_build.push(user_data.refer_id);
+				}
+				connection.query(build, array_build, (err) => {
+					if (err) reject(err);
+					resolve();
+				});
+			}
+		});
 	});
 }
 
