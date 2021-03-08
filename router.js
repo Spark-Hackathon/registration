@@ -205,6 +205,8 @@ router.post("/camper-register-queueing", async (req, res, next) => {
 					connection.query("SELECT id FROM camper WHERE first_name=? AND last_name=? AND email=?", [item.first_name, item.last_name, item.email], async (err, camper_id) => {
 						if (err) reject(err);
 						//insert for each week they signed up for
+						let dead_weeks = [],
+							dead_count = 0;
 						let weeks = [],
 							count = 0;
 						week_meta.forEach((week, index) => {
@@ -213,14 +215,15 @@ router.post("/camper-register-queueing", async (req, res, next) => {
 								weeks[count][0] = week.id;
 								weeks[count][1] = item[week.id + "-status"];
 								count++;
+							} else {
+								deak_weeks[dead_count] = week.id;
+								dead_count++;
 							}
 						});
 						async function enrollmentInsert(week) {
 							return new Promise((enroll_resolve, enroll_reject) => {
-								console.log(week[0], camper_id[0].id);
 								connection.query("SELECT approved FROM enrollment WHERE week_id=? AND camper_id=?", [week[0], camper_id[0].id], (err, camper_enroll_value) => {
 									if (err) console.log(err);
-									console.log("PULLING APPROVE VALUE", week[0], camper_id[0].id, "value:", camper_enroll_value);
 									let approved_value = camper_enroll_value && camper_enroll_value.length && camper_enroll_value[0].approved == 1 ? 1 : 0;
 									connection.query("INSERT INTO enrollment (camper_id, week_id, signup_time, person_loc, approved, confirmed) VALUES " +
 										"(?, ?, ?, ?, ?, ?)", [camper_id[0].id, week[0], new Date(), week[1] - 1, approved_value, 0], (err) => {
@@ -239,6 +242,15 @@ router.post("/camper-register-queueing", async (req, res, next) => {
 						if (weeks.length == 0) reject("no camper value");
 						try {
 							await new Promise(async (enrolling_resolve, enrolling_reject) => {
+								let all_kills = dead_weeks.map((item, index) => {
+									return new Promise((kill_values_resolve, kill_values_reject) => {
+										connection.query("DELETE FROM enrollment WHERE week_id=? AND camper_id=?", [item, camper_id[0].id], (err) => {
+											if (err) kill_values_reject(err);
+											kill_values_resolve();
+										});
+									});
+								});
+								await Promise.all(all_kills);
 								for (let weeks_db = 0; weeks_db < weeks.length; weeks_db++) {
 									let any_questions = await enrollmentInsert(weeks[weeks_db], 0);
 									//each week sends back questions for the specific person - need to build up an array
