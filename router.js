@@ -217,9 +217,11 @@ router.post("/camper-register-queueing", async (req, res, next) => {
 						});
 						async function enrollmentInsert(week) {
 							return new Promise((enroll_resolve, enroll_reject) => {
-								connection.query("SELECT approved FROM enrollment WHERE week_id=? AND camper_id=?", [week[0], camper[0].id], (err, pre_approve) => {
+								console.log(week, camper_id);
+								connection.query("SELECT approved FROM enrollment WHERE week_id=? AND camper_id=?", [week[0], camper_id[0].id], (err, pre_approve) => {
 									if (err) enroll_reject(err);
-									let approved_value = pre_approve && pre_approved[0].approved == 1 ? 1 : 0;
+									console.log(pre_approve);
+									let approved_value = pre_approve && pre_approve.length && pre_approve[0].approved == 1 ? 1 : 0;
 									connection.query("INSERT INTO enrollment (camper_id, week_id, signup_time, person_loc, approved, confirmed) VALUES " +
 										"(?, ?, ?, ?, ?, ?)", [camper_id[0].id, week[0], new Date(), week[1] - 1, approved_value, 0], (err) => {
 											if (err) enroll_reject(err);
