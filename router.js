@@ -81,6 +81,7 @@ function admin_validate(code) {
 function full_sendmail(to, subject, text, replacement) {
 	Object.keys(replacement).forEach((item, index) => {
 		let string = "{{" + item.toUpperCase() + "}}";
+		string = replacement[item] == "" ? " " + string, string;
 		let replacer = new RegExp(string, "g");
 		text = text.replace(replacer, replacement[item]);
 	});
