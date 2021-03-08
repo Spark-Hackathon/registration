@@ -222,12 +222,12 @@ router.post("/camper-register-queueing", async (req, res, next) => {
 						});
 						async function enrollmentInsert(week) {
 							return new Promise((enroll_resolve, enroll_reject) => {
-								connection.query("SELECT approved FROM enrollment, confirmed WHERE week_id=? AND camper_id=?", [week[0], camper_id[0].id], (err, camper_enroll_value) => {
+								connection.query("SELECT approved, confirmed FROM enrollment WHERE week_id=? AND camper_id=?", [week[0], camper_id[0].id], (err, camper_enroll_value) => {
 									if (err) console.log(err);
 									let approved_value = camper_enroll_value && camper_enroll_value.length && camper_enroll_value[0].approved == 1 ? 1 : 0;
 									let confirmed_value = camper_enroll_value && camper_enroll_value.length && camper_enroll_value[0].confirmed == 1 ? 1 : 0;
 									connection.query("INSERT INTO enrollment (camper_id, week_id, signup_time, person_loc, approved, confirmed) VALUES " +
-										"(?, ?, ?, ?, ?, ?) ON DUPLICATE UPDATE signup_time=?, person_loc, approved=?, confirmed=?", 
+										"(?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE signup_time=?, person_loc=?, approved=?, confirmed=?", 
 										[camper_id[0].id, week[0], new Date(), week[1] - 1, 0, 0, new Date(), week[1] - 1, approved_value, confirmed_value], (err) => {
 											if (err) enroll_reject(err);
 											connection.query("SELECT id, question_text FROM question_meta WHERE week_id=?", week[0], (err, questions) => {
