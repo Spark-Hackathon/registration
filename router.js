@@ -371,7 +371,7 @@ router.post("/unsubscribe", (req, res, next) => {
 				if (prospect_info.length) {
 					connection.query("UPDATE prospect SET subscribed=0 WHERE email=?", req.body.email, (err) => {
 						if (err) throw err;
-						res.end();
+						res.render("thank_you_unsubscribe");
 					});
 				} else {
 					res.render("error", {
@@ -710,7 +710,7 @@ router.post("/admin/pull-current-campers", async (req, res, next) => { //ADMIN
 			res.end();
 		});
 	} catch (error) {
-		error.message = "Hmm... Looks like selecting the campers didn't work, try reloading?";
+	 	error.message = "Hmm... Looks like selecting the campers didn't work, try reloading?";
 		next(error);
 	}
 });
