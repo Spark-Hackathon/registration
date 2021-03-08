@@ -92,12 +92,12 @@ CREATE TABLE medical_forms (
 	insurance_company LONGTEXT,
 	insurance_group LONGTEXT,
 	insurance_policy LONGTEXT,
-	FOREIGN KEY (`camper_id`) REFERENCES camper (`id`) ON DELETE CASCADE,
+	FOREIGN KEY (`camper_id`) REFERENCES camper (`id`) ON DELETE CASCADE
 );
 CREATE TABLE meds(
 	camper_id INT NOT NULL,
 	medication_name LONGTEXT,
 	medication_dosage LONGTEXT,
 	medication_notes LONGTEXT,
-	FOREIGN KEY (`camper_id`) REFERENCES camper (`id`) ON DELETE CASCADE,
+	FOREIGN KEY (`camper_id`) REFERENCES camper (`id`) ON DELETE CASCADE
 );
