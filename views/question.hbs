@@ -41,7 +41,9 @@
             redirect: "manual",
             body: JSON.stringify(final_data)
         })
-            .then(() => alert("=== SUBMITTED QUESTIONS ==="))
+            .then(() => {
+                document.location.href = "/apply/thank-you";
+            })
             .catch(err => console.error(err));
     });
 </script>
