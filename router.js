@@ -820,9 +820,9 @@ router.post("/admin/accept-camper-application", async (req, res, next) => { //AD
 		if (!application_schema.validate(req.body)) throw application_schema.validate(req.body).error;
 		await admin_validate(req.body.code);
 		let roll_camper_app = await new Promise((resolve, reject) => {
-			connection.query("SELECT approve FROM enrollment WHERE camper_id=? AND week_id=?", [req.body.camper_id, week_meta.get(req.body.week_name).id], async (err, approved_status) => {
+			connection.query("SELECT approved FROM enrollment WHERE camper_id=? AND week_id=?", [req.body.camper_id, week_meta.get(req.body.week_name).id], async (err, approved_status) => {
 				if (err) reject(err);
-				if (approved_status[0].approved == 1) reject("You can't approve a camper that's already approved");
+				if (approved_status && approved_status[0].approved == 1) reject("You can't approve a camper that's already approved");
 				resolve(await application_accept(req.body.camper_id, req.body.week_name));
 			});
 		});
