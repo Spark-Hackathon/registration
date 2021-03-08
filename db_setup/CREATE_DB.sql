@@ -50,7 +50,6 @@ CREATE TABLE prospect (
 	camper_refer_id INT,
 	name VARCHAR(255) NOT NULL,
 	email VARCHAR(255) NOT NULL,
-	unique_retrieval VARCHAR(255) NOT NULL,
 	subscribed TINYINT(1) NOT NULL DEFAULT 1,
 	FOREIGN KEY (`camper_refer_id`) REFERENCES camper (`id`) ON DELETE CASCADE,
 	UNIQUE KEY `unique_prospect` (`name`, `email`)
@@ -73,5 +72,32 @@ CREATE TABLE system_settings (
 	name VARCHAR(255) NOT NULL,
 	value_int INT,
 	value_str VARCHAR(255),
-	UNIQUE KEY `system_value` (`name`)
+	PRIMARY KEY(name)
+);
+CREATE TABLE medical_forms (
+	camper_id INT NOT NULL,
+	allergies_text LONGTEXT,
+	epi_pen_info LONGTEXT,
+	dietary_restrictions LONGTEXT,
+	otc_acetaminophen LONGTEXT,
+	otc_antihistamines LONGTEXT,
+	otc_aspirin LONGTEXT,
+	otc_sunscreen LONGTEXT,
+	otc_notes LONGTEXT,
+	health_history LONGTEXT,
+	doctor_name LONGTEXT,
+	doctor_phone LONGTEXT,
+	insurance LONGTEXT,
+	insurance_holder LONGTEXT,
+	insurance_company LONGTEXT,
+	insurance_group LONGTEXT,
+	insurance_policy LONGTEXT,
+	FOREIGN KEY (`camper_id`) REFERENCES camper (`id`) ON DELETE CASCADE,
+);
+CREATE TABLE meds(
+	camper_id INT NOT NULL,
+	medication_name LONGTEXT,
+	medication_dosage LONGTEXT,
+	medication_notes LONGTEXT,
+	FOREIGN KEY (`camper_id`) REFERENCES camper (`id`) ON DELETE CASCADE,
 );

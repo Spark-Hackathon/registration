@@ -1,0 +1,8 @@
+Hello {{FIRST_NAME}} {{LAST_NAME}},
+
+Congrats! {{CHILD_NAME}} has been accepted for {{WEEK_NAME}} week. Go to the following link to check out your status for other weeks, and make sure to get your guardians to complete the required registration paperwork.
+
+{{URL}}
+
+From,
+Spark Camp

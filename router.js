@@ -765,7 +765,7 @@ router.post("/admin/export/all", async (req, res, next) => {
 
 function application_accept(id, week) {
 	return new Promise((resolve, reject) => {
-		connection.query("SELECT camper_unique_id, first_name, last_name, email FROM camper WHERE id=?", id, async (err, email_info) => {
+		connection.query("SELECT camper_unique_id, first_name, last_name, email, guardian_name, guardian_email FROM camper WHERE id=?", id, async (err, email_info) => {
 			if (err) reject(err);
 			if (email_info) {
 				let approved_date = new Date();
@@ -778,7 +778,18 @@ function application_accept(id, week) {
 						week_name: week,
 						url: process.env.CURRENT_URL + "reg-status?camper_id=" + email_info[0].camper_unique_id
 					};
-					resolve(await full_sendmail(email_info[0].email, "You were accepted for " + week + " week", apply_camper_file, email_obj));
+					await full_sendmail(email_info[0].email, "You were accepted for " + week + " week", apply_camper_file, email_obj);
+					let apply_guardian_file = fs.readFileSync(path.join(__dirname, "emailTemplates", "accepting_camper_app_guardian")).toString();
+					let split_name = item.name.trim().split(" ");
+					let latter_name = split_name[0] == split_name[split_name.length - 1] ? "" : split_name[split_name.length - 1];
+					email_obj = {
+						first_name: split_name[0],
+						last_name: latter_name,
+						child_name: email_info[0].first_name,
+						week_name: week,
+						url: process.env.CURRENT_URL + "reg-status?camper_id=" + email_info[0].camper_unique_id
+					}
+					resolve(await full_sendmail(email_info[0].guardian_email, email_info[0].first_name + " was accepted for " + week + " week", email_obj));
 				});
 			} else {
 				reject();
@@ -798,7 +809,7 @@ router.post("/admin/accept-camper-application", async (req, res, next) => { //AD
 		if (!application_schema.validate(req.body)) throw application_schema.validate(req.body).error;
 		await admin_validate(req.body.code);
 		let roll_camper_app = await new Promise((resolve, reject) => {
-			connection.query("SELECT approved FROM enrollment WHERE camper_id=? AND week_id=?", [req.body.camper_id, week_meta.get(req.body.week_name).id], async (err, approved_status) => {
+			connection.query("SELECT approve FROM enrollment WHERE camper_id=? AND week_id=?", [req.body.camper_id, week_meta.get(req.body.week_name).id], async (err, approved_status) => {
 				if (err) reject(err);
 				if (approved_status[0].approved == 1) reject("You can't approve a camper that's already approved");
 				resolve(await application_accept(req.body.camper_id, req.body.week_name));
@@ -863,7 +874,7 @@ function prospect_query() {
 			if (err) throw err;
 			let full_obj = [];
 			prospects.forEach((item, index) => {
-				let split_name = item.name.split(" ");
+				let split_name = item.name.trim().split(" ");
 				let latter_name = split_name[0] == split_name[split_name.length - 1] ? "" : split_name[split_name.length - 1];
 				full_obj.push({
 					email: prospects[0].email,
@@ -871,7 +882,6 @@ function prospect_query() {
 					last_name: latter_name,
 					url: "To unsubscribe, click here: " + process.env.CURRENT_URL + "unsubcribe"
 				});
-			full_obj.push({ email: prospects[0].email, first_name: split_name[0], last_name: latter_name, url: "To unsubscribe, click here: " + process.env.CURRENT_URL + "unsubcribe" });
 			});
 			resolve(full_obj);
 		});
