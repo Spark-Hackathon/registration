@@ -1,0 +1,13 @@
+USE registration;
+DELETE FROM system_settings WHERE name="admin_email_info";
+INSERT INTO system_settings (name, value_str) VALUES ("email_admin_image", "https://images-wixmp-ed30a86b8c4ca887773594c2.wixmp.com/f/60461d73-aea8-4b7c-87b7-4ddd345607e4/dach0gj-0d312b9a-f4eb-402c-9361-8846dd99c677.jpg?token=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1cm46YXBwOiIsImlzcyI6InVybjphcHA6Iiwib2JqIjpbW3sicGF0aCI6IlwvZlwvNjA0NjFkNzMtYWVhOC00YjdjLTg3YjctNGRkZDM0NTYwN2U0XC9kYWNoMGdqLTBkMzEyYjlhLWY0ZWItNDAyYy05MzYxLTg4NDZkZDk5YzY3Ny5qcGcifV1dLCJhdWQiOlsidXJuOnNlcnZpY2U6ZmlsZS5kb3dubG9hZCJdfQ.7ZtvJsGVh6NCB6XyyGGRKnccyGFBkarP4iIXXQdc4OM");
+INSERT INTO system_settings (name, value_str) VALUES ("email_admin_image", "https://s3.narvii.com/image/k6hq2kirxxbswkf7ozg43whtfsoynpua_hq.jpg");
+INSERT INTO system_settings (name, value_str) VALUES ("email_admin_image", "https://i.pinimg.com/originals/f8/58/66/f85866ac4793af09f0ebb9e2ec21b551.jpg");
+INSERT INTO system_settings (name, value_str) VALUES ("email_admin_image", "https://static.zerochan.net/Izumi.%28Daradara%29.full.1887695.jpg");
+INSERT INTO system_settings (name, value_str) VALUES ("email_admin_image", "https://i.pinimg.com/originals/9e/c7/22/9ec7220dcc6dc1e57a85bbcacc4fbbfb.png");
+INSERT INTO system_settings (name, value_str) VALUES ("email_admin_image", "https://i.pinimg.com/originals/11/47/74/11477404ad0fa1cf956a6dc0ea6a9456.jpg");
+INSERT INTO system_settings (name, value_str) VALUES ("email_admin_image", "https://images-wixmp-ed30a86b8c4ca887773594c2.wixmp.com/f/f1183505-440c-473c-b6d2-cbd924e6d550/dbr2p7d-3d96f5b6-93b9-4a54-b3ed-3bb9a07fd7a0.jpg?token=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1cm46YXBwOiIsImlzcyI6InVybjphcHA6Iiwib2JqIjpbW3sicGF0aCI6IlwvZlwvZjExODM1MDUtNDQwYy00NzNjLWI2ZDItY2JkOTI0ZTZkNTUwXC9kYnIycDdkLTNkOTZmNWI2LTkzYjktNGE1NC1iM2VkLTNiYjlhMDdmZDdhMC5qcGcifV1dLCJhdWQiOlsidXJuOnNlcnZpY2U6ZmlsZS5kb3dubG9hZCJdfQ.PYdQ6jd5HH5EtxJK8R7qwOScPZyIYtJdhI7TRihc8LU");
+INSERT INTO system_settings (name, value_str) VALUES ("email_admin_image", "https://yaycupcake.com/a3/images/6/6e/%28Kind_Postman%29_Tsumugi_Serious_SSR%2B_Raw.png");
+INSERT INTO system_settings (name, value_str) VALUES ("email_admin_image", "https://64.media.tumblr.com/efce15b18ad023940ce17fdbe5d99d4d/tumblr_pf5l849b7u1vjv3dzo1_1280.png");
+INSERT INTO system_settings (name, value_str) VALUES ("email_admin_image", "https://static.zerochan.net/Gauche.Suede.full.346538.jpg");
+INSERT INTO system_settings (name, value_str) VALUES ("email_admin_image", "https://static.miraheze.org/mrlovewiki/6/69/34430_full.png");
