@@ -418,6 +418,25 @@ router.post("/admin/get-weeks", async (req, res, next) => {
 	}
 });
 
+router.post("/admin/get-campers-link", async (req, res, next) => {
+	try {
+		await admin_validate(req.body.code);
+		await new Promise((resolve, reject) => {
+			connection.query("SELECT first_name, last_name, email, camper_unique_id FROM camper ORDER BY last_name, first_name, email DESC", (err, unique_id) => {
+				if (err) reject(err);
+				let camper_obj = "";
+				unique_id.forEach((item, index) => {
+					camper_obj += "<p> " + item.first_name + " " + item.last_name + " " + item.email + ": " + "camper link".link(process.env.CURRENT_URL + "get-status?camper_id=" + unique_id[0].camper_unique_id) + "</p>";
+				});
+				res.end(camper_obj);
+			});
+		});
+	} catch (error) {
+		error.message = "Getting the formlink didn't work, try reloading?";
+		next(error);
+	}
+});
+
 router.post("/admin/delete-week", async (req, res, next) => {
 	try {
 		await admin_validate(req.body.code);
@@ -718,7 +737,7 @@ router.post("/admin/pull-current-campers", async (req, res, next) => { //ADMIN
 			res.end();
 		});
 	} catch (error) {
-	 	error.message = "Hmm... Looks like selecting the campers didn't work, try reloading?";
+		error.message = "Hmm... Looks like selecting the campers didn't work, try reloading?";
 		next(error);
 	}
 });
