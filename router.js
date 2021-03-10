@@ -422,7 +422,7 @@ router.post("/admin/get-campers-link", async (req, res, next) => {
 	try {
 		await admin_validate(req.body.code);
 		await new Promise((resolve, reject) => {
-			connection.query("SELECT first_name, last_name, email, camper_unique_id FROM camper ORDER BY last_name, first_name, email DESC", (err, unique_id) => {
+			connection.query("SELECT first_name, last_name, email, camper_unique_id FROM camper ORDER BY last_name, first_name, email ASC", (err, unique_id) => {
 				if (err) reject(err);
 				let camper_obj = "";
 				unique_id.forEach((item, index) => {
