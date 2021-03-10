@@ -96,13 +96,21 @@ function pull_camper_id(unique_id) {
 	});
 }
 
-function insert_medical_health_values(query_string, query_questions, camper_values) {
+function insert_medical_health_values(query_string, query_questions, query_update, camper_values, update_form) {
 	return new Promise((resolve, reject) => {
-		connection.query("INSERT INTO medical_forms " + query_string + " VALUES " + query_questions, camper_values, (err) => {
+		connection.query("SELECT COUNT(camper_id) FROM medical_forms WHERE camper_id=?", camper_values[0], (err, dup_check) => {
 			if (err) reject(err);
-			resolve();
+			camper_values = camper_values.concat(update_form);
+			connection.query("INSERT INTO medical_forms " + query_string + " VALUES " + query_questions + query_update, camper_values, (err) => {
+				if (err) reject(err);
+				resolve();
+			});
 		});
 	});
+}
+
+function insert_med_table() {
+
 }
 
 client.post("/submit-health-forms", async (req, res, next) => {
@@ -111,23 +119,56 @@ client.post("/submit-health-forms", async (req, res, next) => {
 		let medical_forms_input = [];
 		medical_forms_input[0] = await pull_camper_id(req.body.camper_unique_id);
 		//start running through the req object to pull all of the fields needed:
-		let sorted_medical_info = Object.keys(req.body).sort();
-		let db_insertion = " (camper_unique_id";
-		let db_questions = " (?";
-		for (med_value in sorted_medical_info) {
-			if (sorted_medical_info[med_value] != "camper_unique_id" && sorted_medical_info[med_value] != "meds") {
-				medical_forms_input.push(req.body[sorted_medical_info[med_value]]);
-				db_insertion += ", " + sorted_medical_info[med_value];
+		let medical_info = Object.keys(req.body);
+		let update_form = [];
+		let db_insertion = "(camper_id";
+		let db_questions = "(?";
+		let db_update = " ON DUPLICATE KEY UPDATE ";
+		let comma = "";
+		for (med_value in medical_info) {
+			if (medical_info[med_value] != "camper_unique_id" && medical_info[med_value] != "meds") {
+				medical_forms_input.push(req.body[medical_info[med_value]]);
+				update_form.push(req.body[medical_info[med_value]]);
+				db_insertion += ", " + medical_info[med_value];
 				db_questions += ", ?";
+				db_update += comma + medical_info[med_value] + "=?";
+				comma = ", ";
 			}
-			db_insertion += med_value == sorted_medical_info.length - 1 ? ")" : "";
-			db_questions += med_value == sorted_medical_info.length - 1 ? ")" : "";
 		}
+		db_insertion += ")";
+		db_questions += ")";
 		//run through the medical_forms_input and encrypt them
-		for (med in medical_forms_input) {
-			medical_forms_input[med + 1] = encrypt(medical_forms_input[med + 1]);
+		for (let med = 1; med < medical_forms_input.length; med++) {
+			medical_forms_input[med] = encrypt(medical_forms_input[med]);
+			update_form[med - 1] = medical_forms_input[med];
 		}
-		await insert_medical_health_values(db_insetion, db_questions, medical_forms_input);
+		await insert_medical_health_values(db_insertion, db_questions, db_update, medical_forms_input, update_form);
+		//go through meds and encrypt them
+		let med_values = [];
+		req.body.meds.map((item, index) => {
+			med_values[index] = {};
+			med_values[index].camper_id = medical_forms_input[0];
+			Object.keys(item).forEach((med) => {
+				med_values[index] = { ...med_values[index],
+					...{
+						[med]: encrypt(item[med])
+					}
+				};
+			});
+		});
+		connection.query("DELETE FROM meds WHERE camper_id=?", medical_forms_input[0], async (err) => {
+			if (err) throw err;
+			let insertion_med = med_values.map((item, index) => {
+				return new Promise((resolve, reject) => {
+					connection.query("INSERT INTO meds VALUES (?, ?, ?, ?)", Object.values(item), (err) => {
+						if (err) reject(err);
+						resolve();
+					});
+				});
+			});
+			await Promise.all(insertion_med);
+			res.end();
+		});
 	} catch (error) {
 		console.error(error);
 		error.message = "Looks like submitting the health forms didn't work, try reloading?";
