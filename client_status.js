@@ -27,14 +27,15 @@ connection.connect((err) => {
 function pull_camper_info(camper_id) {
 	return new Promise((resolve, reject) => {
 		connection.query("SELECT id, first_name, last_name, COUNT(medical_forms.camper_id) AS med, COUNT(consent_release.camper_id) AS consent FROM camper LEFT JOIN medical_forms ON camper.id = medical_forms.camper_id LEFT JOIN consent_release ON camper.id = consent_release.camper_id WHERE camper_unique_id=?", camper_id, (err, camper_info) => {
-			if (err || camper_info.length == 0) reject(err);
+			if (err) return reject(err);
+			if (!camper_info || !camper_info.length || camper_info[0].id == undefined) reject("No camper under the specified value");
 			let camper_obj = {};
 			camper_obj.first_name = camper_info[0].first_name;
 			camper_obj.last_name = camper_info[0].last_name;
 			camper_obj.weeks = [];
 			connection.query("SELECT title, person_loc, approved FROM week INNER JOIN enrollment ON week.id = enrollment.week_id WHERE camper_id=?", camper_info[0].id, (err, camper_week_info) => {
-				if (err) reject(err);
-				if (!camper_week_info || !camper_week_info.length) reject("No enrollment values");
+				if (err) return reject(err);
+				if (!camper_week_info || !camper_week_info.length) return reject("No enrollment values");
 				let med_forms_required = false;
 				let consent_required = false;
 				let in_person_value = false;
@@ -84,13 +85,13 @@ client.get("/get-status", async (req, res, next) => {
 function pull_camper_id(unique_id) {
 	return new Promise((resolve, reject) => {
 		connection.query("SELECT id, approved FROM camper INNER JOIN enrollment ON camper.id = enrollment.camper_id WHERE camper_unique_id=?", unique_id, (err, camper_id) => {
-			if (err) reject(err);
-			if (!camper_id || camper_id.length == 0) reject("No camper with the unique id: ", unique_id);
+			if (err) return reject(err);
+			if (!camper_id || camper_id.length == 0) return reject("No camper with the unique id: ", unique_id);
 			let approval = false;
 			camper_id.forEach((item, index) => {
 				approval = (item.approved == 1 || approval) ? true : false;
 			});
-			if (!approval) reject("The camper specified doesn't need this information submitted");
+			if (!approval) return reject("The camper specified doesn't need this information submitted");
 			resolve(camper_id[0].id);
 		});
 	});
@@ -99,10 +100,10 @@ function pull_camper_id(unique_id) {
 function insert_medical_health_values(query_string, query_questions, query_update, camper_values, update_form) {
 	return new Promise((resolve, reject) => {
 		connection.query("SELECT COUNT(camper_id) FROM medical_forms WHERE camper_id=?", camper_values[0], (err, dup_check) => {
-			if (err) reject(err);
+			if (err) return reject(err);
 			camper_values = camper_values.concat(update_form);
 			connection.query("INSERT INTO medical_forms " + query_string + " VALUES " + query_questions + query_update, camper_values, (err) => {
-				if (err) reject(err);
+				if (err) return reject(err);
 				resolve();
 			});
 		});
@@ -152,19 +153,30 @@ client.post("/submit-health-forms", async (req, res, next) => {
 				};
 			});
 		});
-		connection.query("DELETE FROM meds WHERE camper_id=?", medical_forms_input[0], async (err) => {
-			if (err) throw err;
-			let insertion_med = med_values.map((item, index) => {
-				return new Promise((resolve, reject) => {
-					connection.query("INSERT INTO meds VALUES (?, ?, ?, ?)", Object.values(item), (err) => {
-						if (err) reject(err);
-						resolve();
+		try {
+			let final_meds_query = await new Promise((outer_resolve, outer_reject) => {
+				connection.query("DELETE FROM meds WHERE camper_id=?", medical_forms_input[0], async (err) => {
+					if (err) return reject(err);
+					let insertion_med = med_values.map((item, index) => {
+						return new Promise((resolve, reject) => {
+							connection.query("INSERT INTO meds VALUES (?, ?, ?, ?)", Object.values(item), (err) => {
+								if (err) return reject(err);
+								resolve();
+							});
+						});
+					});
+					await Promise.all(insertion_med).then(() => {
+						outer_resolve();
+					}).catch((error) => {
+						return outer_reject(error);
 					});
 				});
 			});
-			await Promise.all(insertion_med);
-			res.redirect("/get-status?camper_id=" + medical_forms_input[0]);
-		});
+			//then put in the camper_unique_id to redirect to the get-status page of that user
+			res.redirect("/get-status?camper_id=" + req.body.camper_unique_id);
+		} catch (error) {
+			throw error;
+		}
 	} catch (error) {
 		console.error(error);
 		error.message = "Looks like submitting the health forms didn't work, try reloading?";
