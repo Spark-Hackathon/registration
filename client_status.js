@@ -84,14 +84,16 @@ client.get("/get-status", async (req, res, next) => {
 
 function pull_camper_id(unique_id) {
 	return new Promise((resolve, reject) => {
-		connection.query("SELECT id, approved FROM camper INNER JOIN enrollment ON camper.id = enrollment.camper_id WHERE camper_unique_id=?", unique_id, (err, camper_id) => {
+		connection.query("SELECT id, approved, person_loc FROM camper INNER JOIN enrollment ON camper.id = enrollment.camper_id WHERE camper_unique_id=?", unique_id, (err, camper_id) => {
 			if (err) return reject(err);
 			if (!camper_id || camper_id.length == 0) return reject("No camper with the unique id: ", unique_id);
 			let approval = false;
+			let person_loc = false; //if this is false, then we don't need medical information
 			camper_id.forEach((item, index) => {
 				approval = (item.approved == 1 || approval) ? true : false;
+				person_loc = (item.person_loc == 1 || person_loc) ? true : false;
 			});
-			if (!approval) return reject("The camper specified doesn't need this information submitted");
+			if (!approval || !person_loc) return reject("The camper specified doesn't need this information submitted");
 			resolve(camper_id[0].id);
 		});
 	});
