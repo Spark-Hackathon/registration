@@ -82,17 +82,24 @@ client.get("/get-status", async (req, res, next) => {
 	}
 });
 
-function pull_camper_id(unique_id) {
+function pull_camper_id(unique_id, need_location) {
 	return new Promise((resolve, reject) => {
 		connection.query("SELECT id, approved, person_loc FROM camper INNER JOIN enrollment ON camper.id = enrollment.camper_id WHERE camper_unique_id=?", unique_id, (err, camper_id) => {
 			if (err) return reject(err);
 			if (!camper_id || camper_id.length == 0) return reject("No camper with the unique id: ", unique_id);
 			let approval = false;
 			let person_loc = false; //if this is false, then we don't need medical information
-			camper_id.forEach((item, index) => {
-				approval = (item.approved == 1 || approval) ? true : false;
-				person_loc = (item.person_loc == 1 || person_loc) ? true : false;
-			});
+			if (need_location == 0) {
+				person_loc = true;
+				camper_id.forEach((item, index) => {
+					approval = (item.approved == 1 || approval) ? true : false;
+				});
+			} else {
+				camper_id.forEach((item, index) => {
+					approval = (item.approved == 1 || approval) ? true : false;
+					person_loc = (item.person_loc == 1 || person_loc) ? true : false;
+				});
+			}
 			if (!approval || !person_loc) return reject("The camper specified doesn't need this information submitted");
 			resolve(camper_id[0].id);
 		});
@@ -116,7 +123,7 @@ client.post("/submit-health-forms", async (req, res, next) => {
 	//get data, make new array with all data stored as encrypted version, insert into database
 	try {
 		let medical_forms_input = [];
-		medical_forms_input[0] = await pull_camper_id(req.body.camper_unique_id);
+		medical_forms_input[0] = await pull_camper_id(req.body.camper_unique_id, 1);
 		//start running through the req object to pull all of the fields needed:
 		let medical_info = Object.keys(req.body);
 		let update_form = [];
@@ -188,9 +195,10 @@ client.post("/submit-health-forms", async (req, res, next) => {
 
 client.get("/consent-and-release", async (req, res, next) => {
 	try {
-		let safety_net = await new Promise((resolve, reject) => {
-			connection.query("INSERT INTO consent_release VALUES (?, ?) ON DUPLICATE KEY UPDATE completion_time=?", [req.query.camper_id, new Date(), new Date()], (err) => {
-				if (err) reject(err);
+		let safety_net = await new Promise(async (resolve, reject) => {
+			let camper_id = await pull_camper_id(req.query.camper_unique_id, 0);
+			connection.query("INSERT INTO consent_release VALUES (?, ?) ON DUPLICATE KEY UPDATE completion_time=?", [camper_id, new Date(), new Date()], (err) => {
+				if (err) return reject(err);
 				res.end();
 			});
 		});
