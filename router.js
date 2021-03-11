@@ -10,6 +10,7 @@ const fs = require("fs");
 const {
 	getDate
 } = require("./utils");
+const { sheet } = require("./googletest/sheeter.js");
 
 const type_meta = {
 	designer: 0,
@@ -223,12 +224,11 @@ router.post("/camper-register-queueing", async (req, res, next) => {
 						});
 						async function enrollmentInsert(week) {
 							return new Promise((enroll_resolve, enroll_reject) => {
-								connection.query("SELECT approved, confirmed FROM enrollment WHERE week_id=? AND camper_id=?", [week[0], camper_id[0].id], (err, camper_enroll_value) => {
+								connection.query("SELECT approved FROM enrollment WHERE week_id=? AND camper_id=?", [week[0], camper_id[0].id], (err, camper_enroll_value) => {
 									if (err) console.log(err);
 									let approved_value = camper_enroll_value && camper_enroll_value.length && camper_enroll_value[0].approved == 1 ? 1 : 0;
-									let confirmed_value = camper_enroll_value && camper_enroll_value.length && camper_enroll_value[0].confirmed == 1 ? 1 : 0;
-									connection.query("INSERT INTO enrollment (camper_id, week_id, signup_time, person_loc, approved, confirmed) VALUES " +
-										"(?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE signup_time=?, person_loc=?, approved=?, confirmed=?", [camper_id[0].id, week[0], new Date(), week[1] - 1, 0, 0, new Date(), week[1] - 1, approved_value, confirmed_value], (err) => {
+									connection.query("INSERT INTO enrollment (camper_id, week_id, signup_time, person_loc, approved) VALUES " +
+										"(?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE signup_time=?, person_loc=?, approved=?", [camper_id[0].id, week[0], new Date(), week[1] - 1, 0, 0, new Date(), week[1] - 1, approved_value], (err) => {
 											if (err) enroll_reject(err);
 											connection.query("SELECT id, question_text FROM question_meta WHERE week_id=?", week[0], (err, questions) => {
 												if (err) enroll_reject(err);
@@ -654,25 +654,19 @@ function partition(array, low, high) {
 			i--;
 			let week_buffer = array[i][0];
 			let camper_buffer = array[i][1];
-			let confirmed_buffer = array[i][2];
 			array[i][0] = array[j][0];
 			array[i][1] = array[j][1];
-			array[i][2] = array[j][2];
 			array[j][0] = week_buffer;
 			array[j][1] = camper_buffer;
-			array[j][2] = confirmed_buffer;
 		}
 	}
 	if (i >= 0) {
 		let week_buffer = array[i - 1][0];
 		let camper_buffer = array[i - 1][1];
-		let confirmed_buffer = array[i - 1][2];
 		array[i - 1][0] = array[pivot][0];
 		array[i - 1][1] = array[pivot][1];
-		array[i - 1][2] = array[pivot][2];
 		array[pivot][0] = week_buffer;
 		array[pivot][1] = camper_buffer;
-		array[pivot][2] = confirmed_buffer;
 	}
 	return [i - 1, array];
 }
@@ -681,8 +675,7 @@ router.post("/admin/pull-current-campers", async (req, res, next) => { //ADMIN
 	try {
 		await admin_validate(req.body.code);
 		//throw all currently pending campers - run through and see which ones are still waiting in enrollment
-		let addition_on_camper = req.body['applicants-or-registered'] == 1 ? ", confirmed" : "";
-		connection.query("SELECT camper_id, week_id" + addition_on_camper + " FROM enrollment WHERE approved=?", req.body['applicants-or-registered'], async (err, camper_ids) => {
+		connection.query("SELECT camper_id, week_id FROM enrollment WHERE approved=?", req.body['applicants-or-registered'], async (err, camper_ids) => {
 			if (err) throw err;
 			let obj = {
 				campers: []
@@ -693,7 +686,6 @@ router.post("/admin/pull-current-campers", async (req, res, next) => { //ADMIN
 				camper_pos[ids] = [];
 				camper_pos[ids][0] = camper_ids[ids].week_id;
 				camper_pos[ids][1] = camper_ids[ids].camper_id;
-				camper_pos[ids][2] = camper_ids[ids].confirmed;
 			}
 			camper_pos = quicksort(camper_pos, 0, camper_pos.length - 1);
 
@@ -712,9 +704,6 @@ router.post("/admin/pull-current-campers", async (req, res, next) => { //ADMIN
 							inner.type = camper[0].type;
 							inner.hopes_dreams = camper[0].hopes_dreams;
 							inner.participated = camper[0].participated == 1 ? "Participated before" : "Has not participated";
-							if (id[2] == 0 || id[2] == 1) {
-								inner.confirmed = id[2];
-							}
 							resolve(inner);
 						});
 					});
@@ -724,7 +713,6 @@ router.post("/admin/pull-current-campers", async (req, res, next) => { //ADMIN
 			for (let each_id = 0; each_id < camper_ids.length; each_id++) {
 				id[0] = camper_pos[each_id][1];
 				id[1] = camper_pos[each_id][0];
-				id[2] = camper_pos[each_id][2];
 				try {
 					obj.campers.push(await allCampers());
 					if (each_id == camper_ids.length - 1) {
@@ -794,6 +782,18 @@ router.post("/admin/export/all", async (req, res, next) => {
 		await query_net;
 	} catch (error) {
 		error.message = "Failed to export all campers";
+		next(error);
+	}
+});
+
+router.post("/admin/sync-sheet", async (req, res, next) => {
+	try {
+		await admin_validate(req.body.code);
+		await sheet;
+		res.end("Go check the sheet!");
+	} catch (error) {
+		console.error(error);
+		error.message = "Failed to sync google-sheets";
 		next(error);
 	}
 });

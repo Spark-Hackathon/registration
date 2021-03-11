@@ -93,7 +93,6 @@ CREATE TABLE medical_forms (
 	insurance_policy LONGTEXT NOT NULL,
 	FOREIGN KEY (`camper_id`) REFERENCES camper (`id`) ON DELETE CASCADE,
 	UNIQUE INDEX `unique_medical_form` (`camper_id`)
-
 );
 CREATE TABLE meds(
 	camper_id INT NOT NULL,
@@ -105,5 +104,6 @@ CREATE TABLE meds(
 CREATE TABLE consent_release(
 	camper_id INT NOT NULL,
 	completion_time DATETIME NOT NULL,
-	FOREIGN KEY (`camper_id`) REFERENCES camper (`id`) ON DELETE CASCADE
+	FOREIGN KEY (`camper_id`) REFERENCES camper (`id`) ON DELETE CASCADE,
+	UNIQUE INDEX `unique_consent` (`camper_id`)
 );

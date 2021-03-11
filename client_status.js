@@ -30,7 +30,7 @@ function pull_camper_info(camper_id) {
 			if (err || camper_info.length == 0) reject(err);
 			let camper_obj = {};
 			camper_obj.first_name = camper_info[0].first_name;
-			camper_obj.last = camper_info[0].last_name;
+			camper_obj.last_name = camper_info[0].last_name;
 			camper_obj.weeks = [];
 			connection.query("SELECT title, person_loc, approved FROM week INNER JOIN enrollment ON week.id = enrollment.week_id WHERE camper_id=?", camper_info[0].id, (err, camper_week_info) => {
 				if (err) reject(err);
@@ -109,10 +109,6 @@ function insert_medical_health_values(query_string, query_questions, query_updat
 	});
 }
 
-function insert_med_table() {
-
-}
-
 client.post("/submit-health-forms", async (req, res, next) => {
 	//get data, make new array with all data stored as encrypted version, insert into database
 	try {
@@ -167,11 +163,26 @@ client.post("/submit-health-forms", async (req, res, next) => {
 				});
 			});
 			await Promise.all(insertion_med);
-			res.end();
+			res.redirect("/get-status?camper_id=" + medical_forms_input[0]);
 		});
 	} catch (error) {
 		console.error(error);
 		error.message = "Looks like submitting the health forms didn't work, try reloading?";
+		next(error);
+	}
+});
+
+client.get("/consent-and-release", async (req, res, next) => {
+	try {
+		let safety_net = await new Promise((resolve, reject) => {
+			connection.query("INSERT INTO consent_release VALUES (?, ?) ON DUPLICATE KEY UPDATE completion_time=?", [req.query.camper_id, new Date(), new Date()], (err) => {
+				if (err) reject(err);
+				res.end();
+			});
+		});
+	} catch (error) {
+		console.error(error);
+		error.message = "Submitting the consent form didn't work... try reloading?";
 		next(error);
 	}
 });
