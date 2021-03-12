@@ -24,6 +24,53 @@ connection.connect((err) => {
 	if (err) throw err;
 });
 
+function pull_id(camper_unique_id) {
+	return new Promise((resolve, reject) => {
+		connection.query("SELECT id FROM camper WHERE camper_unique_id=?", camper_unique_id, (err, camper_id) => {
+			if (err) return reject(err);
+			if (!camper_id || !camper_id.length) return reject("No camper under the specified ID", err);
+			resolve(camper_id[0].id);
+		});
+	});
+}
+
+client.post("/un-enroll-week", async (req, res, next) => {
+	try {
+		let camper_id = await pull_id(req.body.camper_unique_id);
+		//now delete the enrollment value in the camper
+		await new Promise((resolve, reject) => {
+			connection.query("DELETE FROM enrollment WHERE camper_id=? AND week_id=?", [camper_id, req.body.week_id], (err) => {
+				if (err) return reject(err);
+				resolve();
+			});
+		});
+		res.redirect("/get-status?camper_id=" + req.body.camper_unique_id);
+	} catch (error) {
+		error.message = "Something went wrong trying to un-enroll, try reloading?";
+		next(error);
+	}
+});
+
+client.post("/change-person-loc", async (req, res, next) => {
+	try {
+		let camper_id = await pull_id(req.body.camper_unique_id);
+		await new Promise((resolve, reject) => {
+			connection.query("SELECT person_loc FROM enrollment WHERE camper_id=? AND week_id=?", [camper_id, req.body.week_id], (err, person_loc) => {
+				if (err) return reject(err);
+				person_loc[0].person_loc = person_loc[0].person_loc == 1 ? 0 : 1;
+				connection.query("UPDATE enrollment SET person_loc=? WHERE camper_id=? AND week_id=?", [person_loc[0].person_loc, camper_id, req.body.week_id], (err) => {
+					if (err) return reject(err);
+					resolve();
+				});
+			});
+		});
+		res.redirect("/get-status?camper_id=?" + req.body.camper_unique_id);
+	} catch (error) {
+		error.message = "Looks like changing your location didn't work";
+		next(error);
+	}
+});
+
 function pull_camper_info(camper_id) {
 	return new Promise((resolve, reject) => {
 		connection.query("SELECT id, first_name, last_name, COUNT(medical_forms.camper_id) AS med, COUNT(consent_release.camper_id) AS consent FROM camper LEFT JOIN medical_forms ON camper.id = medical_forms.camper_id LEFT JOIN consent_release ON camper.id = consent_release.camper_id WHERE camper_unique_id=?", camper_id, (err, camper_info) => {
