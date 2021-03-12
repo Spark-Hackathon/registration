@@ -683,7 +683,7 @@ router.post("/admin/pull-current-campers", async (req, res, next) => { //ADMIN
 	try {
 		await admin_validate(req.body.code);
 		//throw all currently pending campers - run through and see which ones are still waiting in enrollment
-		let camper_obj = [];
+		let camper_obj = { campers: [] };
 		await new Promise(async (resolve, reject) => {
 			connection.query("SELECT camper_id, week_id, person_loc FROM enrollment WHERE approved=?", req.body['applicants-or-registered'], async (err, camper_initial) => {
 				if (err || !camper_initial) return reject(err);
@@ -707,7 +707,7 @@ router.post("/admin/pull-current-campers", async (req, res, next) => { //ADMIN
 								//based on person_loc, need to look at med and consent
 								let status = camper[0].consent;
 								if (item[2]) status = (camper[0].med && camper[0].consent) ? 1 : 0;
-								camper_obj.push({
+								camper_obj.campers.push({
 									week: camper[0].title,
 									camper_id: item[1],
 									first_name: camper[0].first_name,
