@@ -64,7 +64,7 @@ client.post("/change-person-loc", async (req, res, next) => {
 				});
 			});
 		});
-		res.redirect("/get-status?camper_id=?" + req.body.camper_unique_id);
+		res.redirect("/get-status?camper_id=" + req.body.camper_unique_id);
 	} catch (error) {
 		error.message = "Looks like changing your location didn't work";
 		next(error);
@@ -83,6 +83,7 @@ function pull_camper_info(camper_id) {
 			connection.query("SELECT title, person_loc, approved FROM week INNER JOIN enrollment ON week.id = enrollment.week_id WHERE camper_id=?", camper_info[0].id, (err, camper_week_info) => {
 				if (err) return reject(err);
 				if (!camper_week_info || !camper_week_info.length) return reject("No enrollment values");
+				console.log(camper_week_info);
 				let med_forms_required = false;
 				let consent_required = false;
 				let in_person_value = false;
