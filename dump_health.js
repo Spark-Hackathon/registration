@@ -43,57 +43,112 @@ function ConvertToCSV(objArray) {
 	return str;
 }
 
-connection.query("SELECT * FROM medical_forms", async (err, medical_forms) => {
-	if (err) throw err;
-	if (!medical_forms || !medical_forms.length) throw "No values in database";
-	//run through each of the values and turn them into unencrypted values
-	//build up an object and then turn it into a csv
-	let all_meds = [];
-	let return_meds = medical_forms.map((item, index) => {
-		return new Promise((resolve) => {
-			//STEP ONE - build up the basic data for each camper: first_name, last_name, weeks
-			connection.query("SELECT week.id AS week, first_name, last_name, title FROM camper INNER JOIN enrollment ON camper.id=enrollment.camper_id INNER JOIN week ON enrollment.week_id=week.id WHERE camper.id=?", item.camper_id, (err, camper_info) => {
-				if (err) throw err;
-				if (!camper_info || !camper_info.length) resolve();
-				//STEP TWO - need to then run through the medical data FOR EACH ROW of that camper and add it onto them
-				let camper_info_decrypt = [];
-				camper_info.forEach((camper, inner_index) => {
-					camper_info_decrypt[inner_index] = {
-						week_id: camper.week,
-						title: camper.title,
-						first_name: camper.first_name,
-						last_name: camper.last_name
-					};
-					//run through the encrypted data and decrypt
-					Object.keys(item).forEach((key) => {
-						if (key != "camper_id") camper_info_decrypt[inner_index] = { ...camper_info_decrypt[inner_index],
-							...{
-								[key]: decrypt(item[key])
-							}
+function sort_value(first_value, second_value) {
+	if (first_value.week > second_value.week) return 1;
+	if (first_value.week < second_value.week) return -1;
+	if (first_value.last_name > second_value.last_name) return 1;
+	if (first_value.last_name < second_value.last_name) return -1;
+	if (first_value.first_name > second_value.first_name) return 1;
+	if (first_value.first_name < second_value.first_name) return -1;
+	return 0;
+};
+
+//NOTE: position 3 in the argv is week, and position 4 is table selection
+async function run_query() {
+	if (process.argv[3] == "medical_forms") return new Promise((full_resolve) => {
+		connection.query("SELECT * FROM medical_forms", async (err, medical_forms) => {
+			if (err) throw err;
+			if (!medical_forms || !medical_forms.length) throw "No values in database";
+			//run through each of the values and turn them into unencrypted values
+			//build up an object and then turn it into a csv
+			let all_meds = [];
+			let return_meds = medical_forms.map((item, index) => {
+				return new Promise((resolve) => {
+					//STEP ONE - build up the basic data for each camper: first_name, last_name, weeks
+					let extra_where_clause = process.argv[2] == 0 ? "" : " AND week_id=?";
+					let conditions = process.argv[2] == 0 ? [item.camper_id] : [item.camper_id, process.argv[2]];
+					connection.query("SELECT week.id AS week, first_name, last_name, title FROM camper INNER JOIN " + 
+						"enrollment ON camper.id=enrollment.camper_id INNER JOIN week ON enrollment.week_id=week.id " + 
+						"WHERE camper.id=?" + extra_where_clause, conditions, (err, camper_info) => {
+						if (err) throw err;
+						if (!camper_info || !camper_info.length) resolve();
+						//STEP TWO - need to then run through the medical data FOR EACH ROW of that camper and add it onto them
+						let camper_info_decrypt = [];
+						camper_info.forEach((camper, inner_index) => {
+							camper_info_decrypt[inner_index] = {
+								week: camper.week,
+								title: camper.title,
+								first_name: camper.first_name,
+								last_name: camper.last_name
+							};
+							//run through the encrypted data and decrypt
+							Object.keys(item).forEach((key) => {
+								if (key != "camper_id") camper_info_decrypt[inner_index] = { ...camper_info_decrypt[inner_index],
+									...{
+										[key]: decrypt(item[key])
+									}
+								};
+							});
+						});
+						resolve(camper_info_decrypt);
+					});
+				});
+			});
+			await Promise.all(return_meds).then(campers => {
+				campers.forEach((item) => {
+					all_meds = all_meds.concat(item);
+				});
+			});
+			//Sort each of the values based on: week, last_name, first_name
+			all_meds.sort(sort_value);
+			full_resolve(ConvertToCSV(all_meds));
+		});
+	});
+	if (process.argv[3] == "meds") return new Promise((resolve) => {
+		//inner week selection
+		let extra_where_clause = process.argv[2] == 0 ? "" : " AND week_id=?";
+		let conditions = process.argv[2] == 0 ? [] : process.argv[2];
+		connection.query("SELECT enrollment.week_id AS week, title, first_name, last_name, medication_name, medication_time, medication_dosage, medication_notes, " +
+			"epi_pen_info FROM camper INNER JOIN enrollment ON camper.id=enrollment.camper_id INNER JOIN week ON week.id=enrollment.week_id INNER JOIN meds ON " +
+			"camper.id=meds.camper_id INNER JOIN medical_forms ON camper.id=medical_forms.camper_id" + extra_where_clause, conditions, (err, meds_info) => {
+				if (err) console.log(err);
+				//console.log(meds_info);
+				//decryption step
+				let medical_object = [];
+				meds_info.forEach((med, index) => {
+					medical_object[index] = {};
+					Object.keys(med).forEach(slice_med => {
+						let object_addition;
+						if (slice_med == "week" || slice_med == "title" || slice_med == "first_name" || slice_med == "last_name") {
+							object_addition = {
+								[slice_med]: med[slice_med]
+							};
+						} else object_addition = {
+							[slice_med]: decrypt(med[slice_med])
+						};
+						medical_object[index] = { ...medical_object[index],
+							...object_addition
 						};
 					});
 				});
-				resolve(camper_info_decrypt);
+				medical_object.sort(sort_value);
+				resolve(ConvertToCSV(medical_object));
 			});
-		});
 	});
-	await Promise.all(return_meds).then(campers => {
-		campers.forEach((item) => {
-			all_meds = all_meds.concat(item);
-		});
+	if (process.argv[3] == "consent_release") return new Promise((resolve) => {
+		let extra_where_clause = process.argv[2] == 0 ? "" : " AND week_id=?";
+		let conditions = process.argv[2] == 0 ? [] : process.argv[2];
+		connection.query("SELECT enrollment.week_id AS week, title, first_name, last_name, completion_time FROM camper " +
+			"INNER JOIN enrollment ON camper.id=enrollment.camper_id INNER JOIN week ON enrollment.week_id=week.id " +
+			"INNER JOIN consent_release ON camper.id=consent_release.camper_id" + extra_where_clause, conditions, (err, consents) => {
+				if (err) throw err;
+				consents.sort(sort_value);
+				resolve(ConvertToCSV(consents));
+			});
 	});
-	function compareNumbers(first_value, second_value) {
-		return first_value.week - second_value.week;
-	}
-	//Sort each of the values based on: week, last_name, first_name
-	all_meds.sort((first_value, second_value) => {
-		if (first_value.week_id > second_value.week_id) return 1;
-		if (first_value.week_id < second_value.week_id) return -1;
-		if (first_value.last_name > second_value.last_name) return 1;
-		if (first_value.last_name < second_value.last_name) return -1;
-		if (first_value.first_name > second_value.first_name) return 1;
-		if (first_value.first_name < second_value.first_name) return -1;
-		return 0;
-	});
-	console.log(ConvertToCSV(all_meds));
+}
+
+run_query().then((ans) => {
+	console.log(ans);
+	connection.close();
 });

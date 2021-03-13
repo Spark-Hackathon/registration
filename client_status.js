@@ -250,7 +250,7 @@ client.get("/consent-and-release", async (req, res, next) => {
 				resolve();
 			});
 		});
-		res.redirect("/get-status?camper_id=" + req.body.camper_unique_id);
+		res.redirect("/get-status?camper_id=" + req.query.camper_unique_id);
 	} catch (error) {
 		console.error(error);
 		error.message = "Submitting the consent form didn't work... try reloading?";
