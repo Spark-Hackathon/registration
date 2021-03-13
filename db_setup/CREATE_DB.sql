@@ -98,6 +98,7 @@ CREATE TABLE meds(
 	camper_id INT NOT NULL,
 	medication_name LONGTEXT NOT NULL,
 	medication_dosage LONGTEXT NOT NULL,
+	medication_time LONGTEXT NOT NULL,
 	medication_notes LONGTEXT NOT NULL,
 	FOREIGN KEY (`camper_id`) REFERENCES camper (`id`) ON DELETE CASCADE
 );

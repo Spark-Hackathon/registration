@@ -182,6 +182,7 @@ client.post("/submit-health-forms", async (req, res, next) => {
 			if (medical_info[med_value] != "camper_unique_id" && medical_info[med_value] != "meds") {
 				medical_forms_input.push(req.body[medical_info[med_value]]);
 				update_form.push(req.body[medical_info[med_value]]);
+				medical_info[med_value] = medical_info[med_value].replace(/[^A-Za-z_]/g, "");
 				db_insertion += ", " + medical_info[med_value];
 				db_questions += ", ?";
 				db_update += comma + medical_info[med_value] + "=?";
@@ -212,10 +213,10 @@ client.post("/submit-health-forms", async (req, res, next) => {
 		try {
 			let final_meds_query = await new Promise((outer_resolve, outer_reject) => {
 				connection.query("DELETE FROM meds WHERE camper_id=?", medical_forms_input[0], async (err) => {
-					if (err) return reject(err);
+					if (err) return outer_reject(err);
 					let insertion_med = med_values.map((item, index) => {
 						return new Promise((resolve, reject) => {
-							connection.query("INSERT INTO meds VALUES (?, ?, ?, ?)", Object.values(item), (err) => {
+							connection.query("INSERT INTO meds VALUES (?, ?, ?, ?, ?)", Object.values(item), (err) => {
 								if (err) return reject(err);
 								resolve();
 							});
@@ -246,9 +247,10 @@ client.get("/consent-and-release", async (req, res, next) => {
 			let camper_id = await pull_camper_id(req.query.camper_unique_id, 0);
 			connection.query("INSERT INTO consent_release VALUES (?, ?) ON DUPLICATE KEY UPDATE completion_time=?", [camper_id, new Date(), new Date()], (err) => {
 				if (err) return reject(err);
-				res.end();
+				resolve();
 			});
 		});
+		res.redirect("/get-status?camper_id=" + req.body.camper_unique_id);
 	} catch (error) {
 		console.error(error);
 		error.message = "Submitting the consent form didn't work... try reloading?";

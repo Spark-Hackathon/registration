@@ -95,5 +95,5 @@ connection.query("SELECT * FROM medical_forms", async (err, medical_forms) => {
 		if (first_value.first_name < second_value.first_name) return -1;
 		return 0;
 	});
-	console.log(all_meds);
+	console.log(ConvertToCSV(all_meds));
 });
