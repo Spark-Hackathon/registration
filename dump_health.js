@@ -51,30 +51,49 @@ connection.query("SELECT * FROM medical_forms", async (err, medical_forms) => {
 	let all_meds = [];
 	let return_meds = medical_forms.map((item, index) => {
 		return new Promise((resolve) => {
-			all_meds[index] = {
-				camper_id: item.camper_id
-			};
-			Object.keys(item).forEach((med) => {
-				if (med != "camper_id") all_meds[index][med] = decrypt(item[med]);
-			});
-			//then run through and grab all their med data
-			connection.query("SELECT * FROM meds WHERE camper_id=?", item.camper_id, (err, meds) => {
+			//STEP ONE - build up the basic data for each camper: first_name, last_name, weeks
+			connection.query("SELECT week.id AS week, first_name, last_name, title FROM camper INNER JOIN enrollment ON camper.id=enrollment.camper_id INNER JOIN week ON enrollment.week_id=week.id WHERE camper.id=?", item.camper_id, (err, camper_info) => {
 				if (err) throw err;
-				if (medical_forms && medical_forms.length) {
-					//run through each row and buil an object to return
-					all_meds[index].meds = [];
-					meds.forEach((med, med_index) => {
-						let med_obj = {};
-						Object.keys(med).forEach((each_dose) => {
-							if (each_dose != "camper_id") med_obj[each_dose] = decrypt(med[each_dose]);
-						});
-						all_meds[index].meds.push(med_obj);
+				if (!camper_info || !camper_info.length) resolve();
+				//STEP TWO - need to then run through the medical data FOR EACH ROW of that camper and add it onto them
+				let camper_info_decrypt = [];
+				camper_info.forEach((camper, inner_index) => {
+					camper_info_decrypt[inner_index] = {
+						week_id: camper.week,
+						title: camper.title,
+						first_name: camper.first_name,
+						last_name: camper.last_name
+					};
+					//run through the encrypted data and decrypt
+					Object.keys(item).forEach((key) => {
+						if (key != "camper_id") camper_info_decrypt[inner_index] = { ...camper_info_decrypt[inner_index],
+							...{
+								[key]: decrypt(item[key])
+							}
+						};
 					});
-					resolve();
-				}
+				});
+				resolve(camper_info_decrypt);
 			});
 		});
 	});
-	await Promise.all(return_meds);
-	console.log(JSON.stringify(all_meds));
+	await Promise.all(return_meds).then(campers => {
+		campers.forEach((item) => {
+			all_meds = all_meds.concat(item);
+		});
+	});
+	function compareNumbers(first_value, second_value) {
+		return first_value.week - second_value.week;
+	}
+	//Sort each of the values based on: week, last_name, first_name
+	all_meds.sort((first_value, second_value) => {
+		if (first_value.week_id > second_value.week_id) return 1;
+		if (first_value.week_id < second_value.week_id) return -1;
+		if (first_value.last_name > second_value.last_name) return 1;
+		if (first_value.last_name < second_value.last_name) return -1;
+		if (first_value.first_name > second_value.first_name) return 1;
+		if (first_value.first_name < second_value.first_name) return -1;
+		return 0;
+	});
+	console.log(all_meds);
 });
