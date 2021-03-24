@@ -5,6 +5,9 @@ const bodyParser = require("body-parser");
 const express = require("express");
 const mysql = require("mysql2");
 const path = require("path");
+const {
+	getDate
+} = require("./utils");
 
 const {
 	chunk_encrypt,
@@ -122,7 +125,11 @@ client.get("/get-status", async (req, res, next) => {
 	//cross-check the id with db
 	try {
 		let camper_info = await pull_camper_info(req.query.camper_id);
-		res.json(camper_info);
+		res.render("status", {
+			title: `Status — Summer ${getDate()}`,
+			year: getDate(),
+			camper_info
+		});
 	} catch (error) {
 		error.message = "Looks like there was a problem pulling up your registration status, try reloading?";
 		next(error);
@@ -167,6 +174,7 @@ function insert_medical_health_values(query_string, query_questions, query_updat
 }
 
 client.post("/submit-health-forms", async (req, res, next) => {
+	console.log(req.body)
 	//get data, make new array with all data stored as encrypted version, insert into database
 	try {
 		let medical_forms_input = [];
