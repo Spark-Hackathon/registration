@@ -166,4 +166,9 @@ class Field {
 
         return this;
     }
+
+    rows = (n) => {
+        this.field.attr("rows", n);
+        return this;
+    }
 }

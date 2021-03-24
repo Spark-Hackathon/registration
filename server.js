@@ -94,6 +94,13 @@ app.get("/unsubscribe", (req, res) => {
     });
 });
 
+app.get("/health", (req, res) => {
+    res.render("health", {
+        "title": `Health & Consent – Spark Camp ${getDate()}`,
+        "year": getDate()
+    });
+});
+
 app.use((error, req, res, next) => {
 	console.log("RUNNING ERROR");
 	console.error(error);
