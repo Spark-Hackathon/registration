@@ -56,6 +56,7 @@ function sort_value(first_value, second_value) {
 //NOTE: position 3 in the argv is week, and position 4 is table selection
 async function run_query() {
 	if (process.argv[3] == "medical_forms") return new Promise((full_resolve) => {
+		console.log("in medical_forms");
 		connection.query("SELECT * FROM medical_forms", async (err, medical_forms) => {
 			if (err) throw err;
 			if (!medical_forms || !medical_forms.length) throw "No values in database";
@@ -106,6 +107,7 @@ async function run_query() {
 	});
 	if (process.argv[3] == "meds") return new Promise((resolve) => {
 		//inner week selection
+		console.log("In meds");
 		let extra_where_clause = process.argv[2] == 0 ? "" : " AND week_id=?";
 		let conditions = process.argv[2] == 0 ? [] : process.argv[2];
 		connection.query("SELECT enrollment.week_id AS week, title, first_name, last_name, medication_name, medication_time, medication_dosage, medication_notes, " +
@@ -136,6 +138,7 @@ async function run_query() {
 			});
 	});
 	if (process.argv[3] == "consent_release") return new Promise((resolve) => {
+		console.log("In consent and release");
 		let extra_where_clause = process.argv[2] == 0 ? "" : " AND week_id=?";
 		let conditions = process.argv[2] == 0 ? [] : process.argv[2];
 		connection.query("SELECT enrollment.week_id AS week, title, first_name, last_name, completion_time FROM camper " +
