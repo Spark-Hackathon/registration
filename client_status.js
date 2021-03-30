@@ -104,9 +104,13 @@ function pull_camper_info(camper_id) {
 				med_forms_required = (consent_required && in_person_value) ? true : false;
 				// resolve what needs to be completed for each form: if both med and consent count are already 1, then every one of the boxes is checked, otherwise, need to do much more researching
 				camper_obj.showing_consent_option = +consent_required;
+				camper_obj.showing_consent_option = camper_obj.showing_consent_option == 1 ? true : false;
 				camper_obj.consent_completion = camper_info[0].consent;
+				camper_obj.consent_completion = camper_obj.consent_completion == 1 ? true : false;
 				camper_obj.showing_med_option = +med_forms_required;
+				camper_obj.showing_med_option = camper_obj.showing_med_option == 1 ? true : false;
 				camper_obj.med_completion = camper_info[0].med;
+				camper_obj.med_completion = camper_obj.med_completion == 1 ? true : false;
 				//now run through and see which "forms_need_completion" string to put
 				let string = (camper_obj.showing_consent_option && !camper_obj.showing_med_option) ? "consent form" : "forms";
 				if (camper_obj.showing_consent_option) camper_obj.forms_need_completion = "Have you completed your " + string + "?";
@@ -189,7 +193,8 @@ client.post("/submit-health-forms", async (req, res, next) => {
 				item.substring(item.length - 16) != "medication_notes") {
 				if (item == "camper_id") {
 					await pull_camper_id(item, 1);
-				} if (item == "wavier_accept") {
+				}
+				if (item == "wavier_accept") {
 					if (req.body[item] == "0") throw "You must accept the wavier to submit";
 				} else if (item == "covid_accept") {
 					if (req.body[item] == "0") throw "You must accept the covid wavier to submit";
@@ -197,7 +202,7 @@ client.post("/submit-health-forms", async (req, res, next) => {
 					if (req.body[item].length == 0) throw "Please input characters into the Consent and Release box";
 				} else {
 					index_counter++;
-					console.log("ROUND?", index_counter, "KEYS VALUE", 
+					console.log("ROUND?", index_counter, "KEYS VALUE",
 						index_counter == 16);
 					let comma = index_counter == 16 ? ")" : ", ";
 					let item_name = item == "allergies" ? "allergies_text" : item;

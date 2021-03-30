@@ -1,5 +1,58 @@
 <header class="mt-20 md:mt-36">
-    <h1 class="text-4xl md:text-6xl">Status for <span class="px-2 bg-yellow-light leading-tight md:px-6">{{first_name}} {{last_name}}</span>.</h1>
-    <p class="mt-4 text-xl leading-normal text-gray-500 md:text-3xl md:leading-relaxed">You have been accepted as a camper! In order to participate, you must fill out this health  Consent &amp; Release forms.</p>
-    <p class="mt-2 text-black text-lg">Note: every field with an asterisk (*) is <span class="underline">required</span>.</p>
+    <h1 class="text-4xl md:text-6xl">Status for <span class="px-2 bg-yellow-light leading-tight md:px-6">{{camper_info.first_name}} {{camper_info.last_name}}</span>.</h1>
+    <p class="mt-4 text-xl leading-normal text-gray-500 md:text-3xl md:leading-relaxed">Here you will find your status for the week(s) you've signed up for. Keep checking back to see if you've been accepted. Please make sure you also fill out the necessary paperwork below.</p>
 </header>
+
+<div class="mt-20">
+    {{#if camper_info.showing_consent_option}}
+        <p class="my-2"><span class="font-semibold uppercase underline text-red-500 mr-4">Important!</span> In order to participate in Summer Spark {{year}}, you will need to fill out the <a id="cr" href="" class="font-semibold underline text-yellow py-1 hover:text-yellow-dark transition duration-200">Consent &amp; Release &rarr;</a> agreement.</p>
+    {{/if}}
+
+    {{#if camper_info.showing_med_option}}
+        <p><span class="font-semibold uppercase underline text-red-500 mr-4">Important!</span> In order to participate in Summer Spark {{year}}, you will need to fill out the <a id="health" href="" class="font-semibold underline text-yellow py-1 hover:text-yellow-dark transition duration-200">Health &amp; Medication &rarr;</a> agreement.</p>
+    {{/if}}
+</div>
+
+<div class="mt-20">
+    <table class="w-full table-fixed">
+        <thead class="border-b-2 border-gray-200 mb-4">
+            <tr class="text-center">
+                <th class="w-1/3">Week</th>
+                <th class="w-1/3">Acception Status</th>
+                <th class="w-1/3">Attendance Method</th>
+            </tr>
+        </thead>
+        <tbody>
+            {{#each camper_info.weeks}}
+                <tr class="even:bg-gray-200">
+                    <td class="py-2 pl-4">{{this.title}}</td>
+
+                    {{#if this.approved}}
+                        <td>You've been accepted!</td>
+                    {{else}}
+                        <td class="italic">Pending approval</td>
+                    {{/if}}
+
+                    {{#if this.person_loc}}
+                        <td class="pr-4">Attending in-person at St. Anne's-Belfield</td>
+                    {{else}}
+                        <td class="pr-4">Attending virtually via Zoom</td>
+                    {{/if}}
+                </tr>
+            {{/each}}
+        </tbody>
+    </table>
+</div>
+
+<script>
+    const search_params = new URLSearchParams(window.location.search);
+    
+    if(search_params.has("camper_id")) {
+        const id = search_params.get("camper_id");
+
+        $("#cr").attr("href", `/consent-release?camper_id=${id}`);
+        $("#health").attr("href", `/health?camper_id=${id}`);
+    } else {
+        alert("ERROR: No camper_id detected. ERR:NCI")
+    }
+</script>
