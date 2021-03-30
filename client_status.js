@@ -344,7 +344,7 @@ client.post("/submit-health-forms", async (req, res, next) => {
 	}
 });
 
-client.get("/consent-and-release", async (req, res, next) => {
+client.post("/consent-and-release", async (req, res, next) => {
 	try {
 		let safety_net = await new Promise(async (resolve, reject) => {
 			let camper_id = await pull_camper_id(req.body.camper_id, 0);
