@@ -39,10 +39,8 @@ CREATE TABLE enrollment (
 	week_id INT NOT NULL,
 	signup_time DATETIME NOT NULL,
 	person_loc TINYINT(1) NOT NULL,
-	approved TINYINT(1) NOT NULL,
+	approved TINYINT(1) NOT NULL DEFAULT 0,
 	approved_time DATETIME,
-	confirmed TINYINT(1) NOT NULL,
-	campbrain_completion DATETIME,
 	FOREIGN KEY (`camper_id`) REFERENCES camper (`id`) ON DELETE CASCADE,
 	FOREIGN KEY (`week_id`) REFERENCES week (`id`) ON DELETE CASCADE,
 	UNIQUE INDEX `unique_enrollment` (`camper_id`, `week_id`)
@@ -73,33 +71,40 @@ CREATE TABLE questions (
 CREATE TABLE system_settings (
 	name VARCHAR(255) NOT NULL,
 	value_int INT,
-	value_str VARCHAR(255),
-	PRIMARY KEY(name)
+	value_str VARCHAR(255)
 );
 CREATE TABLE medical_forms (
 	camper_id INT NOT NULL,
-	allergies_text LONGTEXT,
-	epi_pen_info LONGTEXT,
-	dietary_restrictions LONGTEXT,
-	otc_acetaminophen LONGTEXT,
-	otc_antihistamines LONGTEXT,
-	otc_aspirin LONGTEXT,
-	otc_sunscreen LONGTEXT,
-	otc_notes LONGTEXT,
-	health_history LONGTEXT,
-	doctor_name LONGTEXT,
-	doctor_phone LONGTEXT,
-	insurance LONGTEXT,
-	insurance_holder LONGTEXT,
-	insurance_company LONGTEXT,
-	insurance_group LONGTEXT,
-	insurance_policy LONGTEXT,
-	FOREIGN KEY (`camper_id`) REFERENCES camper (`id`) ON DELETE CASCADE
+	allergies_text LONGTEXT NOT NULL,
+	epi_pen_info LONGTEXT NOT NULL,
+	dietary_restrictions LONGTEXT NOT NULL,
+	otc_acetaminophen LONGTEXT NOT NULL,
+	otc_antihistamines LONGTEXT NOT NULL,
+	otc_aspirin LONGTEXT NOT NULL,
+	otc_sunscreen LONGTEXT NOT NULL,
+	otc_notes LONGTEXT NOT NULL,
+	health_history LONGTEXT NOT NULL,
+	doctor_name LONGTEXT NOT NULL,
+	doctor_phone LONGTEXT NOT NULL,
+	insurance LONGTEXT NOT NULL,
+	insurance_holder LONGTEXT NOT NULL,
+	insurance_company LONGTEXT NOT NULL,
+	insurance_group LONGTEXT NOT NULL,
+	insurance_policy LONGTEXT NOT NULL,
+	FOREIGN KEY (`camper_id`) REFERENCES camper (`id`) ON DELETE CASCADE,
+	UNIQUE INDEX `unique_medical_form` (`camper_id`)
 );
 CREATE TABLE meds(
 	camper_id INT NOT NULL,
-	medication_name LONGTEXT,
-	medication_dosage LONGTEXT,
-	medication_notes LONGTEXT,
+	medication_name LONGTEXT NOT NULL,
+	medication_dosage LONGTEXT NOT NULL,
+	medication_time LONGTEXT NOT NULL,
+	medication_notes LONGTEXT NOT NULL,
 	FOREIGN KEY (`camper_id`) REFERENCES camper (`id`) ON DELETE CASCADE
+);
+CREATE TABLE consent_release(
+	camper_id INT NOT NULL,
+	completion_time DATETIME NOT NULL,
+	FOREIGN KEY (`camper_id`) REFERENCES camper (`id`) ON DELETE CASCADE,
+	UNIQUE INDEX `unique_consent` (`camper_id`)
 );

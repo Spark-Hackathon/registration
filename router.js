@@ -10,6 +10,9 @@ const fs = require("fs");
 const {
 	getDate
 } = require("./utils");
+const {
+	sheet
+} = require("./googletest/sheeter.js");
 
 const type_meta = {
 	designer: 0,
@@ -79,6 +82,7 @@ function admin_validate(code) {
 }
 
 function full_sendmail(to, subject, text, replacement) {
+	console.log(text, replacement);
 	Object.keys(replacement).forEach((item, index) => {
 		let string = "{{" + item.toUpperCase() + "}}";
 		string = replacement[item] == "" ? " " + string : string;
@@ -222,12 +226,11 @@ router.post("/camper-register-queueing", async (req, res, next) => {
 						});
 						async function enrollmentInsert(week) {
 							return new Promise((enroll_resolve, enroll_reject) => {
-								connection.query("SELECT approved, confirmed FROM enrollment WHERE week_id=? AND camper_id=?", [week[0], camper_id[0].id], (err, camper_enroll_value) => {
+								connection.query("SELECT approved FROM enrollment WHERE week_id=? AND camper_id=?", [week[0], camper_id[0].id], (err, camper_enroll_value) => {
 									if (err) console.log(err);
 									let approved_value = camper_enroll_value && camper_enroll_value.length && camper_enroll_value[0].approved == 1 ? 1 : 0;
-									let confirmed_value = camper_enroll_value && camper_enroll_value.length && camper_enroll_value[0].confirmed == 1 ? 1 : 0;
-									connection.query("INSERT INTO enrollment (camper_id, week_id, signup_time, person_loc, approved, confirmed) VALUES " +
-										"(?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE signup_time=?, person_loc=?, approved=?, confirmed=?", [camper_id[0].id, week[0], new Date(), week[1] - 1, 0, 0, new Date(), week[1] - 1, approved_value, confirmed_value], (err) => {
+									connection.query("INSERT INTO enrollment (camper_id, week_id, signup_time, person_loc, approved) VALUES " +
+										"(?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE signup_time=?, person_loc=?, approved=?", [camper_id[0].id, week[0], new Date(), week[1] - 1, 0, 0, new Date(), week[1] - 1, approved_value], (err) => {
 											if (err) enroll_reject(err);
 											connection.query("SELECT id, question_text FROM question_meta WHERE week_id=?", week[0], (err, questions) => {
 												if (err) enroll_reject(err);
@@ -333,6 +336,13 @@ router.post("/signup-prospect", async (req, res, next) => {
 	try {
 		if (!referral_schema.validate(req.body)) throw pros_schema.validate(user_data).error;
 		await prospectSignup(req.body);
+		let email_obj = {};
+		let email_text = fs.readFileSync(path.join(__dirname, "emailTemplates", "prospect_signedup")).toString();
+		let split_name = req.body.name.trim().split(" ");
+		email_obj.first_name = split_name[0];
+		email_obj.last_name = split_name[0] == split_name[split_name.length - 1] ? "" : split_name[split_name.length - 1];
+		email_obj.url = "If you ever want to unsubscribe, go to this link: " + process.env.CURRENT_URL + "unsubscribe";
+		await full_sendmail(req.body.email, "You've singed up for updates", email_text, email_obj);
 		res.redirect("/updates/thank-you");
 	} catch (error) {
 		error.message = "Hmm... Looks like signing up didn't work, try reloading?";
@@ -406,6 +416,25 @@ router.post("/admin/get-weeks", async (req, res, next) => {
 		res.json(weeks);
 	} catch (error) {
 		error.message = "Hmm.. Looks like getting weeks didn't work, try reloading?";
+		next(error);
+	}
+});
+
+router.post("/admin/get-campers-link", async (req, res, next) => {
+	try {
+		await admin_validate(req.body.code);
+		await new Promise((resolve, reject) => {
+			connection.query("SELECT first_name, last_name, email, camper_unique_id FROM camper ORDER BY last_name, first_name, email ASC", (err, unique_id) => {
+				if (err) reject(err);
+				let camper_obj = "";
+				unique_id.forEach((item, index) => {
+					camper_obj += "<p> " + item.first_name + " " + item.last_name + " " + item.email + ": " + "camper link".link(process.env.CURRENT_URL + "get-status?camper_id=" + unique_id[0].camper_unique_id) + "</p>";
+				});
+				res.end(camper_obj);
+			});
+		});
+	} catch (error) {
+		error.message = "Getting the formlink didn't work, try reloading?";
 		next(error);
 	}
 });
@@ -627,25 +656,25 @@ function partition(array, low, high) {
 			i--;
 			let week_buffer = array[i][0];
 			let camper_buffer = array[i][1];
-			let confirmed_buffer = array[i][2];
+			let person_loc_buffer = array[i][2];
 			array[i][0] = array[j][0];
 			array[i][1] = array[j][1];
 			array[i][2] = array[j][2];
 			array[j][0] = week_buffer;
 			array[j][1] = camper_buffer;
-			array[j][2] = confirmed_buffer;
+			array[j][2] = person_loc_buffer;
 		}
 	}
 	if (i >= 0) {
 		let week_buffer = array[i - 1][0];
 		let camper_buffer = array[i - 1][1];
-		let confirmed_buffer = array[i - 1][2];
+		let person_loc_buffer = array[i - 1][2];
 		array[i - 1][0] = array[pivot][0];
 		array[i - 1][1] = array[pivot][1];
 		array[i - 1][2] = array[pivot][2];
 		array[pivot][0] = week_buffer;
 		array[pivot][1] = camper_buffer;
-		array[pivot][2] = confirmed_buffer;
+		array[pivot][2] = person_loc_buffer;
 	}
 	return [i - 1, array];
 }
@@ -654,63 +683,54 @@ router.post("/admin/pull-current-campers", async (req, res, next) => { //ADMIN
 	try {
 		await admin_validate(req.body.code);
 		//throw all currently pending campers - run through and see which ones are still waiting in enrollment
-		let addition_on_camper = req.body['applicants-or-registered'] == 1 ? ", confirmed" : "";
-		connection.query("SELECT camper_id, week_id" + addition_on_camper + " FROM enrollment WHERE approved=?", req.body['applicants-or-registered'], async (err, camper_ids) => {
-			if (err) throw err;
-			let obj = {
-				campers: []
-			};
-			let id = [];
-			let camper_pos = [];
-			for (ids in camper_ids) {
-				camper_pos[ids] = [];
-				camper_pos[ids][0] = camper_ids[ids].week_id;
-				camper_pos[ids][1] = camper_ids[ids].camper_id;
-				camper_pos[ids][2] = camper_ids[ids].confirmed;
-			}
-			camper_pos = quicksort(camper_pos, 0, camper_pos.length - 1);
-
-			function allCampers() {
-				return new Promise((resolve, reject) => {
-					//build up the week object
-					let inner = {};
-					connection.query("SELECT title FROM week WHERE id=?", id[1], (err, week_title) => {
-						if (err) reject(err);
-						inner.week = week_title[0].title;
-						connection.query("SELECT id, first_name, last_name, type, hopes_dreams, participated FROM camper WHERE id=?", id, (err, camper) => {
-							if (err) reject(err);
-							inner.camper_id = camper[0].id;
-							inner.first_name = camper[0].first_name;
-							inner.last_name = camper[0].last_name;
-							inner.type = camper[0].type;
-							inner.hopes_dreams = camper[0].hopes_dreams;
-							inner.participated = camper[0].participated == 1 ? "Participated before" : "Has not participated";
-							if (id[2] == 0 || id[2] == 1) {
-								inner.confirmed = id[2];
-							}
-							resolve(inner);
-						});
+		let camper_obj = { campers: [] };
+		await new Promise(async (resolve, reject) => {
+			connection.query("SELECT camper_id, week_id, person_loc FROM enrollment WHERE approved=?", req.body['applicants-or-registered'], async (err, camper_initial) => {
+				if (err || !camper_initial) return reject(err);
+				if (!camper_initial.length) resolve("No campers");
+				//run through campers and sort based on weeks
+				let camper_build = [];
+				for (camp in camper_initial) {
+					camper_build[camp] = [];
+					camper_build[camp][0] = camper_initial[camp].week_id;
+					camper_build[camp][1] = camper_initial[camp].camper_id;
+					camper_build[camp][2] = camper_initial[camp].person_loc;
+				}
+				camper_build = quicksort(camper_build, 0, camper_build.length - 1);
+				//run through all the values
+				let camper_loop = camper_build.map((item, index) => {
+					return new Promise((camper_resolve, camper_reject) => {
+						connection.query("SELECT first_name, last_name, type, hopes_dreams, participated, COUNT(medical_forms.camper_id) AS med, COUNT(consent_release.camper_id) AS consent," +
+							" title FROM camper LEFT JOIN medical_forms ON camper.id=medical_forms.camper_id LEFT JOIN consent_release ON camper.id=consent_release.camper_id CROSS JOIN week WHERE camper.id=? AND week.id=?", [item[1], item[0]], (err, camper) => {
+								if (err || !camper) return camper_reject(err);
+								if (!camper.length) return camper_reject("No camper matches");
+								//based on person_loc, need to look at med and consent
+								let status = camper[0].consent;
+								if (item[2]) status = (camper[0].med && camper[0].consent) ? 1 : 0;
+								camper_obj.campers.push({
+									week: camper[0].title,
+									camper_id: item[1],
+									first_name: camper[0].first_name,
+									last_name: camper[0].last_name,
+									type: camper[0].type,
+									hopes_dreams: camper[0].hopes_dreams,
+									participated: camper[0].participated,
+									confirmed: status
+								});
+								camper_resolve();
+							});
 					});
 				});
-			}
-			let each_week_rolling = [];
-			for (let each_id = 0; each_id < camper_ids.length; each_id++) {
-				id[0] = camper_pos[each_id][1];
-				id[1] = camper_pos[each_id][0];
-				id[2] = camper_pos[each_id][2];
-				try {
-					obj.campers.push(await allCampers());
-					if (each_id == camper_ids.length - 1) {
-						res.json(obj);
-					}
-				} catch (error) {
-					throw error;
-				}
-			}
-			res.end();
+				await Promise.all(camper_loop).then(() => {
+					resolve();
+				}).catch((err) => {
+					return reject(err);
+				});
+			});
 		});
+		res.json(camper_obj);
 	} catch (error) {
-	 	error.message = "Hmm... Looks like selecting the campers didn't work, try reloading?";
+		error.message = "Hmm... Looks like selecting the campers didn't work, try reloading?";
 		next(error);
 	}
 });
@@ -767,6 +787,18 @@ router.post("/admin/export/all", async (req, res, next) => {
 		await query_net;
 	} catch (error) {
 		error.message = "Failed to export all campers";
+		next(error);
+	}
+});
+
+router.post("/admin/sync-sheet", async (req, res, next) => {
+	try {
+		await admin_validate(req.body.code);
+		await sheet;
+		res.end("Go check the sheet!");
+	} catch (error) {
+		console.error(error);
+		error.message = "Failed to sync google-sheets";
 		next(error);
 	}
 });
