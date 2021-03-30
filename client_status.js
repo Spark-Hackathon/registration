@@ -93,10 +93,12 @@ function pull_camper_info(camper_id) {
 				camper_week_info.forEach((item, index) => {
 					consent_required = (item.approved == 1 || consent_required) ? true : false;
 					in_person_value = (item.person_loc == 1 || in_person_value) ? true : false;
+					let person_loc_bool = item.person_loc == 1 ? true : false;
+					let approved_bool = item.approved == 1 ? true : false;
 					camper_obj.weeks.push({
 						title: item.title,
-						person_loc: item.person_loc,
-						approved: item.approved
+						person_loc: person_loc_bool,
+						approved: approved_bool
 					});
 				});
 				med_forms_required = (consent_required && in_person_value) ? true : false;
