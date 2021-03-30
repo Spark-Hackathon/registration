@@ -80,6 +80,7 @@ function pull_camper_info(camper_id) {
 			if (err) return reject(err);
 			if (!camper_info || !camper_info.length || camper_info[0].id == undefined) reject("No camper under the specified value");
 			let camper_obj = {};
+			camper_obj.camper_id = camper_info[0].id;
 			camper_obj.first_name = camper_info[0].first_name;
 			camper_obj.last_name = camper_info[0].last_name;
 			camper_obj.weeks = [];
@@ -125,6 +126,7 @@ client.get("/get-status", async (req, res, next) => {
 	//cross-check the id with db
 	try {
 		let camper_info = await pull_camper_info(req.query.camper_id);
+		console.log(camper_info);
 		res.render("status", {
 			title: `Status — Summer ${getDate()}`,
 			year: getDate(),
@@ -136,9 +138,9 @@ client.get("/get-status", async (req, res, next) => {
 	}
 });
 
-function pull_camper_id(unique_id, need_location) {
+function pull_camper_id(id, need_location) {
 	return new Promise((resolve, reject) => {
-		connection.query("SELECT id, approved, person_loc FROM camper INNER JOIN enrollment ON camper.id = enrollment.camper_id WHERE camper_unique_id=?", unique_id, (err, camper_id) => {
+		connection.query("SELECT id, approved, person_loc FROM camper INNER JOIN enrollment ON camper.id = enrollment.camper_id WHERE camper.id=?", id, (err, camper_id) => {
 			if (err) return reject(err);
 			if (!camper_id || camper_id.length == 0) return reject("No camper with the unique id: ", unique_id);
 			let approval = false;
@@ -180,13 +182,15 @@ client.post("/submit-health-forms", async (req, res, next) => {
 		let update_statement = " ON DUPLICATE KEY UPDATE ";
 		let index_counter = 0;
 		console.log(Object.keys(req.body));
-		Object.keys(req.body).forEach((item, index) => {
+		Object.keys(req.body).forEach(async (item, index) => {
 			console.log("INDEX CHECK?", index_counter, index);
 			if (item.substring(item.length - 15) != "medication_name" &&
 				item.substring(item.length - 17) != "medication_dosage" &&
 				item.substring(item.length - 16) != "medication_times" &&
 				item.substring(item.length - 16) != "medication_notes") {
-				if (item == "wavier_accept") {
+				if (item == "camper_id") {
+					await pull_camper_id(item, 1);
+				} if (item == "wavier_accept") {
 					if (req.body[item] == "0") throw "You must accept the wavier to submit";
 				} else if (item == "covid_accept") {
 					if (req.body[item] == "0") throw "You must accept the covid wavier to submit";
@@ -245,15 +249,11 @@ client.post("/submit-health-forms", async (req, res, next) => {
 				}
 			}
 		});
-		console.log("CURRENT MEDICALSS", medical_forms_input);
 		for (let med = 0; med < medical_forms_input.length; med++) {
 			medical_forms_input[med] = encrypt(medical_forms_input[med]);
 		}
-		console.log("\n MEDICALSS");
-		console.log(medical_forms_input);
-		console.log("\n\n AND HEALTH VALUES");
 		console.log(insert_statement + value_statement + update_statement + "\n");
-		await insert_medical_health_values(1, insert_statement, value_statement, update_statement, medical_forms_input);
+		await insert_medical_health_values(req.body.camper_id, insert_statement, value_statement, update_statement, medical_forms_input);
 		return res.end();
 		//go through meds and encrypt them
 		req.body.meds.map((item, index) => {
@@ -347,13 +347,17 @@ client.post("/submit-health-forms", async (req, res, next) => {
 client.get("/consent-and-release", async (req, res, next) => {
 	try {
 		let safety_net = await new Promise(async (resolve, reject) => {
-			let camper_id = await pull_camper_id(req.query.camper_unique_id, 0);
+			let camper_id = await pull_camper_id(req.body.camper_id, 0);
 			connection.query("INSERT INTO consent_release VALUES (?, ?) ON DUPLICATE KEY UPDATE completion_time=?", [camper_id, new Date(), new Date()], (err) => {
 				if (err) return reject(err);
 				resolve();
 			});
 		});
-		res.redirect("/get-status?camper_id=" + req.query.camper_unique_id);
+		res.render("status", {
+			title: `Status — Summer ${getDate()}`,
+			year: getDate(),
+			camper_info
+		});
 	} catch (error) {
 		console.error(error);
 		error.message = "Submitting the consent form didn't work... try reloading?";
