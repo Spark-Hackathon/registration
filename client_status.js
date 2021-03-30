@@ -76,7 +76,7 @@ client.post("/change-person-loc", async (req, res, next) => {
 
 function pull_camper_info(camper_id) {
 	return new Promise((resolve, reject) => {
-		connection.query("SELECT id, first_name, last_name, COUNT(medical_forms.camper_id) AS med, COUNT(consent_release.camper_id) AS consent FROM camper LEFT JOIN medical_forms ON camper.id = medical_forms.camper_id LEFT JOIN consent_release ON camper.id = consent_release.camper_id WHERE camper_unique_id=?", camper_id, (err, camper_info) => {
+		connection.query("SELECT id, first_name, last_name, COUNT(medical_forms.camper_id) AS med, COUNT(consent_release.camper_id) AS consent FROM camper LEFT JOIN medical_forms ON camper.id = medical_forms.camper_id LEFT JOIN consent_release ON camper.id = consent_release.camper_id WHERE camper_unique_id=? GROUP BY camper.id", camper_id, (err, camper_info) => {
 			if (err) return reject(err);
 			if (!camper_info || !camper_info.length || camper_info[0].id == undefined) reject("No camper under the specified value");
 			let camper_obj = {};
@@ -126,7 +126,6 @@ client.get("/get-status", async (req, res, next) => {
 	//cross-check the id with db
 	try {
 		let camper_info = await pull_camper_info(req.query.camper_id);
-		console.log(camper_info);
 		res.render("status", {
 			title: `Status — Summer ${getDate()}`,
 			year: getDate(),
@@ -181,9 +180,7 @@ client.post("/submit-health-forms", async (req, res, next) => {
 		let value_statement = " VALUES (?, ";
 		let update_statement = " ON DUPLICATE KEY UPDATE ";
 		let index_counter = 0;
-		console.log(Object.keys(req.body));
 		Object.keys(req.body).forEach(async (item, index) => {
-			console.log("INDEX CHECK?", index_counter, index);
 			if (item.substring(item.length - 15) != "medication_name" &&
 				item.substring(item.length - 17) != "medication_dosage" &&
 				item.substring(item.length - 16) != "medication_times" &&
@@ -252,7 +249,6 @@ client.post("/submit-health-forms", async (req, res, next) => {
 		for (let med = 0; med < medical_forms_input.length; med++) {
 			medical_forms_input[med] = encrypt(medical_forms_input[med]);
 		}
-		console.log(insert_statement + value_statement + update_statement + "\n");
 		await insert_medical_health_values(req.body.camper_id, insert_statement, value_statement, update_statement, medical_forms_input);
 		return res.end();
 		//go through meds and encrypt them
