@@ -87,10 +87,6 @@ let wavier_accept = new Field("select", "wavier_accept")
         [1, "Yes, I do accept the waiver"]
     ])
     .setLabel("Have you read, understand, and agree to abide to our <a class='underline text-yellow py-1 hover:text-yellow-dark transition duration-200' href='https://docs.google.com/document/d/1ytMXuZqaUPhTRz0bU5svxgH9bfZRG22pQfODZh8bIpU/edit#heading=h.fa8ea2qy1eto' target=_blank>medical waiver</a>?")
-let cr_accept = new Field("input:text", "cr_accept")
-    .require()
-    .setLabel("If you accept our <a class='underline text-yellow py-1 hover:text-yellow-dark transition duration-200' href='https://docs.google.com/document/d/1ytMXuZqaUPhTRz0bU5svxgH9bfZRG22pQfODZh8bIpU/edit#heading=h.fa8ea2qy1eto' target=_blank>Consent and Release Agreement</a>, type your full name.")
-    .placeholder("ex. John Smith")
 let covid_accept = new Field("select", "covid_accept")
     .require()
     .addOptions([
@@ -132,7 +128,6 @@ $(document).ready(() => {
             insurance_group,
             insurance_policy,
             wavier_accept,
-            cr_accept,
             covid_accept,
             submit
         ])
