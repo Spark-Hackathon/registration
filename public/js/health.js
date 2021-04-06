@@ -87,10 +87,6 @@ let wavier_accept = new Field("select", "wavier_accept")
         [1, "Yes, I do accept the waiver"]
     ])
     .setLabel("Have you read, understand, and agree to abide to our <a class='underline text-yellow py-1 hover:text-yellow-dark transition duration-200' href='https://docs.google.com/document/d/1ytMXuZqaUPhTRz0bU5svxgH9bfZRG22pQfODZh8bIpU/edit#heading=h.fa8ea2qy1eto' target=_blank>medical waiver</a>?")
-let cr_accept = new Field("input:text", "cr_accept")
-    .require()
-    .setLabel("If you accept our <a class='underline text-yellow py-1 hover:text-yellow-dark transition duration-200' href='https://docs.google.com/document/d/1ytMXuZqaUPhTRz0bU5svxgH9bfZRG22pQfODZh8bIpU/edit#heading=h.fa8ea2qy1eto' target=_blank>Consent and Release Agreement</a>, type your full name.")
-    .placeholder("ex. John Smith")
 let covid_accept = new Field("select", "covid_accept")
     .require()
     .addOptions([
@@ -111,68 +107,77 @@ const new_medication = () => {
 }
 
 $(document).ready(() => {
-    health
-        .styles(labels, notes, spans, inputs)
-        .formStyles(form)
-        .addFields([
-            allergies,
-            epipen,
-            dietary_restrictions,
-            acetaminophen,
-            antihistamines,
-            aspirin,
-            ibuprofen,
-            sunscreen,
-            otc_notes,
-            health_history,
-            doctor_name,
-            doctor_phone,
-            insurance_holder,
-            insurance_company,
-            insurance_group,
-            insurance_policy,
-            wavier_accept,
-            cr_accept,
-            covid_accept,
-            submit
-        ])
-        .mountTo("#health_form");
+    const search_params = new URLSearchParams(window.location.search);
     
-    const section_template = $("template")[1];
-    const section = section_template.content.cloneNode(true);
+    if(search_params.has("camper_id")) {
+        let camper_id = new Field("input:hidden", "camper_id")
+            .value(search_params.get("camper_id"))
 
-    $("#dietary_restrictions").after(section);
-
-    $("#new_medication").click(() => {
-        new_medication()
-    });
-
-    new MutationObserver(e => {
-        let added = e[0].addedNodes[1];
-        let med_name = $(added).find("#med_name")[0];
-        let med;
+        health
+            .styles(labels, notes, spans, inputs)
+            .formStyles(form)
+            .addFields([
+                camper_id,
+                allergies,
+                epipen,
+                dietary_restrictions,
+                acetaminophen,
+                antihistamines,
+                aspirin,
+                ibuprofen,
+                sunscreen,
+                otc_notes,
+                health_history,
+                doctor_name,
+                doctor_phone,
+                insurance_holder,
+                insurance_company,
+                insurance_group,
+                insurance_policy,
+                wavier_accept,
+                covid_accept,
+                submit
+            ])
+            .mountTo("#health_form");
         
-        $(med_name).on("input", () => {
-            med = med_name.value;
+        const section_template = $("template")[1];
+        const section = section_template.content.cloneNode(true);
 
-            $(med_name).prop("name", `${med.toLowerCase()}_medication_name`);
-            
-            let name_label = $(added).find("label")[0];
-            $(name_label).html(`<span class="text-red-500 inline-block">*</span> ${med} Name`);
+        $("#dietary_restrictions").after(section);
 
-            let dosage_label = $(added).find("label")[1];
-            $(dosage_label).html(`<span class="text-red-500 inline-block">*</span> ${med} Dosage`);
-
-            let dosage_field = $(added).find("input")[1];
-            $(dosage_field).prop("name", `${med.toLowerCase()}_medication_dosage`);
-
-            let times_field = $(added).find("input")[2];
-            $(times_field).prop("name", `${med.toLowerCase()}_medication_times`);
-
-            let notes = $(added).find("textarea")[0];
-            $(notes).prop("name", `${med.toLowerCase()}_medication_notes`);
+        $("#new_medication").click(() => {
+            new_medication()
         });
-    }).observe($("#meds")[0], { childList: true });
+
+        new MutationObserver(e => {
+            let added = e[0].addedNodes[1];
+            let med_name = $(added).find("#med_name")[0];
+            let med;
+            
+            $(med_name).on("input", () => {
+                med = med_name.value;
+
+                $(med_name).prop("name", `${med.toLowerCase()}_medication_name`);
+                
+                let name_label = $(added).find("label")[0];
+                $(name_label).html(`<span class="text-red-500 inline-block">*</span> ${med} Name`);
+
+                let dosage_label = $(added).find("label")[1];
+                $(dosage_label).html(`<span class="text-red-500 inline-block">*</span> ${med} Dosage`);
+
+                let dosage_field = $(added).find("input")[1];
+                $(dosage_field).prop("name", `${med.toLowerCase()}_medication_dosage`);
+
+                let times_field = $(added).find("input")[2];
+                $(times_field).prop("name", `${med.toLowerCase()}_medication_times`);
+
+                let notes = $(added).find("textarea")[0];
+                $(notes).prop("name", `${med.toLowerCase()}_medication_notes`);
+            });
+        }).observe($("#meds")[0], { childList: true });
+    } else {
+        alert("ERROR: No camper_id detected. ERR:NCI");
+    }
 
     $("#covid-19").css("display", "none");
 

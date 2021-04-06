@@ -96,7 +96,14 @@ app.get("/unsubscribe", (req, res) => {
 
 app.get("/health", (req, res) => {
     res.render("health", {
-        "title": `Health & Consent – Spark Camp ${getDate()}`,
+        "title": `Health & Medication – Spark Camp ${getDate()}`,
+        "year": getDate()
+    });
+});
+
+app.get("/consent-release", (req, res) => {
+    res.render("consent_release", {
+        "title": `Consent & Release – Spark Camp ${getDate()}`,
         "year": getDate()
     });
 });
