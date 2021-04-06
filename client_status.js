@@ -76,10 +76,11 @@ client.post("/change-person-loc", async (req, res, next) => {
 
 function pull_camper_info(camper_id) {
 	return new Promise((resolve, reject) => {
-		connection.query("SELECT id, first_name, last_name, COUNT(medical_forms.camper_id) AS med, COUNT(consent_release.camper_id) AS consent FROM camper LEFT JOIN medical_forms ON camper.id = medical_forms.camper_id LEFT JOIN consent_release ON camper.id = consent_release.camper_id WHERE camper_unique_id=?", camper_id, (err, camper_info) => {
+		connection.query("SELECT id, first_name, last_name, COUNT(medical_forms.camper_id) AS med, COUNT(consent_release.camper_id) AS consent FROM camper LEFT JOIN medical_forms ON camper.id = medical_forms.camper_id LEFT JOIN consent_release ON camper.id = consent_release.camper_id WHERE camper.id=?", camper_id, (err, camper_info) => {
 			if (err) return reject(err);
 			if (!camper_info || !camper_info.length || camper_info[0].id == undefined) reject("No camper under the specified value");
 			let camper_obj = {};
+			camper_obj.camper_id = camper_info[0].id;
 			camper_obj.first_name = camper_info[0].first_name;
 			camper_obj.last_name = camper_info[0].last_name;
 			camper_obj.weeks = [];
@@ -92,18 +93,24 @@ function pull_camper_info(camper_id) {
 				camper_week_info.forEach((item, index) => {
 					consent_required = (item.approved == 1 || consent_required) ? true : false;
 					in_person_value = (item.person_loc == 1 || in_person_value) ? true : false;
+					let person_loc_bool = item.person_loc == 1 ? true : false;
+					let approved_bool = item.approved == 1 ? true : false;
 					camper_obj.weeks.push({
 						title: item.title,
-						person_loc: item.person_loc,
-						approved: item.approved
+						person_loc: person_loc_bool,
+						approved: approved_bool
 					});
 				});
 				med_forms_required = (consent_required && in_person_value) ? true : false;
 				// resolve what needs to be completed for each form: if both med and consent count are already 1, then every one of the boxes is checked, otherwise, need to do much more researching
 				camper_obj.showing_consent_option = +consent_required;
+				camper_obj.showing_consent_option = camper_obj.showing_consent_option == 1 ? true : false;
 				camper_obj.consent_completion = camper_info[0].consent;
+				camper_obj.consent_completion = camper_obj.consent_completion == 1 ? true : false;
 				camper_obj.showing_med_option = +med_forms_required;
+				camper_obj.showing_med_option = camper_obj.showing_med_option == 1 ? true : false;
 				camper_obj.med_completion = camper_info[0].med;
+				camper_obj.med_completion = camper_obj.med_completion == 1 ? true : false;
 				//now run through and see which "forms_need_completion" string to put
 				let string = (camper_obj.showing_consent_option && !camper_obj.showing_med_option) ? "consent form" : "forms";
 				if (camper_obj.showing_consent_option) camper_obj.forms_need_completion = "Have you completed your " + string + "?";
@@ -136,9 +143,9 @@ client.get("/get-status", async (req, res, next) => {
 	}
 });
 
-function pull_camper_id(unique_id, need_location) {
+function pull_camper_id(id, need_location) {
 	return new Promise((resolve, reject) => {
-		connection.query("SELECT id, approved, person_loc FROM camper INNER JOIN enrollment ON camper.id = enrollment.camper_id WHERE camper_unique_id=?", unique_id, (err, camper_id) => {
+		connection.query("SELECT id, approved, person_loc FROM camper INNER JOIN enrollment ON camper.id = enrollment.camper_id WHERE camper.id=?", id, (err, camper_id) => {
 			if (err) return reject(err);
 			if (!camper_id || camper_id.length == 0) return reject("No camper with the unique id: ", unique_id);
 			let approval = false;
@@ -179,13 +186,14 @@ client.post("/submit-health-forms", async (req, res, next) => {
 		let value_statement = " VALUES (?, ";
 		let update_statement = " ON DUPLICATE KEY UPDATE ";
 		let index_counter = 0;
-		console.log(Object.keys(req.body));
-		Object.keys(req.body).forEach((item, index) => {
-			console.log("INDEX CHECK?", index_counter, index);
+		Object.keys(req.body).forEach(async (item, index) => {
 			if (item.substring(item.length - 15) != "medication_name" &&
 				item.substring(item.length - 17) != "medication_dosage" &&
 				item.substring(item.length - 16) != "medication_times" &&
 				item.substring(item.length - 16) != "medication_notes") {
+				if (item == "camper_id") {
+					await pull_camper_id(item, 1);
+				}
 				if (item == "wavier_accept") {
 					if (req.body[item] == "0") throw "You must accept the wavier to submit";
 				} else if (item == "covid_accept") {
@@ -194,7 +202,7 @@ client.post("/submit-health-forms", async (req, res, next) => {
 					if (req.body[item].length == 0) throw "Please input characters into the Consent and Release box";
 				} else {
 					index_counter++;
-					console.log("ROUND?", index_counter, "KEYS VALUE", 
+					console.log("ROUND?", index_counter, "KEYS VALUE",
 						index_counter == 16);
 					let comma = index_counter == 16 ? ")" : ", ";
 					let item_name = item == "allergies" ? "allergies_text" : item;
@@ -245,15 +253,10 @@ client.post("/submit-health-forms", async (req, res, next) => {
 				}
 			}
 		});
-		console.log("CURRENT MEDICALSS", medical_forms_input);
 		for (let med = 0; med < medical_forms_input.length; med++) {
 			medical_forms_input[med] = encrypt(medical_forms_input[med]);
 		}
-		console.log("\n MEDICALSS");
-		console.log(medical_forms_input);
-		console.log("\n\n AND HEALTH VALUES");
-		console.log(insert_statement + value_statement + update_statement + "\n");
-		await insert_medical_health_values(1, insert_statement, value_statement, update_statement, medical_forms_input);
+		await insert_medical_health_values(req.body.camper_id, insert_statement, value_statement, update_statement, medical_forms_input);
 		return res.end();
 		//go through meds and encrypt them
 		req.body.meds.map((item, index) => {
@@ -344,16 +347,20 @@ client.post("/submit-health-forms", async (req, res, next) => {
 	}
 });
 
-client.get("/consent-and-release", async (req, res, next) => {
+client.post("/consent-and-release", async (req, res, next) => {
 	try {
 		let safety_net = await new Promise(async (resolve, reject) => {
-			let camper_id = await pull_camper_id(req.query.camper_unique_id, 0);
+			let camper_id = await pull_camper_id(req.body.camper_id, 0);
 			connection.query("INSERT INTO consent_release VALUES (?, ?) ON DUPLICATE KEY UPDATE completion_time=?", [camper_id, new Date(), new Date()], (err) => {
 				if (err) return reject(err);
 				resolve();
 			});
 		});
-		res.redirect("/get-status?camper_id=" + req.query.camper_unique_id);
+		res.render("status", {
+			title: `Status — Summer ${getDate()}`,
+			year: getDate(),
+			camper_info
+		});
 	} catch (error) {
 		console.error(error);
 		error.message = "Submitting the consent form didn't work... try reloading?";
