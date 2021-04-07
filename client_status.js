@@ -131,7 +131,9 @@ client.use(bodyParser.json());
 client.get("/get-status", async (req, res, next) => {
 	//cross-check the id with db
 	try {
+		console.log(req.query);
 		let camper_info = await pull_camper_info(req.query.unique_id);
+		console.log(camper_info);
 		res.render("status", {
 			title: `Status — Summer ${getDate()}`,
 			year: getDate(),
