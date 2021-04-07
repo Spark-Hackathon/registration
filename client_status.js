@@ -27,9 +27,9 @@ connection.connect((err) => {
 	if (err) throw err;
 });
 
-function pull_id(camper_unique_id) {
+function pull_id(unique_id) {
 	return new Promise((resolve, reject) => {
-		connection.query("SELECT id FROM camper WHERE camper_unique_id=?", camper_unique_id, (err, camper_id) => {
+		connection.query("SELECT id FROM camper WHERE unique_id=?", unique_id, (err, camper_id) => {
 			if (err) return reject(err);
 			if (!camper_id || !camper_id.length) return reject("No camper under the specified ID", err);
 			resolve(camper_id[0].id);
@@ -39,7 +39,7 @@ function pull_id(camper_unique_id) {
 
 client.post("/un-enroll-week", async (req, res, next) => {
 	try {
-		let camper_id = await pull_id(req.body.camper_unique_id);
+		let camper_id = await pull_id(req.body.unique_id);
 		//now delete the enrollment value in the camper
 		await new Promise((resolve, reject) => {
 			connection.query("DELETE FROM enrollment WHERE camper_id=? AND week_id=?", [camper_id, req.body.week_id], (err) => {
@@ -47,7 +47,7 @@ client.post("/un-enroll-week", async (req, res, next) => {
 				resolve();
 			});
 		});
-		res.redirect("/get-status?camper_id=" + req.body.camper_unique_id);
+		res.redirect("/get-status?unique_id=" + req.body.unique_id);
 	} catch (error) {
 		error.message = "Something went wrong trying to un-enroll, try reloading?";
 		next(error);
@@ -56,7 +56,7 @@ client.post("/un-enroll-week", async (req, res, next) => {
 
 client.post("/change-person-loc", async (req, res, next) => {
 	try {
-		let camper_id = await pull_id(req.body.camper_unique_id);
+		let camper_id = await pull_id(req.body.unique_id);
 		await new Promise((resolve, reject) => {
 			connection.query("SELECT person_loc FROM enrollment WHERE camper_id=? AND week_id=?", [camper_id, req.body.week_id], (err, person_loc) => {
 				if (err) return reject(err);
@@ -67,16 +67,16 @@ client.post("/change-person-loc", async (req, res, next) => {
 				});
 			});
 		});
-		res.redirect("/get-status?camper_id=" + req.body.camper_unique_id);
+		res.redirect("/get-status?unique_id=" + req.body.unique_id);
 	} catch (error) {
 		error.message = "Looks like changing your location didn't work";
 		next(error);
 	}
 });
 
-function pull_camper_info(camper_id) {
+function pull_camper_info(unique_id) {
 	return new Promise((resolve, reject) => {
-		connection.query("SELECT id, first_name, last_name, COUNT(medical_forms.camper_id) AS med, COUNT(consent_release.camper_id) AS consent FROM camper LEFT JOIN medical_forms ON camper.id = medical_forms.camper_id LEFT JOIN consent_release ON camper.id = consent_release.camper_id WHERE camper.id=?", camper_id, (err, camper_info) => {
+		connection.query("SELECT id, first_name, last_name, COUNT(medical_forms.camper_id) AS med, COUNT(consent_release.camper_id) AS consent FROM camper LEFT JOIN medical_forms ON camper.id = medical_forms.camper_id LEFT JOIN consent_release ON camper.id = consent_release.camper_id WHERE camper.camper_unique_id=?", unique_id, (err, camper_info) => {
 			if (err) return reject(err);
 			if (!camper_info || !camper_info.length || camper_info[0].id == undefined) reject("No camper under the specified value");
 			let camper_obj = {};
@@ -131,7 +131,8 @@ client.use(bodyParser.json());
 client.get("/get-status", async (req, res, next) => {
 	//cross-check the id with db
 	try {
-		let camper_info = await pull_camper_info(req.query.camper_unique_id);
+		let camper_info = await pull_camper_info(req.query.unique_id);
+		console.log(camper_info);
 		res.render("status", {
 			title: `Status — Summer ${getDate()}`,
 			year: getDate(),
@@ -191,9 +192,6 @@ client.post("/submit-health-forms", async (req, res, next) => {
 				item.substring(item.length - 17) != "medication_dosage" &&
 				item.substring(item.length - 16) != "medication_times" &&
 				item.substring(item.length - 16) != "medication_notes") {
-				if (item == "camper_id") {
-					await pull_camper_id(item, 1);
-				}
 				if (item == "wavier_accept") {
 					if (req.body[item] == "0") throw "You must accept the wavier to submit";
 				} else if (item == "covid_accept") {
@@ -215,6 +213,9 @@ client.post("/submit-health-forms", async (req, res, next) => {
 					med_value = req.body[item] == "0" ? "no" : "";
 					req.body[item] = med_value == "yes" || med_value == "no" ? med_value : req.body[item];
 					medical_forms_input.push(req.body[item]);
+				}
+				if (item == "unique_id") {
+					medical_forms_input[medical_forms_input.length - 1] = await pull_camper_id(item, 1);
 				}
 			} else {
 				// Figure out which one you are trying to add
@@ -336,7 +337,7 @@ client.post("/submit-health-forms", async (req, res, next) => {
 				});
 			});
 			//then put in the camper_unique_id to redirect to the get-status page of that user
-			res.redirect("/get-status?camper_id=" + req.body.camper_unique_id);
+			res.redirect("/get-status?unique_id=" + req.body.unique_id);
 		} catch (error) {
 			throw error;
 		}
@@ -349,18 +350,15 @@ client.post("/submit-health-forms", async (req, res, next) => {
 
 client.post("/consent-and-release", async (req, res, next) => {
 	try {
+		console.log("submitting", req.body.unique_id);
 		let safety_net = await new Promise(async (resolve, reject) => {
-			let camper_id = await pull_camper_id(req.body.camper_id, 0);
+			let camper_id = await pull_camper_id(req.body.unique_id, 0);
 			connection.query("INSERT INTO consent_release VALUES (?, ?) ON DUPLICATE KEY UPDATE completion_time=?", [camper_id, new Date(), new Date()], (err) => {
 				if (err) return reject(err);
 				resolve();
 			});
 		});
-		res.render("status", {
-			title: `Status — Summer ${getDate()}`,
-			year: getDate(),
-			camper_info
-		});
+		res.redirect("/get-status?unique_id=" + req.body.unique_id);
 	} catch (error) {
 		console.error(error);
 		error.message = "Submitting the consent form didn't work... try reloading?";
