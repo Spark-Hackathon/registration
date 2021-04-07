@@ -18,9 +18,9 @@ let submit = new Field("input:submit", "")
 $(document).ready(() => {
     const search_params = new URLSearchParams(window.location.search);
     
-    if(search_params.has("camper_id")) {
-        let camper_id = new Field("input:hidden", "camper_id")
-            .value(search_params.get("camper_id"))
+    if(search_params.has("unique_id")) {
+        let camper_id = new Field("input:hidden", "unique_id")
+            .value(search_params.get("unique_id"))
 
         consent_release
             .styles(labels, notes, spans, inputs)
@@ -32,6 +32,6 @@ $(document).ready(() => {
             ])
             .mountTo("#cr_application");
     } else {
-        alert("ERROR: No camper_id detected. ERR:NCI");
+        alert("ERROR: No unique_id detected. ERR:NUI");
     }
 });
