@@ -55,6 +55,9 @@ function sort_value(first_value, second_value) {
 
 //NOTE: position 3 in the argv is week, and position 4 is table selection
 async function run_query() {
+	if (!process.argv[2] || !process.argv[3]) return "\nPlease insert one of the following values for the inputs for the week: 0 (for all), " +
+		"1 (for web dev), 2 (for creative coding), 3 (for art of games) Followed by which value you wish for: " +
+	"medical_forms, meds, or consent_release.\n";
 	if (process.argv[3] == "medical_forms") return new Promise((full_resolve) => {
 		console.log("in medical_forms");
 		connection.query("SELECT * FROM medical_forms", async (err, medical_forms) => {
@@ -68,31 +71,31 @@ async function run_query() {
 					//STEP ONE - build up the basic data for each camper: first_name, last_name, weeks
 					let extra_where_clause = process.argv[2] == 0 ? "" : " AND week_id=?";
 					let conditions = process.argv[2] == 0 ? [item.camper_id] : [item.camper_id, process.argv[2]];
-					connection.query("SELECT week.id AS week, first_name, last_name, title FROM camper INNER JOIN " + 
-						"enrollment ON camper.id=enrollment.camper_id INNER JOIN week ON enrollment.week_id=week.id " + 
+					connection.query("SELECT week.id AS week, first_name, last_name, title FROM camper INNER JOIN " +
+						"enrollment ON camper.id=enrollment.camper_id INNER JOIN week ON enrollment.week_id=week.id " +
 						"WHERE camper.id=?" + extra_where_clause, conditions, (err, camper_info) => {
-						if (err) throw err;
-						if (!camper_info || !camper_info.length) resolve();
-						//STEP TWO - need to then run through the medical data FOR EACH ROW of that camper and add it onto them
-						let camper_info_decrypt = [];
-						camper_info.forEach((camper, inner_index) => {
-							camper_info_decrypt[inner_index] = {
-								week: camper.week,
-								title: camper.title,
-								first_name: camper.first_name,
-								last_name: camper.last_name
-							};
-							//run through the encrypted data and decrypt
-							Object.keys(item).forEach((key) => {
-								if (key != "camper_id") camper_info_decrypt[inner_index] = { ...camper_info_decrypt[inner_index],
-									...{
-										[key]: decrypt(item[key])
-									}
+							if (err) throw err;
+							if (!camper_info || !camper_info.length) resolve();
+							//STEP TWO - need to then run through the medical data FOR EACH ROW of that camper and add it onto them
+							let camper_info_decrypt = [];
+							camper_info.forEach((camper, inner_index) => {
+								camper_info_decrypt[inner_index] = {
+									week: camper.week,
+									title: camper.title,
+									first_name: camper.first_name,
+									last_name: camper.last_name
 								};
+								//run through the encrypted data and decrypt
+								Object.keys(item).forEach((key) => {
+									if (key != "camper_id") camper_info_decrypt[inner_index] = { ...camper_info_decrypt[inner_index],
+										...{
+											[key]: decrypt(item[key])
+										}
+									};
+								});
 							});
+							resolve(camper_info_decrypt);
 						});
-						resolve(camper_info_decrypt);
-					});
 				});
 			});
 			await Promise.all(return_meds).then(campers => {
@@ -146,6 +149,7 @@ async function run_query() {
 			"INNER JOIN consent_release ON camper.id=consent_release.camper_id" + extra_where_clause, conditions, (err, consents) => {
 				if (err) throw err;
 				consents.sort(sort_value);
+				console.log(consents);
 				resolve(ConvertToCSV(consents));
 			});
 	});
