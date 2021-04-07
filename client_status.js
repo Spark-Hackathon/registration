@@ -131,7 +131,6 @@ client.use(bodyParser.json());
 client.get("/get-status", async (req, res, next) => {
 	//cross-check the id with db
 	try {
-		console.log(req.query);
 		let camper_info = await pull_camper_info(req.query.unique_id);
 		console.log(camper_info);
 		res.render("status", {
@@ -361,7 +360,6 @@ client.post("/consent-and-release", async (req, res, next) => {
 				resolve();
 			});
 		});
-		console.log("redirect time\n", process.env.CURRENT_URL + "get-status?camper_id=" + camper_id);
 		res.redirect("/get-status?unique_id=" + req.body.unique_id);
 	} catch (error) {
 		console.error(error);
