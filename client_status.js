@@ -27,9 +27,9 @@ connection.connect((err) => {
 	if (err) throw err;
 });
 
-function pull_id(camper_unique_id) {
+function pull_id(unique_id) {
 	return new Promise((resolve, reject) => {
-		connection.query("SELECT id FROM camper WHERE camper_unique_id=?", camper_unique_id, (err, camper_id) => {
+		connection.query("SELECT id FROM camper WHERE camper_unique_id=?", unique_id, (err, camper_id) => {
 			if (err) return reject(err);
 			if (!camper_id || !camper_id.length) return reject("No camper under the specified ID", err);
 			resolve(camper_id[0].id);
@@ -39,7 +39,7 @@ function pull_id(camper_unique_id) {
 
 client.post("/un-enroll-week", async (req, res, next) => {
 	try {
-		let camper_id = await pull_id(req.body.camper_unique_id);
+		let camper_id = await pull_id(req.body.unique_id);
 		//now delete the enrollment value in the camper
 		await new Promise((resolve, reject) => {
 			connection.query("DELETE FROM enrollment WHERE camper_id=? AND week_id=?", [camper_id, req.body.week_id], (err) => {
@@ -47,7 +47,7 @@ client.post("/un-enroll-week", async (req, res, next) => {
 				resolve();
 			});
 		});
-		res.redirect("/get-status?camper_id=" + req.body.camper_unique_id);
+		res.redirect("/get-status?unique_id=" + req.body.unique_id);
 	} catch (error) {
 		error.message = "Something went wrong trying to un-enroll, try reloading?";
 		next(error);
@@ -56,7 +56,7 @@ client.post("/un-enroll-week", async (req, res, next) => {
 
 client.post("/change-person-loc", async (req, res, next) => {
 	try {
-		let camper_id = await pull_id(req.body.camper_unique_id);
+		let camper_id = await pull_id(req.body.unique_id);
 		await new Promise((resolve, reject) => {
 			connection.query("SELECT person_loc FROM enrollment WHERE camper_id=? AND week_id=?", [camper_id, req.body.week_id], (err, person_loc) => {
 				if (err) return reject(err);
@@ -67,7 +67,7 @@ client.post("/change-person-loc", async (req, res, next) => {
 				});
 			});
 		});
-		res.redirect("/get-status?camper_id=" + req.body.camper_unique_id);
+		res.redirect("/get-status?unique_id=" + req.body.unique_id);
 	} catch (error) {
 		error.message = "Looks like changing your location didn't work";
 		next(error);
@@ -171,7 +171,6 @@ function pull_camper_id(unique_id, need_location) {
 }
 
 function insert_medical_health_values(camper_id, query_string, query_questions, query_update, camper_values) {
-	console.log(camper_id, query_string + query_questions + query_update, camper_values);
 	return new Promise((resolve, reject) => {
 		camper_values = [camper_id].concat(camper_values, camper_values);
 		connection.query(query_string + query_questions + query_update, camper_values, (err) => {

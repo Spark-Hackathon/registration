@@ -827,7 +827,7 @@ function application_accept(id, week) {
 						last_name: latter_name,
 						child_name: email_info[0].first_name,
 						week_name: week,
-						url: process.env.CURRENT_URL + "reg-status?camper_id=" + email_info[0].camper_unique_id
+						url: process.env.CURRENT_URL + "reg-status?unique_id=" + email_info[0].camper_unique_id
 					}
 					resolve(await full_sendmail(email_info[0].guardian_email, email_info[0].first_name + " was accepted for " + week + " week", apply_guardian_file, email_obj));
 				});
