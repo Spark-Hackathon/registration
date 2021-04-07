@@ -47,12 +47,12 @@
 <script>
     const search_params = new URLSearchParams(window.location.search);
     
-    if(search_params.has("camper_unique_id")) {
-        const id = search_params.get("camper_unique_id");
+    if(search_params.has("unique_id")) {
+        const id = search_params.get("unique_id");
 
         $("#cr").attr("href", `/consent-release?unique_id=${id}`);
         $("#health").attr("href", `/health?unique_id=${id}`);
     } else {
-        alert("ERROR: No camper_unique_id detected. ERR:NCUI")
+        alert("ERROR: No unique_id detected. ERR:NUI")
     }
 </script>
