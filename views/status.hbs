@@ -48,10 +48,10 @@
     const search_params = new URLSearchParams(window.location.search);
     
     if(search_params.has("camper_id")) {
-        const id = search_params.get("camper_id");
+        const id = search_params.get("camper_unique_id");
 
         $("#cr").attr("href", `/consent-release?camper_id=${id}`);
-        $("#health").attr("href", `/health?camper_id=${id}`);
+        $("#health").attr("href", `/health?camper_unique_id=${id}`);
     } else {
         alert("ERROR: No camper_id detected. ERR:NCI")
     }
