@@ -145,11 +145,11 @@ client.get("/get-status", async (req, res, next) => {
 });
 
 function pull_camper_id(unique_id, need_location) {
+	console.log(unique_id);
 	return new Promise((resolve, reject) => {
 		connection.query("SELECT id, approved, person_loc FROM camper INNER JOIN enrollment ON camper.id = enrollment.camper_id WHERE camper.camper_unique_id=?", unique_id, (err, camper_id) => {
 			if (err) return reject(err);
-			console.log(id);
-			if (!camper_id || camper_id.length == 0) return reject("No camper with the unique id: ", id);
+			if (!camper_id || camper_id.length == 0) return reject("No camper with the unique id: ", unique_id);
 			let approval = false;
 			let person_loc = false; //if this is false, then we don't need medical information
 			if (need_location == 0) {
@@ -164,6 +164,7 @@ function pull_camper_id(unique_id, need_location) {
 				});
 			}
 			if (!approval || !person_loc) return reject("The camper specified doesn't need this information submitted");
+			console.log("running", camper_id[0].id);
 			resolve(camper_id[0].id);
 		});
 	});
@@ -171,7 +172,8 @@ function pull_camper_id(unique_id, need_location) {
 
 function insert_medical_health_values(camper_id, query_string, query_questions, query_update, camper_values) {
 	return new Promise((resolve, reject) => {
-		camper_values = [camper_id].concat(camper_values, camper_values);
+		camper_values = camper_values.concat(camper_values);
+		console.log(camper_id);
 		connection.query(query_string + query_questions + query_update, camper_values, (err) => {
 			if (err) return reject(err);
 			resolve();
@@ -184,10 +186,12 @@ client.post("/submit-health-forms", async (req, res, next) => {
 	try {
 		let med_values = {};
 		let medical_forms_input = [];
-		let insert_statement = "INSERT INTO medical_forms (camper_id, ";
-		let value_statement = " VALUES (?, ";
+		let insert_statement = "INSERT INTO medical_forms (";
+		let value_statement = " VALUES (";
 		let update_statement = " ON DUPLICATE KEY UPDATE ";
 		let index_counter = 0;
+		let save_unique_id = req.body.unique_id;
+		req.body.unique_id = await pull_camper_id(req.body.unique_id, 1);
 		Object.keys(req.body).forEach(async (item, index) => {
 			if (item.substring(item.length - 15) != "medication_name" &&
 				item.substring(item.length - 17) != "medication_dosage" &&
@@ -197,15 +201,14 @@ client.post("/submit-health-forms", async (req, res, next) => {
 					if (req.body[item] == "0") throw "You must accept the wavier to submit";
 				} else if (item == "covid_accept") {
 					if (req.body[item] == "0") throw "You must accept the covid wavier to submit";
-				} else if (item == "cr_accept") {
-					if (req.body[item].length == 0) throw "Please input characters into the Consent and Release box";
 				} else {
 					index_counter++;
-					console.log("ROUND?", index_counter, "KEYS VALUE",
+					console.log("ROUND?", item, index_counter, "KEYS VALUE",
 						index_counter == 16);
-					let comma = index_counter == 16 ? ")" : ", ";
+					let comma = index_counter == 17 ? ")" : ", ";
 					let item_name = item == "allergies" ? "allergies_text" : item;
 					item_name = item == "epipen" ? "epi_pen_info" : item_name;
+					item_name = item == "unique_id" ? "camper_id" : item_name;
 					insert_statement += item_name + comma;
 					value_statement += "?" + comma;
 					comma = comma == ")" ? "" : comma;
@@ -213,11 +216,8 @@ client.post("/submit-health-forms", async (req, res, next) => {
 					let med_value = req.body[item] == "1" ? "yes" : "";
 					med_value = req.body[item] == "0" ? "no" : "";
 					req.body[item] = med_value == "yes" || med_value == "no" ? med_value : req.body[item];
-					req.body[item] = req.body[item].length ? req.body[item] : "none";
+					req.body[item] = req.body[item].toString().length ? req.body[item] : "none";
 					medical_forms_input.push(req.body[item]);
-				}
-				if (item == "unique_id") {
-					medical_forms_input[medical_forms_input.length - 1] = await pull_camper_id(req.body[item], 1);
 				}
 			} else {
 				// Figure out which one you are trying to add
@@ -256,30 +256,26 @@ client.post("/submit-health-forms", async (req, res, next) => {
 				}
 			}
 		});
-		for (let med = 0; med < medical_forms_input.length; med++) {
+		for (let med = 1; med < medical_forms_input.length; med++) {
 			medical_forms_input[med] = encrypt(medical_forms_input[med]);
 		}
 		await insert_medical_health_values(medical_forms_input[0], insert_statement, value_statement, update_statement, medical_forms_input);
-		return res.end();
 		//go through meds and encrypt them
-		req.body.meds.map((item, index) => {
-			med_values[index] = {};
-			med_values[index].camper_id = medical_forms_input[0];
-			Object.keys(item).forEach((med) => {
-				med_values[index] = { ...med_values[index],
-					...{
-						[med]: encrypt(item[med])
-					}
-				};
+		let meds = [];
+		Object.keys(med_values).forEach((item, index) => {
+			meds[index] = [];
+			Object.keys(med_values[item]).forEach((med, ind) => {
+				meds[index][ind] = encrypt(med_values[item][med]);
 			});
+			meds[index] = [req.body.unique_id].concat(meds[index]);
 		});
 		try {
 			let final_meds_query = await new Promise((outer_resolve, outer_reject) => {
 				connection.query("DELETE FROM meds WHERE camper_id=?", medical_forms_input[0], async (err) => {
 					if (err) return outer_reject(err);
-					let insertion_med = med_values.map((item, index) => {
+					let insertion_med = meds.map((item, index) => {
 						return new Promise((resolve, reject) => {
-							connection.query("INSERT INTO meds VALUES (?, ?, ?, ?, ?)", Object.values(item), (err) => {
+							connection.query("INSERT INTO meds VALUES (?, ?, ?, ?, ?)", item, (err) => {
 								if (err) return reject(err);
 								resolve();
 							});
@@ -293,53 +289,7 @@ client.post("/submit-health-forms", async (req, res, next) => {
 				});
 			});
 			//then put in the camper_unique_id to redirect to the get-status page of that user
-			res.redirect("/get-status?camper_id=" + req.body.camper_unique_id);
-		} catch (error) {
-			throw error;
-		}
-		//l_forms_input[0] = await pull_camper_id(req.body.camper_unique_id, 1);
-		//start running through the req object to pull all of the fields needed:
-		db_insertion += ")";
-		db_questions += ")";
-		//run through the medical_forms_input and encrypt them
-		for (let med = 1; med < medical_forms_input.length; med++) {
-			medical_forms_input[med] = encrypt(medical_forms_input[med]);
-			update_form[med - 1] = medical_forms_input[med];
-		}
-		await insert_medical_health_values(db_insertion, db_questions, db_update, medical_forms_input, update_form);
-		//go through meds and encrypt them
-		req.body.meds.map((item, index) => {
-			med_values[index] = {};
-			med_values[index].camper_id = medical_forms_input[0];
-			Object.keys(item).forEach((med) => {
-				med_values[index] = { ...med_values[index],
-					...{
-						[med]: encrypt(item[med])
-					}
-				};
-			});
-		});
-		try {
-			let final_meds_query = await new Promise((outer_resolve, outer_reject) => {
-				connection.query("DELETE FROM meds WHERE camper_id=?", medical_forms_input[0], async (err) => {
-					if (err) return outer_reject(err);
-					let insertion_med = med_values.map((item, index) => {
-						return new Promise((resolve, reject) => {
-							connection.query("INSERT INTO meds VALUES (?, ?, ?, ?, ?)", Object.values(item), (err) => {
-								if (err) return reject(err);
-								resolve();
-							});
-						});
-					});
-					await Promise.all(insertion_med).then(() => {
-						outer_resolve();
-					}).catch((error) => {
-						return outer_reject(error);
-					});
-				});
-			});
-			//then put in the camper_unique_id to redirect to the get-status page of that user
-			res.redirect("/get-status?unique_id=" + req.body.unique_id);
+			res.redirect("/get-status?unique_id=" + save_unique_id);
 		} catch (error) {
 			throw error;
 		}
