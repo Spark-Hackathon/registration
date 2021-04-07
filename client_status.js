@@ -74,9 +74,9 @@ client.post("/change-person-loc", async (req, res, next) => {
 	}
 });
 
-function pull_camper_info(camper_id) {
+function pull_camper_info(unique_id) {
 	return new Promise((resolve, reject) => {
-		connection.query("SELECT id, first_name, last_name, COUNT(medical_forms.camper_id) AS med, COUNT(consent_release.camper_id) AS consent FROM camper LEFT JOIN medical_forms ON camper.id = medical_forms.camper_id LEFT JOIN consent_release ON camper.id = consent_release.camper_id WHERE camper.id=?", camper_id, (err, camper_info) => {
+		connection.query("SELECT id, first_name, last_name, COUNT(medical_forms.camper_id) AS med, COUNT(consent_release.camper_id) AS consent FROM camper LEFT JOIN medical_forms ON camper.id = medical_forms.camper_id LEFT JOIN consent_release ON camper.id = consent_release.camper_id WHERE camper.camper_unique_id=?", unique_id, (err, camper_info) => {
 			if (err) return reject(err);
 			if (!camper_info || !camper_info.length || camper_info[0].id == undefined) reject("No camper under the specified value");
 			let camper_obj = {};
@@ -131,7 +131,7 @@ client.use(bodyParser.json());
 client.get("/get-status", async (req, res, next) => {
 	//cross-check the id with db
 	try {
-		let camper_info = await pull_camper_info(req.query.camper_id);
+		let camper_info = await pull_camper_info(req.query.unique_id);
 		res.render("status", {
 			title: `Status — Summer ${getDate()}`,
 			year: getDate(),
@@ -143,9 +143,9 @@ client.get("/get-status", async (req, res, next) => {
 	}
 });
 
-function pull_camper_id(id, need_location) {
+function pull_camper_id(unique_id, need_location) {
 	return new Promise((resolve, reject) => {
-		connection.query("SELECT id, approved, person_loc FROM camper INNER JOIN enrollment ON camper.id = enrollment.camper_id WHERE camper.id=?", id, (err, camper_id) => {
+		connection.query("SELECT id, approved, person_loc FROM camper INNER JOIN enrollment ON camper.id = enrollment.camper_id WHERE camper.camper_unique_id=?", unique_id, (err, camper_id) => {
 			if (err) return reject(err);
 			console.log(id);
 			if (!camper_id || camper_id.length == 0) return reject("No camper with the unique id: ", id);
@@ -193,9 +193,6 @@ client.post("/submit-health-forms", async (req, res, next) => {
 				item.substring(item.length - 17) != "medication_dosage" &&
 				item.substring(item.length - 16) != "medication_times" &&
 				item.substring(item.length - 16) != "medication_notes") {
-				if (item == "camper_id") {
-					await pull_camper_id(req.body[item], 1);
-				}
 				if (item == "wavier_accept") {
 					if (req.body[item] == "0") throw "You must accept the wavier to submit";
 				} else if (item == "covid_accept") {
@@ -218,6 +215,9 @@ client.post("/submit-health-forms", async (req, res, next) => {
 					req.body[item] = med_value == "yes" || med_value == "no" ? med_value : req.body[item];
 					req.body[item] = req.body[item].length ? req.body[item] : "none";
 					medical_forms_input.push(req.body[item]);
+				}
+				if (item == "unique_id") {
+					medical_forms_input[medical_forms_input.length - 1] = await pull_camper_id(req.body[item], 1);
 				}
 			} else {
 				// Figure out which one you are trying to add
@@ -259,7 +259,7 @@ client.post("/submit-health-forms", async (req, res, next) => {
 		for (let med = 0; med < medical_forms_input.length; med++) {
 			medical_forms_input[med] = encrypt(medical_forms_input[med]);
 		}
-		await insert_medical_health_values(req.body.camper_id, insert_statement, value_statement, update_statement, medical_forms_input);
+		await insert_medical_health_values(medical_forms_input[0], insert_statement, value_statement, update_statement, medical_forms_input);
 		return res.end();
 		//go through meds and encrypt them
 		req.body.meds.map((item, index) => {
@@ -339,7 +339,7 @@ client.post("/submit-health-forms", async (req, res, next) => {
 				});
 			});
 			//then put in the camper_unique_id to redirect to the get-status page of that user
-			res.redirect("/get-status?camper_id=" + req.body.camper_unique_id);
+			res.redirect("/get-status?unique_id=" + req.body.unique_id);
 		} catch (error) {
 			throw error;
 		}
@@ -352,7 +352,7 @@ client.post("/submit-health-forms", async (req, res, next) => {
 
 client.post("/consent-and-release", async (req, res, next) => {
 	try {
-		let camper_id = await pull_camper_id(req.body.camper_id, 0);
+		let camper_id = await pull_camper_id(req.body.unique_id, 0);
 		let safety_net = await new Promise(async (resolve, reject) => {
 			let current_date = new Date().toISOString().substr(0, 19).replace("T", " ").toString();
 			connection.query("INSERT INTO consent_release (camper_id, completion_time) VALUES (?, ?) ON DUPLICATE KEY UPDATE completion_time=?", [camper_id, current_date, current_date], (err) => {
@@ -361,7 +361,7 @@ client.post("/consent-and-release", async (req, res, next) => {
 			});
 		});
 		console.log("redirect time\n", process.env.CURRENT_URL + "get-status?camper_id=" + camper_id);
-		res.redirect(process.env.CURRENT_URL + "get-status?camper_id=" + camper_id);
+		res.redirect("/get-status?unique_id=" + req.body.unique_id);
 	} catch (error) {
 		console.error(error);
 		error.message = "Submitting the consent form didn't work... try reloading?";
