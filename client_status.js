@@ -16,6 +16,10 @@ connection.connect((err) => {
 	if (err) throw err;
 });
 
+connection.connect((err) => {
+        if (err) throw err;
+});
+
 function real_accounting(camper_id) {
 	return new Promise((resolve, reject) => {
 		connection.query("SELECT id FROM camper WHERE camper_unique_id=?", camper_id, (err, count) => {
