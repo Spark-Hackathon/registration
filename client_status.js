@@ -304,7 +304,10 @@ client.post("/consent-and-release", async (req, res, next) => {
 	try {
 		let camper_id = await pull_camper_id(req.body.unique_id, 0);
 		let safety_net = await new Promise(async (resolve, reject) => {
-			let current_date = new Date().toISOString().substr(0, 19).replace("T", " ").toString();
+			let current_date = new Date();
+			let offset = -1 * current_date.getTimezoneOffset();
+			current_date.setTime(current_date.getTime() + offset * 60 * 1000);
+			current_date.toISOString().substr(0, 19).replace("T", " ").toString();
 			connection.query("INSERT INTO consent_release (camper_id, completion_time) VALUES (?, ?) ON DUPLICATE KEY UPDATE completion_time=?", [camper_id, current_date, current_date], (err) => {
 				if (err) return reject(err);
 				resolve();

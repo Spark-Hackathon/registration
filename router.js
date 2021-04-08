@@ -36,7 +36,7 @@ let transporter = nodemail.createTransport({
 });
 
 //connect to db
-const connection = mysql.createConnection({
+let connection = mysql.createConnection({
 	host: process.env.HOST,
 	database: process.env.DATABASE,
 	password: process.env.PASSWORD,
@@ -82,7 +82,7 @@ function admin_validate(code) {
 }
 
 function full_sendmail(to, subject, text, replacement) {
-	console.log(text, replacement);
+	console.log("send mail", to, subject, text, replacement);
 	Object.keys(replacement).forEach((item, index) => {
 		let string = "{{" + item.toUpperCase() + "}}";
 		string = replacement[item] == "" ? " " + string : string;
@@ -283,7 +283,7 @@ router.post("/camper-register-queueing", async (req, res, next) => {
 									first_name: item.first_name,
 									last_name: item.last_name
 								};
-								console.log(await full_sendmail(item.email, "You've signed up!", registration_file, email_obj));
+								console.log(await full_sendmail(item.email, "You've applied!", registration_file, email_obj));
 								connection.query("DELETE FROM prospect WHERE email=?", item.email, (err) => {
 									if (err) enrolling_reject(err);
 									enrolling_resolve(res.render("question.hbs", {
@@ -335,6 +335,7 @@ router.post("/camper-submit-questions", async (req, res, next) => {
 router.post("/signup-prospect", async (req, res, next) => {
 	try {
 		if (!referral_schema.validate(req.body)) throw pros_schema.validate(user_data).error;
+		console.log("PREPARE INSERTION");
 		await prospectSignup(req.body);
 		let email_obj = {};
 		let email_text = fs.readFileSync(path.join(__dirname, "emailTemplates", "prospect_signedup")).toString();
@@ -986,6 +987,33 @@ router.post("/admin/send-mail", async (req, res, next) => { //ADMIN
 	} catch (error) {
 		error.message = "Hmm... Looks like sending mail didn't work, try reloading?";
 		next(error);
+	}
+});
+
+router.post("/isDatabaseConnected", (req, res, next) => {
+	if (req.body.code == process.env.DATABASE_CHECK_CODE) {
+		console.log("System received database check");
+		connection.query("SELECT value_str FROM system_settings", function(err, value) {
+	    		if (!err) {
+	      			res.end("No error :)");
+	    		}
+			if (err) {
+				connection = mysql.createConnection({
+				        host: process.env.HOST,
+				        database: process.env.DATABASE,
+				        password: process.env.PASSWORD,
+				        user: process.env.DB_USER,
+				        insecureAuth: true
+				});
+				connection.connect((err) => {
+	        			if (err) throw err;
+					console.log("No restart error");
+					res.end("Mysql rebooted ;)");
+				});
+			}
+  		});
+	} else {
+		res.end("Incorrect code");
 	}
 });
 
