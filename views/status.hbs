@@ -4,12 +4,16 @@
 </header>
 
 <div class="mt-20">
-    {{#if camper_info.showing_consent_option}}
+    {{#if camper_info.consent_completion}}
+        <p class="my-2"><span class="font-semibold underline text-green-500 mr-4">Completed!</span> You have filled out the <a id="cr" href="" class="font-semibold underline text-yellow py-1 hover:text-yellow-dark transition duration-200">Consent &amp; Release &rarr;</a> agreement.</p>
+    {{else}}
         <p class="my-2"><span class="font-semibold uppercase underline text-red-500 mr-4">Important!</span> In order to participate in Summer Spark {{year}}, you will need to fill out the <a id="cr" href="" class="font-semibold underline text-yellow py-1 hover:text-yellow-dark transition duration-200">Consent &amp; Release &rarr;</a> agreement.</p>
     {{/if}}
 
-    {{#if camper_info.showing_med_option}}
-        <p><span class="font-semibold uppercase underline text-red-500 mr-4">Important!</span> In order to participate in Summer Spark {{year}}, you will need to fill out the <a id="health" href="" class="font-semibold underline text-yellow py-1 hover:text-yellow-dark transition duration-200">Health &amp; Medication &rarr;</a> agreement.</p>
+    {{#if camper_info.med_completion}}
+        <p><span class="font-semibold underline text-green-500 mr-4">Completed!</span> You have filled out the <a id="health" href="" class="font-semibold underline text-yellow py-1 hover:text-yellow-dark transition duration-200">Health &amp; Medication &rarr;</a> paperwork.</p>
+    {{else}}
+        <p><span class="font-semibold uppercase underline text-red-500 mr-4">Important!</span> In order to participate in Summer Spark {{year}}, you will need to fill out the <a id="health" href="" class="font-semibold underline text-yellow py-1 hover:text-yellow-dark transition duration-200">Health &amp; Medication &rarr;</a> paperwork.</p>
     {{/if}}
 </div>
 
