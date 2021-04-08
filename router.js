@@ -335,6 +335,13 @@ router.post("/signup-prospect", async (req, res, next) => {
 		if (!referral_schema.validate(req.body)) throw pros_schema.validate(user_data).error;
 		console.log("PREPARE INSERTION");
 		await prospectSignup(req.body);
+		let email_obj = {};
+		let email_text = fs.readFileSync(path.join(__dirname, "emailTemplates", "prospect_signedup")).toString();
+		let split_name = req.body.name.trim().split(" ");
+		email_obj.first_name = split_name[0];
+		email_obj.last_name = split_name[0] == split_name[split_name.length - 1] ? "" : split_name[split_name.length - 1];
+		email_obj.url = "If you ever want to unsubscribe, go to this link: " + process.env.CURRENT_URL + "unsubscribe";
+		await full_sendmail(req.body.email, "You've singed up for updates", email_text, email_obj);
 		res.redirect("/updates/thank-you");
 	} catch (error) {
 		error.message = "Hmm... Looks like signing up didn't work, try reloading?";
@@ -982,7 +989,7 @@ router.post("/isDatabaseConnected", (req, res, next) => {
 			}
   		});
 	} else {
-	res.end("Incorrect code");
+		res.end("Incorrect code");
 	}
 });
 

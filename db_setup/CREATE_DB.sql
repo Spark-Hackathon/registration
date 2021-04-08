@@ -73,8 +73,7 @@ CREATE TABLE questions (
 CREATE TABLE system_settings (
 	name VARCHAR(255) NOT NULL,
 	value_int INT,
-	value_str VARCHAR(255),
-	PRIMARY KEY(name)
+	value_str VARCHAR(255)
 );
 CREATE TABLE medical_forms (
 	camper_id INT NOT NULL,

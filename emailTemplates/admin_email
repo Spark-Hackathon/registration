@@ -1,0 +1,6 @@
+Hey Admin,
+
+Looks like there's {{CAMPER_AMOUNT}} camper{{PLURAL_VALUE}} in the queue, might want to check that out.
+
+See you tomorrow <3,
+<img src="{{IMG_URL}}"/>
