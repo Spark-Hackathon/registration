@@ -59,7 +59,6 @@ async function run_query() {
 		"1 (for web dev), 2 (for creative coding), 3 (for art of games) Followed by which value you wish for: " +
 	"medical_forms, meds, or consent_release.\n";
 	if (process.argv[3] == "medical_forms") return new Promise((full_resolve) => {
-		console.log("in medical_forms");
 		connection.query("SELECT * FROM medical_forms", async (err, medical_forms) => {
 			if (err) throw err;
 			if (!medical_forms || !medical_forms.length) throw "No values in database";
@@ -73,9 +72,9 @@ async function run_query() {
 					let conditions = process.argv[2] == 0 ? [item.camper_id] : [item.camper_id, process.argv[2]];
 					connection.query("SELECT week.id AS week, first_name, last_name, title FROM camper INNER JOIN " +
 						"enrollment ON camper.id=enrollment.camper_id INNER JOIN week ON enrollment.week_id=week.id " +
-						"WHERE camper.id=?" + extra_where_clause, conditions, (err, camper_info) => {
+						"WHERE enrollment.approved=1 AND camper.id=?" + extra_where_clause, conditions, (err, camper_info) => {
 							if (err) throw err;
-							if (!camper_info || !camper_info.length) resolve();
+							if (!camper_info || !camper_info.length) return resolve("NO VALUE");
 							//STEP TWO - need to then run through the medical data FOR EACH ROW of that camper and add it onto them
 							let camper_info_decrypt = [];
 							camper_info.forEach((camper, inner_index) => {
@@ -100,7 +99,7 @@ async function run_query() {
 			});
 			await Promise.all(return_meds).then(campers => {
 				campers.forEach((item) => {
-					all_meds = all_meds.concat(item);
+					if (item != "NO VALUE") all_meds = all_meds.concat(item);
 				});
 			});
 			//Sort each of the values based on: week, last_name, first_name
@@ -110,12 +109,11 @@ async function run_query() {
 	});
 	if (process.argv[3] == "meds") return new Promise((resolve) => {
 		//inner week selection
-		console.log("In meds");
 		let extra_where_clause = process.argv[2] == 0 ? "" : " AND week_id=?";
 		let conditions = process.argv[2] == 0 ? [] : process.argv[2];
 		connection.query("SELECT enrollment.week_id AS week, title, first_name, last_name, medication_name, medication_time, medication_dosage, medication_notes, " +
-			"epi_pen_info FROM camper INNER JOIN enrollment ON camper.id=enrollment.camper_id INNER JOIN week ON week.id=enrollment.week_id INNER JOIN meds ON " +
-			"camper.id=meds.camper_id INNER JOIN medical_forms ON camper.id=medical_forms.camper_id" + extra_where_clause, conditions, (err, meds_info) => {
+			"epi_pen_info FROM camper INNER JOIN enrollment ON camper.id=enrollment.camper_id LEFT JOIN week ON week.id=enrollment.week_id LEFT JOIN meds ON " +
+			"camper.id=meds.camper_id LEFT JOIN medical_forms ON camper.id=medical_forms.camper_id WHERE enrollment.approved=1" + extra_where_clause, conditions, (err, meds_info) => {
 				if (err) console.log(err);
 				//console.log(meds_info);
 				//decryption step
@@ -141,7 +139,6 @@ async function run_query() {
 			});
 	});
 	if (process.argv[3] == "consent_release") return new Promise((resolve) => {
-		console.log("In consent and release");
 		let extra_where_clause = process.argv[2] == 0 ? "" : " AND week_id=?";
 		let conditions = process.argv[2] == 0 ? [] : process.argv[2];
 		connection.query("SELECT enrollment.week_id AS week, title, first_name, last_name, completion_time FROM camper " +
@@ -149,7 +146,6 @@ async function run_query() {
 			"INNER JOIN consent_release ON camper.id=consent_release.camper_id" + extra_where_clause, conditions, (err, consents) => {
 				if (err) throw err;
 				consents.sort(sort_value);
-				console.log(consents);
 				resolve(ConvertToCSV(consents));
 			});
 	});

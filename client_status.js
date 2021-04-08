@@ -145,7 +145,6 @@ client.get("/get-status", async (req, res, next) => {
 });
 
 function pull_camper_id(unique_id, need_location) {
-	console.log(unique_id);
 	return new Promise((resolve, reject) => {
 		connection.query("SELECT id, approved, person_loc FROM camper INNER JOIN enrollment ON camper.id = enrollment.camper_id WHERE camper.camper_unique_id=?", unique_id, (err, camper_id) => {
 			if (err) return reject(err);
@@ -164,7 +163,6 @@ function pull_camper_id(unique_id, need_location) {
 				});
 			}
 			if (!approval || !person_loc) return reject("The camper specified doesn't need this information submitted");
-			console.log("running", camper_id[0].id);
 			resolve(camper_id[0].id);
 		});
 	});
@@ -173,7 +171,7 @@ function pull_camper_id(unique_id, need_location) {
 function insert_medical_health_values(camper_id, query_string, query_questions, query_update, camper_values) {
 	return new Promise((resolve, reject) => {
 		camper_values = camper_values.concat(camper_values);
-		console.log(camper_id);
+		console.log(query_string + query_questions + query_update, camper_values);
 		connection.query(query_string + query_questions + query_update, camper_values, (err) => {
 			if (err) return reject(err);
 			resolve();
@@ -269,6 +267,7 @@ client.post("/submit-health-forms", async (req, res, next) => {
 			});
 			meds[index] = [req.body.unique_id].concat(meds[index]);
 		});
+		console.log(meds, "\n");
 		try {
 			let final_meds_query = await new Promise((outer_resolve, outer_reject) => {
 				connection.query("DELETE FROM meds WHERE camper_id=?", medical_forms_input[0], async (err) => {
@@ -304,11 +303,7 @@ client.post("/consent-and-release", async (req, res, next) => {
 	try {
 		let camper_id = await pull_camper_id(req.body.unique_id, 0);
 		let safety_net = await new Promise(async (resolve, reject) => {
-			let current_date = new Date();
-			let offset = -1 * current_date.getTimezoneOffset();
-			current_date.setTime(current_date.getTime() + offset * 60 * 1000);
-			current_date.toISOString().substr(0, 19).replace("T", " ").toString();
-			connection.query("INSERT INTO consent_release (camper_id, completion_time) VALUES (?, ?) ON DUPLICATE KEY UPDATE completion_time=?", [camper_id, current_date, current_date], (err) => {
+			connection.query("INSERT INTO consent_release (camper_id, completion_time) VALUES (?, NOW()) ON DUPLICATE KEY UPDATE completion_time=NOW()", [camper_id], (err) => {
 				if (err) return reject(err);
 				resolve();
 			});
