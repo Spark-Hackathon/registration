@@ -193,9 +193,9 @@ router.post("/camper-register-queueing", async (req, res, next) => {
 				let camper_writeup;
 				let extra_camper_info = [];
 				item.guardian_number.replace(/[^0-9]/g, "");
-				console.log("test number", item.guardian_number, typeof item.guardian_number);
 				item.guardian_number = parseInt(item.guardian_number, 10);
-				console.log("check number", typeof item.guardian_number);
+				item.dob = new Date(item.dob);
+				item.dob = [item.dob.getFullYear(), item.dob.getMonth(), item.dob.getDate()].join("-");
 				extra_camper_info.push(item.first_name, item.last_name, item.email, item.dob, item.school, item.grade, item.gender, item.type, item.race_ethnicity,
 					item.hopes, item.tshirt_size, item.borrow_laptop, item.guardian_name, item.guardian_email, item.guardian_number, item.participated);
 				if (pre_id && pre_id.length) {
@@ -232,7 +232,6 @@ router.post("/camper-register-queueing", async (req, res, next) => {
 						async function enrollmentInsert(week) {
 							return new Promise((enroll_resolve, enroll_reject) => {
 								let loc = parseInt(week[1], 10);
-								console.log("test type", typeof week[1], typeof loc, loc - 1, typeof loc);
 								connection.query("SELECT approved FROM enrollment WHERE week_id=? AND camper_id=?", [week[0], camper_id[0].id], (err, camper_enroll_value) => {
 									if (err) console.log(err);
 									let approved_value = camper_enroll_value && camper_enroll_value.length && camper_enroll_value[0].approved == 1 ? 1 : 0;
