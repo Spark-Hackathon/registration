@@ -86,6 +86,7 @@ async function sheet() {
 
 sheet().then(() => {
 	console.log("dun");
+	connection.close();
 });
 
 module.exports = sheet;

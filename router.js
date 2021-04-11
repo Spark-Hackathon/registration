@@ -82,6 +82,7 @@ function admin_validate(code) {
 }
 
 function full_sendmail(to, subject, text, replacement) {
+	if (!/^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)*$/.test(to)) return false; 
 	console.log("send mail", to, subject, text, replacement);
 	Object.keys(replacement).forEach((item, index) => {
 		let string = "{{" + item.toUpperCase() + "}}";
@@ -96,7 +97,7 @@ function full_sendmail(to, subject, text, replacement) {
 			replyTo: 'spark@stab.org',
 			to: to,
 			subject: subject,
-			text: text
+			html: text
 		}, (err, info) => {
 			if (err) {
 				err.send_mail_info = info;
@@ -191,6 +192,7 @@ router.post("/camper-register-queueing", async (req, res, next) => {
 				if (err) reject(err);
 				let camper_writeup;
 				let extra_camper_info = [];
+				console.log("\nDATE OF BIRTH", item.dob);
 				extra_camper_info.push(item.first_name, item.last_name, item.email, item.dob, item.school, item.grade, item.gender, item.type, item.race_ethnicity,
 					item.hopes, item.tshirt_size, item.borrow_laptop, item.guardian_name, item.guardian_email, item.guardian_number, item.participated);
 				if (pre_id && pre_id.length) {
@@ -343,7 +345,7 @@ router.post("/signup-prospect", async (req, res, next) => {
 		email_obj.first_name = split_name[0];
 		email_obj.last_name = split_name[0] == split_name[split_name.length - 1] ? "" : split_name[split_name.length - 1];
 		email_obj.url = "If you ever want to unsubscribe, go to this link: " + process.env.CURRENT_URL + "unsubscribe";
-		await full_sendmail(req.body.email, "You've singed up for updates", email_text, email_obj);
+		await full_sendmail(req.body.email, "You've signed up for updates!", email_text, email_obj);
 		res.redirect("/updates/thank-you");
 	} catch (error) {
 		error.message = "Hmm... Looks like signing up didn't work, try reloading?";
@@ -817,7 +819,7 @@ function application_accept(id, week) {
 						first_name: email_info[0].first_name,
 						last_name: email_info[0].last_name,
 						week_name: week,
-						url: process.env.CURRENT_URL + "reg-status?unique_id=" + email_info[0].camper_unique_id
+						url: process.env.CURRENT_URL + "get-status?unique_id=" + email_info[0].camper_unique_id
 					};
 					await full_sendmail(email_info[0].email, "You were accepted for " + week + " week", apply_camper_file, email_obj);
 					let apply_guardian_file = fs.readFileSync(path.join(__dirname, "emailTemplates", "accepting_camper_app_guardian")).toString();
