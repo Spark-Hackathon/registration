@@ -237,7 +237,7 @@ router.post("/camper-register-queueing", async (req, res, next) => {
 									if (err) console.log(err);
 									let approved_value = camper_enroll_value && camper_enroll_value.length && camper_enroll_value[0].approved == 1 ? 1 : 0;
 									connection.query("INSERT INTO enrollment (camper_id, week_id, signup_time, person_loc, approved) VALUES " +
-										"(?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE signup_time=?, person_loc=?, approved=?", [camper_id[0].id, week[0], new Date(), loc  - 1, 0, 0, new Date(), week[1] - 1, approved_value], (err) => {
+										"(?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE signup_time=?, person_loc=?, approved=?", [camper_id[0].id, week[0], new Date(), loc  - 1, 0, new Date(), week[1] - 1, approved_value], (err) => {
 											if (err) enroll_reject(err);
 											connection.query("SELECT id, question_text FROM question_meta WHERE week_id=?", week[0], (err, questions) => {
 												if (err) enroll_reject(err);
