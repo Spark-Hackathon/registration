@@ -191,6 +191,7 @@ router.post("/camper-register-queueing", async (req, res, next) => {
 				if (err) reject(err);
 				let camper_writeup;
 				let extra_camper_info = [];
+				item.guardian_phone.replace(/[^0-9]/g, "");
 				extra_camper_info.push(item.first_name, item.last_name, item.email, item.dob, item.school, item.grade, item.gender, item.type, item.race_ethnicity,
 					item.hopes, item.tshirt_size, item.borrow_laptop, item.guardian_name, item.guardian_email, item.guardian_number, item.participated);
 				if (pre_id && pre_id.length) {
