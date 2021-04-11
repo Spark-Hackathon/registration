@@ -192,7 +192,10 @@ router.post("/camper-register-queueing", async (req, res, next) => {
 				if (err) reject(err);
 				let camper_writeup;
 				let extra_camper_info = [];
-				item.guardian_phone.replace(/[^0-9]/g, "");
+				item.guardian_number.replace(/[^0-9]/g, "");
+				console.log("test number", item.guardian_number, typeof item.guardian_number);
+				item.guardian_number = parseInt(item.guardian_number, 10);
+				console.log("check number", typeof item.guardian_number);
 				extra_camper_info.push(item.first_name, item.last_name, item.email, item.dob, item.school, item.grade, item.gender, item.type, item.race_ethnicity,
 					item.hopes, item.tshirt_size, item.borrow_laptop, item.guardian_name, item.guardian_email, item.guardian_number, item.participated);
 				if (pre_id && pre_id.length) {
@@ -228,11 +231,13 @@ router.post("/camper-register-queueing", async (req, res, next) => {
 						});
 						async function enrollmentInsert(week) {
 							return new Promise((enroll_resolve, enroll_reject) => {
+								let loc = parseInt(week[1], 10);
+								console.log("test type", typeof week[1], typeof loc, loc - 1, typeof loc);
 								connection.query("SELECT approved FROM enrollment WHERE week_id=? AND camper_id=?", [week[0], camper_id[0].id], (err, camper_enroll_value) => {
 									if (err) console.log(err);
 									let approved_value = camper_enroll_value && camper_enroll_value.length && camper_enroll_value[0].approved == 1 ? 1 : 0;
 									connection.query("INSERT INTO enrollment (camper_id, week_id, signup_time, person_loc, approved) VALUES " +
-										"(?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE signup_time=?, person_loc=?, approved=?", [camper_id[0].id, week[0], new Date(), week[1] - 1, 0, 0, new Date(), week[1] - 1, approved_value], (err) => {
+										"(?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE signup_time=?, person_loc=?, approved=?", [camper_id[0].id, week[0], new Date(), loc  - 1, 0, 0, new Date(), week[1] - 1, approved_value], (err) => {
 											if (err) enroll_reject(err);
 											connection.query("SELECT id, question_text FROM question_meta WHERE week_id=?", week[0], (err, questions) => {
 												if (err) enroll_reject(err);
