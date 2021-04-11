@@ -196,7 +196,8 @@ router.post("/camper-register-queueing", async (req, res, next) => {
 				item.guardian_number = item.guardian_number.length == 0 ? "0" : item.guardian_number;
 				item.guardian_number = parseInt(item.guardian_number, 10);
 				item.dob = new Date(item.dob);
-				item.dob = [item.dob.getFullYear(), item.dob.getMonth(), item.dob.getDate()].join("-");
+				item.dob.setTime(item.dob.getTime() + (item.dob.getHours()*60*60*1000));
+				item.dob = [item.dob.getFullYear(), item.dob.getMonth() + 1, item.dob.getDate()].join("-");
 				extra_camper_info.push(item.first_name, item.last_name, item.email, item.dob, item.school, item.grade, item.gender, item.type, item.race_ethnicity,
 					item.hopes, item.tshirt_size, item.borrow_laptop, item.guardian_name, item.guardian_email, item.guardian_number, item.participated);
 				if (pre_id && pre_id.length) {
