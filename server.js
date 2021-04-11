@@ -12,6 +12,16 @@ const { getDate } = require("./utils");
 const router = require("./router");
 const client = require("./client_status");
 
+const Airbrake = require("@airbrake/node");
+const airbrakeExpress = require("@airbrake/node/dist/instrumentation/express");
+
+const airbrake = new Airbrake.Notifier({
+	projectId: 328702,
+	projectKey: "1fa4f064e141600f3164192a6d4210cb"
+});
+
+app.use(airbrakeExpress.makeMiddleware(airbrake));
+
 // application setup
 app.use(express.static(__dirname + "/public"));
 app.use("/", router);
@@ -107,6 +117,8 @@ app.get("/consent-release", (req, res) => {
         "year": getDate()
     });
 });
+
+app.use(airbrakeExpress.makeErrorHandler(airbrake));
 
 app.use((error, req, res, next) => {
 	console.log("RUNNING ERROR");
