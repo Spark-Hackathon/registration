@@ -192,7 +192,8 @@ router.post("/camper-register-queueing", async (req, res, next) => {
 				if (err) reject(err);
 				let camper_writeup;
 				let extra_camper_info = [];
-				item.guardian_number.replace(/[^0-9]/g, "");
+				item.guardian_number = item.guardian_number.replace(/[^0-9]/g, "");
+				item.guardian_number = item.guardian_number.length == 0 ? "0" : item.guardian_number;
 				item.guardian_number = parseInt(item.guardian_number, 10);
 				item.dob = new Date(item.dob);
 				item.dob = [item.dob.getFullYear(), item.dob.getMonth(), item.dob.getDate()].join("-");
@@ -209,10 +210,11 @@ router.post("/camper-register-queueing", async (req, res, next) => {
 					extra_camper_info.push(new_uuid);
 				}
 				// add them to the camper database, then enrollment based on their weeks
+				console.log("\nTEST", camper_writeup, extra_camper_info);
 				connection.query(camper_writeup, extra_camper_info, async (err) => {
-					if (err) reject(err);
+					if (err) return reject(err);
 					connection.query("SELECT id FROM camper WHERE first_name=? AND last_name=? AND email=?", [item.first_name, item.last_name, item.email], async (err, camper_id) => {
-						if (err) reject(err);
+						if (err) return reject(err);
 						//insert for each week they signed up for
 						let dead_weeks = [],
 							dead_count = 0;
@@ -233,13 +235,13 @@ router.post("/camper-register-queueing", async (req, res, next) => {
 							return new Promise((enroll_resolve, enroll_reject) => {
 								let loc = parseInt(week[1], 10);
 								connection.query("SELECT approved FROM enrollment WHERE week_id=? AND camper_id=?", [week[0], camper_id[0].id], (err, camper_enroll_value) => {
-									if (err) console.log(err);
+									if (err) return enroll_reject(err);
 									let approved_value = camper_enroll_value && camper_enroll_value.length && camper_enroll_value[0].approved == 1 ? 1 : 0;
 									connection.query("INSERT INTO enrollment (camper_id, week_id, signup_time, person_loc, approved) VALUES " +
 										"(?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE signup_time=?, person_loc=?, approved=?", [camper_id[0].id, week[0], new Date(), loc  - 1, 0, new Date(), week[1] - 1, approved_value], (err) => {
-											if (err) enroll_reject(err);
+											if (err) return enroll_reject(err);
 											connection.query("SELECT id, question_text FROM question_meta WHERE week_id=?", week[0], (err, questions) => {
-												if (err) enroll_reject(err);
+												if (err) return enroll_reject(err);
 												if (questions.length) enroll_resolve(questions);
 												enroll_resolve([]);
 											});
@@ -301,7 +303,7 @@ router.post("/camper-register-queueing", async (req, res, next) => {
 								});
 							});
 						} catch (error) {
-							reject(error);
+							return reject(error);
 						}
 					});
 				});
