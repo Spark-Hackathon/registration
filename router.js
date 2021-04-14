@@ -10,9 +10,9 @@ const fs = require("fs");
 const {
 	getDate
 } = require("./utils");
-const {
-	sheet
-} = require("./googletest/sheeter.js");
+// const {
+// 	sheet
+// } = require("./googletest/sheeter.js");
 
 const type_meta = {
 	designer: 0,
@@ -804,7 +804,7 @@ router.post("/admin/export/all", async (req, res, next) => {
 router.post("/admin/sync-sheet", async (req, res, next) => {
 	try {
 		await admin_validate(req.body.code);
-		await sheet;
+		//await sheet();
 		res.end("Go check the sheet!");
 	} catch (error) {
 		console.error(error);

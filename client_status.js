@@ -75,9 +75,14 @@ client.post("/change-person-loc", async (req, res, next) => {
 });
 
 function pull_camper_info(unique_id) {
+	console.log(unique_id);
 	return new Promise((resolve, reject) => {
-		connection.query("SELECT id, first_name, last_name, COUNT(medical_forms.camper_id) AS med, COUNT(consent_release.camper_id) AS consent FROM camper LEFT JOIN medical_forms ON camper.id = medical_forms.camper_id LEFT JOIN consent_release ON camper.id = consent_release.camper_id WHERE camper.camper_unique_id=?", unique_id, (err, camper_info) => {
-			if (err) return reject(err);
+		connection.query("SELECT id, first_name, last_name, COUNT(medical_forms.camper_id) AS med, COUNT(consent_release.camper_id) AS consent FROM camper " + 
+			"LEFT JOIN medical_forms ON camper.id = medical_forms.camper_id LEFT JOIN consent_release ON camper.id = consent_release.camper_id WHERE camper.camper_unique_id=?", unique_id, (err, camper_info) => {
+			if (err) {
+				console.log(err);
+				return reject(err);
+			}
 			if (!camper_info || !camper_info.length || camper_info[0].id == undefined) reject("No camper under the specified value");
 			let camper_obj = {};
 			camper_obj.camper_id = camper_info[0].id;
@@ -293,7 +298,6 @@ client.post("/submit-health-forms", async (req, res, next) => {
 			throw error;
 		}
 	} catch (error) {
-		console.error(error);
 		error.message = "Looks like submitting the health forms didn't work, try reloading?";
 		next(error);
 	}
@@ -310,7 +314,6 @@ client.post("/consent-and-release", async (req, res, next) => {
 		});
 		res.redirect("/get-status?unique_id=" + req.body.unique_id);
 	} catch (error) {
-		console.error(error);
 		error.message = "Submitting the consent form didn't work... try reloading?";
 		next(error);
 	}
