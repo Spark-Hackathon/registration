@@ -259,6 +259,7 @@ client.post("/submit-health-forms", async (req, res, next) => {
 				}
 			}
 		});
+		console.log(medical_forms_input);
 		for (let med = 1; med < medical_forms_input.length; med++) {
 			medical_forms_input[med] = encrypt(medical_forms_input[med]);
 		}
