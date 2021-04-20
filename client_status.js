@@ -77,54 +77,54 @@ client.post("/change-person-loc", async (req, res, next) => {
 function pull_camper_info(unique_id) {
 	console.log(unique_id);
 	return new Promise((resolve, reject) => {
-		connection.query("SELECT id, first_name, last_name, COUNT(medical_forms.camper_id) AS med, COUNT(consent_release.camper_id) AS consent FROM camper " + 
+		connection.query("SELECT id, first_name, last_name, COUNT(medical_forms.camper_id) AS med, COUNT(consent_release.camper_id) AS consent FROM camper " +
 			"LEFT JOIN medical_forms ON camper.id = medical_forms.camper_id LEFT JOIN consent_release ON camper.id = consent_release.camper_id WHERE camper.camper_unique_id=?", unique_id, (err, camper_info) => {
-			if (err) {
-				console.log(err);
-				return reject(err);
-			}
-			if (!camper_info || !camper_info.length || camper_info[0].id == undefined) reject("No camper under the specified value");
-			let camper_obj = {};
-			camper_obj.camper_id = camper_info[0].id;
-			camper_obj.first_name = camper_info[0].first_name;
-			camper_obj.last_name = camper_info[0].last_name;
-			camper_obj.weeks = [];
-			connection.query("SELECT title, person_loc, approved FROM week INNER JOIN enrollment ON week.id = enrollment.week_id WHERE camper_id=?", camper_info[0].id, (err, camper_week_info) => {
-				if (err) return reject(err);
-				if (!camper_week_info || !camper_week_info.length) return reject("No enrollment values");
-				let med_forms_required = false;
-				let consent_required = false;
-				let in_person_value = false;
-				camper_week_info.forEach((item, index) => {
-					consent_required = (item.approved == 1 || consent_required) ? true : false;
-					in_person_value = (item.person_loc == 1 || in_person_value) ? true : false;
-					let person_loc_bool = item.person_loc == 1 ? true : false;
-					let approved_bool = item.approved == 1 ? true : false;
-					camper_obj.weeks.push({
-						title: item.title,
-						person_loc: person_loc_bool,
-						approved: approved_bool
+				if (err) {
+					console.log(err);
+					return reject(err);
+				}
+				if (!camper_info || !camper_info.length || camper_info[0].id == undefined) reject("No camper under the specified value");
+				let camper_obj = {};
+				camper_obj.camper_id = camper_info[0].id;
+				camper_obj.first_name = camper_info[0].first_name;
+				camper_obj.last_name = camper_info[0].last_name;
+				camper_obj.weeks = [];
+				connection.query("SELECT title, person_loc, approved FROM week INNER JOIN enrollment ON week.id = enrollment.week_id WHERE camper_id=?", camper_info[0].id, (err, camper_week_info) => {
+					if (err) return reject(err);
+					if (!camper_week_info || !camper_week_info.length) return reject("No enrollment values");
+					let med_forms_required = false;
+					let consent_required = false;
+					let in_person_value = false;
+					camper_week_info.forEach((item, index) => {
+						consent_required = (item.approved == 1 || consent_required) ? true : false;
+						in_person_value = (item.person_loc == 1 || in_person_value) ? true : false;
+						let person_loc_bool = item.person_loc == 1 ? true : false;
+						let approved_bool = item.approved == 1 ? true : false;
+						camper_obj.weeks.push({
+							title: item.title,
+							person_loc: person_loc_bool,
+							approved: approved_bool
+						});
 					});
+					med_forms_required = (consent_required && in_person_value) ? true : false;
+					// resolve what needs to be completed for each form: if both med and consent count are already 1, then every one of the boxes is checked, otherwise, need to do much more researching
+					camper_obj.showing_consent_option = +consent_required;
+					camper_obj.showing_consent_option = camper_obj.showing_consent_option == 1 ? true : false;
+					camper_obj.consent_completion = camper_info[0].consent;
+					camper_obj.consent_completion = camper_obj.consent_completion == 1 ? true : false;
+					camper_obj.showing_med_option = +med_forms_required;
+					camper_obj.showing_med_option = camper_obj.showing_med_option == 1 ? true : false;
+					camper_obj.med_completion = camper_info[0].med;
+					camper_obj.med_completion = camper_obj.med_completion == 1 ? true : false;
+					//now run through and see which "forms_need_completion" string to put
+					let string = (camper_obj.showing_consent_option && !camper_obj.showing_med_option) ? "consent form" : "forms";
+					if (camper_obj.showing_consent_option) camper_obj.forms_need_completion = "Have you completed your " + string + "?";
+					if (camper_obj.showing_consent_option && camper_obj.consent_completion == 0 && camper_obj.med_completion == 1) camper_obj.forms_need_completion = "Make sure to complete the complete the consent and release form";
+					if (camper_obj.showing_med_option && camper_obj.med_completion == 0 && camper_obj.consent_completion) camper_obj.forms_need_completion = "Have you completed your health form?";
+					if (camper_obj.consent_completion && camper_obj.med_completion) camper_obj.forms_need_completion = "Forms all completed! Resubmit form to change health information";
+					resolve(camper_obj);
 				});
-				med_forms_required = (consent_required && in_person_value) ? true : false;
-				// resolve what needs to be completed for each form: if both med and consent count are already 1, then every one of the boxes is checked, otherwise, need to do much more researching
-				camper_obj.showing_consent_option = +consent_required;
-				camper_obj.showing_consent_option = camper_obj.showing_consent_option == 1 ? true : false;
-				camper_obj.consent_completion = camper_info[0].consent;
-				camper_obj.consent_completion = camper_obj.consent_completion == 1 ? true : false;
-				camper_obj.showing_med_option = +med_forms_required;
-				camper_obj.showing_med_option = camper_obj.showing_med_option == 1 ? true : false;
-				camper_obj.med_completion = camper_info[0].med;
-				camper_obj.med_completion = camper_obj.med_completion == 1 ? true : false;
-				//now run through and see which "forms_need_completion" string to put
-				let string = (camper_obj.showing_consent_option && !camper_obj.showing_med_option) ? "consent form" : "forms";
-				if (camper_obj.showing_consent_option) camper_obj.forms_need_completion = "Have you completed your " + string + "?";
-				if (camper_obj.showing_consent_option && camper_obj.consent_completion == 0 && camper_obj.med_completion == 1) camper_obj.forms_need_completion = "Make sure to complete the complete the consent and release form";
-				if (camper_obj.showing_med_option && camper_obj.med_completion == 0 && camper_obj.consent_completion) camper_obj.forms_need_completion = "Have you completed your health form?";
-				if (camper_obj.consent_completion && camper_obj.med_completion) camper_obj.forms_need_completion = "Forms all completed! Resubmit form to change health information";
-				resolve(camper_obj);
 			});
-		});
 	})
 }
 
@@ -176,7 +176,6 @@ function pull_camper_id(unique_id, need_location) {
 function insert_medical_health_values(camper_id, query_string, query_questions, query_update, camper_values) {
 	return new Promise((resolve, reject) => {
 		camper_values = camper_values.concat(camper_values);
-		console.log(query_string + query_questions + query_update, camper_values);
 		connection.query(query_string + query_questions + query_update, camper_values, (err) => {
 			if (err) return reject(err);
 			resolve();
@@ -187,93 +186,93 @@ function insert_medical_health_values(camper_id, query_string, query_questions, 
 client.post("/submit-health-forms", async (req, res, next) => {
 	//get data, make new array with all data stored as encrypted version, insert into database
 	try {
-		let med_values = {};
 		let medical_forms_input = [];
-		let insert_statement = "INSERT INTO medical_forms (";
-		let value_statement = " VALUES (";
-		let update_statement = " ON DUPLICATE KEY UPDATE ";
-		let index_counter = 0;
-		let save_unique_id = req.body.unique_id;
-		req.body.unique_id = await pull_camper_id(req.body.unique_id, 1);
-		Object.keys(req.body).forEach(async (item, index) => {
-			if (item.substring(item.length - 15) != "medication_name" &&
-				item.substring(item.length - 17) != "medication_dosage" &&
-				item.substring(item.length - 16) != "medication_times" &&
-				item.substring(item.length - 16) != "medication_notes") {
-				if (item == "wavier_accept") {
-					if (req.body[item] == "0") throw "You must accept the wavier to submit";
-				} else if (item == "covid_accept") {
-					if (req.body[item] == "0") throw "You must accept the covid wavier to submit";
-				} else {
-					index_counter++;
-					console.log("ROUND?", item, index_counter, "KEYS VALUE",
-						index_counter == 16);
-					let comma = index_counter == 17 ? ")" : ", ";
-					let item_name = item == "allergies" ? "allergies_text" : item;
-					item_name = item == "epipen" ? "epi_pen_info" : item_name;
-					item_name = item == "unique_id" ? "camper_id" : item_name;
-					insert_statement += item_name + comma;
-					value_statement += "?" + comma;
-					comma = comma == ")" ? "" : comma;
-					update_statement += item_name + "=?" + comma;
-					let med_value = req.body[item] == "1" ? "yes" : "";
-					med_value = req.body[item] == "0" ? "no" : "";
-					req.body[item] = med_value == "yes" || med_value == "no" ? med_value : req.body[item];
-					req.body[item] = req.body[item].toString().length ? req.body[item] : "none";
-					medical_forms_input.push(req.body[item]);
-				}
-			} else {
-				// Figure out which one you are trying to add
-				if (item.substring(item.length - 15) == "medication_name") {
-					if (typeof med_values[item.substring(0, item.length - 16)] == "undefined")
-						med_values[item.substring(0, item.length - 16)] = {};
-					med_values[item.substring(0, item.length - 16)] = { ...med_values[item.substring(0, item.length - 16)],
-						...{
-							medication_name: req.body[item]
-						}
-					};
-				} else if (item.substring(item.length - 17) == "medication_dosage") {
-					if (typeof med_values[item.substring(0, item.length - 18)] == "undefined")
-						med_values[item.substring(0, item.length - 18)] = {};
-					med_values[item.substring(0, item.length - 18)] = { ...med_values[item.substring(0, item.length - 18)],
-						...{
-							medication_dosage: req.body[item]
-						}
-					};
-				} else if (item.substring(item.length - 16) == "medication_times") {
-					if (typeof med_values[item.substring(0, item.length - 17)] == "undefined")
-						med_values[item.substring(0, item.length - 17)] = {};
-					med_values[item.substring(0, item.length - 17)] = { ...med_values[item.substring(0, item.length - 17)],
-						...{
-							medication_times: req.body[item]
-						}
-					};
-				} else {
-					if (typeof med_values[item.substring(0, item.length - 17)] == "undefined")
-						med_values[item.substring(0, item.length - 17)] = {};
-					med_values[item.substring(0, item.length - 17)] = { ...med_values[item.substring(0, item.length - 17)],
-						...{
-							medication_notes: req.body[item]
-						}
-					};
-				}
-			}
-		});
-		console.log(medical_forms_input);
-		for (let med = 1; med < medical_forms_input.length; med++) {
-			medical_forms_input[med] = encrypt(medical_forms_input[med]);
-		}
-		await insert_medical_health_values(medical_forms_input[0], insert_statement, value_statement, update_statement, medical_forms_input);
-		//go through meds and encrypt them
+		let med_values = {};
 		let meds = [];
-		Object.keys(med_values).forEach((item, index) => {
-			meds[index] = [];
-			Object.keys(med_values[item]).forEach((med, ind) => {
-				meds[index][ind] = encrypt(med_values[item][med]);
+		let save_unique_id = req.body.unique_id;
+		await new Promise(async (resolve, reject) => {
+			let insert_statement = "INSERT INTO medical_forms (";
+			let value_statement = " VALUES (";
+			let update_statement = " ON DUPLICATE KEY UPDATE ";
+			let index_counter = 0;
+			req.body.unique_id = await pull_camper_id(req.body.unique_id, 1);
+			Object.keys(req.body).forEach(async (item, index) => {
+				if (item.substring(item.length - 15) != "medication_name" &&
+					item.substring(item.length - 17) != "medication_dosage" &&
+					item.substring(item.length - 16) != "medication_times" &&
+					item.substring(item.length - 16) != "medication_notes") {
+					if (item == "wavier_accept") {
+						if (req.body[item] == "0") return reject(1);
+					} else if (item == "covid_accept") {
+						if (req.body[item] == "0") return reject(2);
+					} else {
+						index_counter++;
+						let comma = index_counter == 17 ? ")" : ", ";
+						let item_name = item == "allergies" ? "allergies_text" : item;
+						item_name = item == "epipen" ? "epi_pen_info" : item_name;
+						item_name = item == "unique_id" ? "camper_id" : item_name;
+						insert_statement += item_name + comma;
+						value_statement += "?" + comma;
+						comma = comma == ")" ? "" : comma;
+						update_statement += item_name + "=?" + comma;
+						let med_value = req.body[item] == "1" ? "yes" : "";
+						med_value = req.body[item] == "0" ? "no" : "";
+						req.body[item] = med_value == "yes" || med_value == "no" ? med_value : req.body[item];
+						req.body[item] = req.body[item].toString().length ? req.body[item] : "none";
+						medical_forms_input.push(req.body[item]);
+					}
+				} else {
+					// Figure out which one you are trying to add
+					if (item.substring(item.length - 15) == "medication_name") {
+						if (typeof med_values[item.substring(0, item.length - 16)] == "undefined")
+							med_values[item.substring(0, item.length - 16)] = {};
+						med_values[item.substring(0, item.length - 16)] = { ...med_values[item.substring(0, item.length - 16)],
+							...{
+								medication_name: req.body[item]
+							}
+						};
+					} else if (item.substring(item.length - 17) == "medication_dosage") {
+						if (typeof med_values[item.substring(0, item.length - 18)] == "undefined")
+							med_values[item.substring(0, item.length - 18)] = {};
+						med_values[item.substring(0, item.length - 18)] = { ...med_values[item.substring(0, item.length - 18)],
+							...{
+								medication_dosage: req.body[item]
+							}
+						};
+					} else if (item.substring(item.length - 16) == "medication_times") {
+						if (typeof med_values[item.substring(0, item.length - 17)] == "undefined")
+							med_values[item.substring(0, item.length - 17)] = {};
+						med_values[item.substring(0, item.length - 17)] = { ...med_values[item.substring(0, item.length - 17)],
+							...{
+								medication_times: req.body[item]
+							}
+						};
+					} else {
+						if (typeof med_values[item.substring(0, item.length - 17)] == "undefined")
+							med_values[item.substring(0, item.length - 17)] = {};
+						med_values[item.substring(0, item.length - 17)] = { ...med_values[item.substring(0, item.length - 17)],
+							...{
+								medication_notes: req.body[item]
+							}
+						};
+					}
+				}
 			});
-			meds[index] = [req.body.unique_id].concat(meds[index]);
+			console.log(medical_forms_input);
+			for (let med = 1; med < medical_forms_input.length; med++) {
+				medical_forms_input[med] = encrypt(medical_forms_input[med]);
+			}
+			await insert_medical_health_values(medical_forms_input[0], insert_statement, value_statement, update_statement, medical_forms_input);
+			//go through meds and encrypt them
+			Object.keys(med_values).forEach((item, index) => {
+				meds[index] = [];
+				Object.keys(med_values[item]).forEach((med, ind) => {
+					meds[index][ind] = encrypt(med_values[item][med]);
+				});
+				meds[index] = [req.body.unique_id].concat(meds[index]);
+			});
+			resolve();
 		});
-		console.log(meds, "\n");
 		try {
 			let final_meds_query = await new Promise((outer_resolve, outer_reject) => {
 				connection.query("DELETE FROM meds WHERE camper_id=?", medical_forms_input[0], async (err) => {
@@ -299,7 +298,12 @@ client.post("/submit-health-forms", async (req, res, next) => {
 			throw error;
 		}
 	} catch (error) {
-		error.message = "Looks like submitting the health forms didn't work, try reloading?";
+		error = {
+			mainload: error
+		};
+		error.message = error.mainload == 1 ? "You must accept the wavier to submit. Press back and alter the form, then resubmit." : error.mainload == 2 ?
+			"You must accept the COVID-19 Protocols to submit. Press back and alter the form, then resubmit." :
+			"Looks like submitting the health forms didn't work, try reloading?";
 		next(error);
 	}
 });
