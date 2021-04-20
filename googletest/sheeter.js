@@ -4,7 +4,7 @@ const {
 const mysql = require('mysql2');
 const path = require('path');
 require('dotenv').config({
-	path: path.resolve(__dirname, '../.env')
+	path: path.resolve(path.join(__dirname, '../.env'))
 });
 const doc = new GoogleSpreadsheet(process.env.GOOGLE_SPREADSHEET_ID);
 
