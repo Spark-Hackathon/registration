@@ -10,9 +10,9 @@ const fs = require("fs");
 const {
 	getDate
 } = require("./utils");
-const {
-	sheet
-} = require("./googletest/sheeter.js");
+// const {
+// 	sheet
+// } = require("./googletest/sheeter.js");
 
 const type_meta = {
 	designer: 0,
@@ -82,6 +82,7 @@ function admin_validate(code) {
 }
 
 function full_sendmail(to, subject, text, replacement) {
+	if (!/^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)*$/.test(to)) return false; 
 	console.log("send mail", to, subject, text, replacement);
 	Object.keys(replacement).forEach((item, index) => {
 		let string = "{{" + item.toUpperCase() + "}}";
@@ -96,7 +97,7 @@ function full_sendmail(to, subject, text, replacement) {
 			replyTo: 'spark@stab.org',
 			to: to,
 			subject: subject,
-			text: text
+			html: text
 		}, (err, info) => {
 			if (err) {
 				err.send_mail_info = info;
@@ -191,6 +192,12 @@ router.post("/camper-register-queueing", async (req, res, next) => {
 				if (err) reject(err);
 				let camper_writeup;
 				let extra_camper_info = [];
+				item.guardian_number = item.guardian_number.replace(/[^0-9]/g, "");
+				item.guardian_number = item.guardian_number.length == 0 ? "0" : item.guardian_number;
+				item.guardian_number = parseInt(item.guardian_number, 10);
+				item.dob = new Date(item.dob);
+				item.dob.setTime(item.dob.getTime() + (item.dob.getHours()*60*60*1000));
+				item.dob = [item.dob.getFullYear(), item.dob.getMonth() + 1, item.dob.getDate()].join("-");
 				extra_camper_info.push(item.first_name, item.last_name, item.email, item.dob, item.school, item.grade, item.gender, item.type, item.race_ethnicity,
 					item.hopes, item.tshirt_size, item.borrow_laptop, item.guardian_name, item.guardian_email, item.guardian_number, item.participated);
 				if (pre_id && pre_id.length) {
@@ -204,10 +211,11 @@ router.post("/camper-register-queueing", async (req, res, next) => {
 					extra_camper_info.push(new_uuid);
 				}
 				// add them to the camper database, then enrollment based on their weeks
+				console.log("\nTEST", camper_writeup, extra_camper_info);
 				connection.query(camper_writeup, extra_camper_info, async (err) => {
-					if (err) reject(err);
+					if (err) return reject(err);
 					connection.query("SELECT id FROM camper WHERE first_name=? AND last_name=? AND email=?", [item.first_name, item.last_name, item.email], async (err, camper_id) => {
-						if (err) reject(err);
+						if (err) return reject(err);
 						//insert for each week they signed up for
 						let dead_weeks = [],
 							dead_count = 0;
@@ -226,14 +234,15 @@ router.post("/camper-register-queueing", async (req, res, next) => {
 						});
 						async function enrollmentInsert(week) {
 							return new Promise((enroll_resolve, enroll_reject) => {
+								let loc = parseInt(week[1], 10);
 								connection.query("SELECT approved FROM enrollment WHERE week_id=? AND camper_id=?", [week[0], camper_id[0].id], (err, camper_enroll_value) => {
-									if (err) console.log(err);
+									if (err) return enroll_reject(err);
 									let approved_value = camper_enroll_value && camper_enroll_value.length && camper_enroll_value[0].approved == 1 ? 1 : 0;
 									connection.query("INSERT INTO enrollment (camper_id, week_id, signup_time, person_loc, approved) VALUES " +
-										"(?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE signup_time=?, person_loc=?, approved=?", [camper_id[0].id, week[0], new Date(), week[1] - 1, 0, 0, new Date(), week[1] - 1, approved_value], (err) => {
-											if (err) enroll_reject(err);
+										"(?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE signup_time=?, person_loc=?, approved=?", [camper_id[0].id, week[0], new Date(), loc  - 1, 0, new Date(), week[1] - 1, approved_value], (err) => {
+											if (err) return enroll_reject(err);
 											connection.query("SELECT id, question_text FROM question_meta WHERE week_id=?", week[0], (err, questions) => {
-												if (err) enroll_reject(err);
+												if (err) return enroll_reject(err);
 												if (questions.length) enroll_resolve(questions);
 												enroll_resolve([]);
 											});
@@ -295,7 +304,7 @@ router.post("/camper-register-queueing", async (req, res, next) => {
 								});
 							});
 						} catch (error) {
-							reject(error);
+							return reject(error);
 						}
 					});
 				});
@@ -343,7 +352,7 @@ router.post("/signup-prospect", async (req, res, next) => {
 		email_obj.first_name = split_name[0];
 		email_obj.last_name = split_name[0] == split_name[split_name.length - 1] ? "" : split_name[split_name.length - 1];
 		email_obj.url = "If you ever want to unsubscribe, go to this link: " + process.env.CURRENT_URL + "unsubscribe";
-		await full_sendmail(req.body.email, "You've singed up for updates", email_text, email_obj);
+		await full_sendmail(req.body.email, "You've signed up for updates!", email_text, email_obj);
 		res.redirect("/updates/thank-you");
 	} catch (error) {
 		error.message = "Hmm... Looks like signing up didn't work, try reloading?";
@@ -795,7 +804,7 @@ router.post("/admin/export/all", async (req, res, next) => {
 router.post("/admin/sync-sheet", async (req, res, next) => {
 	try {
 		await admin_validate(req.body.code);
-		await sheet;
+		//await sheet();
 		res.end("Go check the sheet!");
 	} catch (error) {
 		console.error(error);
@@ -817,7 +826,7 @@ function application_accept(id, week) {
 						first_name: email_info[0].first_name,
 						last_name: email_info[0].last_name,
 						week_name: week,
-						url: process.env.CURRENT_URL + "reg-status?unique_id=" + email_info[0].camper_unique_id
+						url: process.env.CURRENT_URL + "get-status?unique_id=" + email_info[0].camper_unique_id
 					};
 					await full_sendmail(email_info[0].email, "You were accepted for " + week + " week", apply_camper_file, email_obj);
 					let apply_guardian_file = fs.readFileSync(path.join(__dirname, "emailTemplates", "accepting_camper_app_guardian")).toString();
