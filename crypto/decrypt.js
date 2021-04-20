@@ -9,7 +9,6 @@ module.exports = {
 	decrypt: (item_decrypt) => {
 		let decipherString = "";
 		let chunks = item_decrypt.split("==");
-		console.log(chunks);
 		chunks.forEach((chunk) => {
 			decipherString += chunk.length ? module.exports.chunk_decrypt(chunk + "==") : '';
 		});
