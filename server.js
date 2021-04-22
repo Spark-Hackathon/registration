@@ -122,9 +122,9 @@ app.use(airbrakeExpress.makeErrorHandler(airbrake));
 
 app.use((error, req, res, next) => {
 	console.log("RUNNING ERROR");
-	console.error(error);
+	console.error(error, error.message);
 	res.render("error", {
-		title: `Help! – Summer Camp ${getDate()}`,
+		title: `Help! – Spark Camp ${getDate()}`,
 		error: error.message
 	})
 });

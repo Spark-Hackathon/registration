@@ -36,7 +36,7 @@ function ConvertToCSV(objArray) {
 		let line = '';
 		for (let index in array[i]) {
 			if (line != '') line += ','
-			line += array[i][index];
+			line += "\"" + array[i][index] + "\"";
 		}
 		str += line + '\r\n';
 	}
@@ -99,6 +99,11 @@ async function run_query() {
 			});
 			await Promise.all(return_meds).then(campers => {
 				campers.forEach((item) => {
+					item.forEach((inner) => {
+						Object.values(inner_inner => {
+							inner_inner = inner_inner.toString().replace(/"/g, '\\\"');
+						});
+					});
 					if (item != "NO VALUE") all_meds = all_meds.concat(item);
 				});
 			});

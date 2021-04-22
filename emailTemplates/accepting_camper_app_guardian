@@ -1,8 +1,15 @@
-Hello {{FIRST_NAME}} {{LAST_NAME}},
+<pre><font face="arial">Hello {{FIRST_NAME}} {{LAST_NAME}},
 
-Congrats! {{CHILD_NAME}} has been accepted for {{WEEK_NAME}} week. Go to the following link to check out your status for other weeks, and make sure to fill out the required registration paperwork for {{CHILD_NAME}}.
+{{CHILD_NAME}} has been accepted for {{WEEK_NAME}} week at Summer Spark 2021. Go to the <a href="{{URL}}">status page</a> to check out their status for this and other weeks, and make sure to complete the required registration paperwork (health information; required consent & release) for {{CHILD_NAME}} soon.
 
-{{URL}}
+Please expect an email from us a little later this spring with extra logistical details about attending camp and what to bring. For now, you should know:
+	* This week of camp runs from {{START}} to {{END}}.
+	* Camp runs from 9am EDT to 4pm EDT.
+	* If {{CHILD_NAME}} is attending in person, we'll let you know a bit later how early you can drop off & pick up.
+	* If {{CHILD_NAME}} is an online camper, camp will be available 24/7 during the camp week, but synchronous activities (live streaming events, video calls) with your cabin will happen at different times between 9am and 4pm. We'll publish a daily schedule before camp begins.
+	* Please let us know by email at spark@stab.org if you need to switch between in-person and virtual options, as space is limited.
 
-From,
-Spark Camp
+Thank you for your support this summer,
+-- Summer Spark Program
+Email: spark@stab.org
+Website: https://summerspark.stab.org/</font></pre>
