@@ -216,7 +216,7 @@ client.post("/submit-health-forms", async (req, res, next) => {
 						comma = comma == ")" ? "" : comma;
 						update_statement += item_name + "=?" + comma;
 						let med_value = req.body[item] == "1" ? "yes" : "no";
-						req.body[item] = med_value == "yes" || med_value == "no" ? med_value : req.body[item];
+						req.body[item] = (med_value == "yes" || med_value == "no") && (req.body[item] == "1" || req.body[item] == "0") ? med_value : req.body[item];
 						req.body[item] = req.body[item].toString().length ? req.body[item] : "none";
 						medical_forms_input.push(req.body[item]);
 					}
