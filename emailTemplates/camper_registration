@@ -1,6 +1,6 @@
-Hey {{FIRST_NAME}} {{LAST_NAME}}!
+<pre><font face="arial">Hey {{FIRST_NAME}} {{LAST_NAME}}!
 
 Thanks for applying to camp! We'll check out your application and get back to you in a bit.
 
 From,
-Spark Camp
+Spark Camp</font></pre>
