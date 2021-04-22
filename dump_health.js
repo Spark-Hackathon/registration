@@ -100,7 +100,9 @@ async function run_query() {
 			await Promise.all(return_meds).then(campers => {
 				campers.forEach((item) => {
 					item.forEach((inner) => {
-						inner = inner.replace(/"/g, '\\\"');
+						Object.values(inner_inner => {
+							inner_inner = inner_inner.toString().replace(/"/g, '\\\"');
+						});
 					});
 					if (item != "NO VALUE") all_meds = all_meds.concat(item);
 				});
