@@ -154,7 +154,8 @@ const camper_schema = Joi.object({
 	participated: Joi.number().max(1).required(),
 });
 
-let months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
 router.get("/open-weeks", (req, res) => {
 	let week_data = [];
@@ -822,10 +823,16 @@ function application_accept(id, week) {
 				connection.query("UPDATE enrollment SET approved=1, approved_time=? WHERE camper_id=? AND week_id=?", [approved_date, id, week_meta.get(week).id], async (err) => {
 					if (err) reject(err);
 					let apply_camper_file = fs.readFileSync(path.join(__dirname, "emailTemplates", "accepting_camper_app")).toString();
+					let start_date = new Date(week_meta.get(week).start_date);
+					let end_date = new Date(week_meta.get(week).end_date);
+					start_date = days[start_date.getDay()] + ", " +  months[parseInt(start_date.toLocaleDateString('en-US').split("/")[0], 10) - 1] + " " + start_date.toLocaleDateString('en-US').split("/")[1];
+                			end_date = days[end_date.getDay()] + ", " + months[parseInt(end_date.toLocaleDateString('en-US').split("/")[0], 10) - 1] + " " + end_date.toLocaleDateString('en-US').split("/")[1];
 					let email_obj = {
 						first_name: email_info[0].first_name,
 						last_name: email_info[0].last_name,
 						week_name: week,
+						start: start_date,
+						end: end_date,
 						url: process.env.CURRENT_URL + "get-status?unique_id=" + email_info[0].camper_unique_id
 					};
 					await full_sendmail(email_info[0].email, "You were accepted for " + week + " week", apply_camper_file, email_obj);
@@ -836,8 +843,10 @@ function application_accept(id, week) {
 						first_name: split_name[0],
 						last_name: latter_name,
 						child_name: email_info[0].first_name,
+						start: start_date,
+						end: end_date,
 						week_name: week,
-						url: process.env.CURRENT_URL + "reg-status?unique_id=" + email_info[0].camper_unique_id
+						url: process.env.CURRENT_URL + "get-status?unique_id=" + email_info[0].camper_unique_id
 					}
 					resolve(await full_sendmail(email_info[0].guardian_email, email_info[0].first_name + " was accepted for " + week + " week", apply_guardian_file, email_obj));
 				});
