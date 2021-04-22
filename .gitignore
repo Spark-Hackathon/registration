@@ -1,3 +1,6 @@
 node_modules/
 .DS_Store
 .env
+bash_testConnection
+prospect_load.js
+sheet_all_over
