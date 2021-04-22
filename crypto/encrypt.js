@@ -1,7 +1,7 @@
 const crypto = require('crypto');
 const fs = require('fs');
 
-const chunk_size = 64;
+const chunk_size = 32;
 const linux_v_windows = "=="; // linux is none, windows is 2 (likely as well as mac but wouldn't know)
 
 module.exports = {
