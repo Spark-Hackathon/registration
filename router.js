@@ -2,12 +2,12 @@ const bodyParser = require("body-parser");
 const nodemail = require("nodemailer");
 const sendmail = require("sendmail");
 const express = require("express");
-const mysql = require("mysql2");
 const path = require("path");
 const Joi = require("joi");
 const fs = require("fs");
 
 const {
+	connection,
 	getDate
 } = require("./utils");
 // const {
@@ -33,19 +33,6 @@ let transporter = nodemail.createTransport({
 	sendmail: true,
 	newline: 'unix',
 	path: '/usr/sbin/sendmail'
-});
-
-//connect to db
-let connection = mysql.createConnection({
-	host: process.env.HOST,
-	database: process.env.DATABASE,
-	password: process.env.PASSWORD,
-	user: process.env.DB_USER,
-	insecureAuth: true
-});
-
-connection.connect((err) => {
-	if (err) throw err;
 });
 
 let week_meta;
@@ -1005,33 +992,6 @@ router.post("/admin/send-mail", async (req, res, next) => { //ADMIN
 	} catch (error) {
 		error.message = "Hmm... Looks like sending mail didn't work, try reloading?";
 		next(error);
-	}
-});
-
-router.post("/isDatabaseConnected", (req, res, next) => {
-	if (req.body.code == process.env.DATABASE_CHECK_CODE) {
-		console.log("System received database check");
-		connection.query("SELECT value_str FROM system_settings", function(err, value) {
-	    		if (!err) {
-	      			res.end("No error :)");
-	    		}
-			if (err) {
-				connection = mysql.createConnection({
-				        host: process.env.HOST,
-				        database: process.env.DATABASE,
-				        password: process.env.PASSWORD,
-				        user: process.env.DB_USER,
-				        insecureAuth: true
-				});
-				connection.connect((err) => {
-	        			if (err) throw err;
-					console.log("No restart error");
-					res.end("Mysql rebooted ;)");
-				});
-			}
-  		});
-	} else {
-		res.end("Incorrect code");
 	}
 });
 

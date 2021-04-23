@@ -8,7 +8,7 @@ const fetch = require("node-fetch");
 const bodyParser = require("body-parser");
 const exphbs = require("express-handlebars");
 
-const { getDate } = require("./utils");
+const { getDate, utilities } = require("./utils");
 const router = require("./router");
 const client = require("./client_status");
 
@@ -26,6 +26,7 @@ app.use(airbrakeExpress.makeMiddleware(airbrake));
 app.use(express.static(__dirname + "/public"));
 app.use("/", router);
 app.use("/", client);
+app.use("/", utilities);
 
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());

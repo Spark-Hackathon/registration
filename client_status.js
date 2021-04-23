@@ -6,6 +6,7 @@ const express = require("express");
 const mysql = require("mysql2");
 const path = require("path");
 const {
+	connection,
 	getDate
 } = require("./utils");
 
@@ -14,18 +15,6 @@ const {
 	encrypt
 } = require("./crypto/encrypt.js");
 const client = express.Router();
-
-const connection = mysql.createConnection({
-	host: process.env.HOST,
-	database: process.env.DATABASE,
-	password: process.env.PASSWORD,
-	user: process.env.DB_USER,
-	insecureAuth: true
-});
-
-connection.connect((err) => {
-	if (err) throw err;
-});
 
 function pull_id(unique_id) {
 	return new Promise((resolve, reject) => {
