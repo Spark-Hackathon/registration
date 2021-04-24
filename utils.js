@@ -19,6 +19,28 @@ connection.connect((err) => {
 
 const getDate = () => `'${new Date().getFullYear().toString().substr(-2)}`;
 
+const ConvertToCSV = function (objArray) {
+	let array = typeof objArray != 'object' ? JSON.parse(objArray) : objArray;
+	let str = '';
+	for (var i = 0; i < array.length; i++) {
+		if (i == 0) {
+			let key_line = '';
+			Object.keys(array[0]).forEach((item, index) => {
+				if (item != '' && index != 0) key_line += ',';
+				key_line += item;
+			});
+			str += key_line + '\r\n';
+		}
+		let line = '';
+		for (let index in array[i]) {
+			if (line != '') line += ','
+			line += "\"" + array[i][index] + "\"";
+		}
+		str += line + '\r\n';
+	}
+	return str;
+}
+
 // make connection to server
 const utilities = express.Router();
 
@@ -52,5 +74,6 @@ utilities.post("/isDatabaseConnected", (req, res, next) => {
 module.exports = {
 	connection,
 	utilities,
-    getDate
+    	getDate,
+	ConvertToCSV
 }

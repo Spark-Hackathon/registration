@@ -8,6 +8,7 @@ const {
 	decrypt,
 	chunk_decrypt
 } = require("./crypto/decrypt.js");
+const { ConvertToCSV } = require("./utils");
 
 const connection = mysql.createConnection({
 	host: process.env.HOST,
@@ -20,28 +21,6 @@ const connection = mysql.createConnection({
 connection.connect((err) => {
 	if (err) throw err;
 });
-
-function ConvertToCSV(objArray) {
-	let array = typeof objArray != 'object' ? JSON.parse(objArray) : objArray;
-	let str = '';
-	for (var i = 0; i < array.length; i++) {
-		if (i == 0) {
-			let key_line = '';
-			Object.keys(array[0]).forEach((item, index) => {
-				if (item != '' && index != 0) key_line += ',';
-				key_line += item;
-			});
-			str += key_line + '\r\n';
-		}
-		let line = '';
-		for (let index in array[i]) {
-			if (line != '') line += ','
-			line += "\"" + array[i][index] + "\"";
-		}
-		str += line + '\r\n';
-	}
-	return str;
-}
 
 function sort_value(first_value, second_value) {
 	if (first_value.week > second_value.week) return 1;
