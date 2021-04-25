@@ -181,7 +181,7 @@ fetch("/open-weeks")
 
             let not_coming_div = $(`<div class="ml-8 flex flex-row items-center"></div>`);
             let not_coming_label = $(`<label class="text-lg" for="${id}-not-coming">I will not attend this week</label>`);
-            let not_coming = $(`<input type="radio" class="mr-2" id="${id}-not-coming" name="${id}-status" value="0" />`);
+            let not_coming = $(`<input type="radio" class="mr-2" id="${id}-not-coming" name="${id}-status" value="0" required />`);
             not_coming_div.append(not_coming);
             not_coming_div.append(not_coming_label);
 
@@ -191,7 +191,7 @@ fetch("/open-weeks")
             if(virtual) {
                 let virtual_div = $(`<div class="ml-8 flex flex-row items-center"></div>`);
                 let virtual_label = $(`<label class="text-lg" for="${id}-virtual">I will attend virtually via Zoom</label>`);
-                let virtual = $(`<input type="radio" class="mr-2" id="${id}-virtual" name="${id}-status" value="1" />`);
+                let virtual = $(`<input type="radio" class="mr-2" id="${id}-virtual" name="${id}-status" value="1" required />`);
                 virtual_div.append(virtual);
                 virtual_div.append(virtual_label);
 
@@ -201,7 +201,7 @@ fetch("/open-weeks")
             if(in_person) {
                 let in_person_div = $(`<div class="ml-8 flex flex-row items-center"></div>`);
                 let in_person_label = $(`<label class="text-lg" for="${id}-in-person">I will attend in-person at St. Anne's-Belfield</label>`);
-                let in_person = $(`<input type="radio" class="mr-2" id="${id}-in-person" name="${id}-status" value="2" />`);
+                let in_person = $(`<input type="radio" class="mr-2" id="${id}-in-person" name="${id}-status" value="2" required />`);
                 in_person_div.append(in_person);
                 in_person_div.append(in_person_label);
 
