@@ -3,6 +3,14 @@
     <p class="mt-4 text-xl leading-normal text-gray-500 md:text-3xl md:leading-relaxed">Here you will find your status for the week(s) you've signed up for. Keep checking back to see if you've been accepted. Please make sure you also fill out the necessary paperwork below.</p>
 </header>
 
+<noscript>
+    <div class="mt-20 md:mt-36 border-4 border-black p-6">
+        <p>This page does not work if JavaScript is disabled. <a href="https://www.enable-javascript.com" class="underline text-yellow hover:text-yellow-dark transition duration-200" target="_blank">Here's an online guide for how to turn it on.</a></p>
+
+        <p class="mt-5">Otherwise, please fill out this form on Google Chrome, Firefox, or another web browser that supports JavaScript. We do not recommend Internet Explorer.</p>
+    </div>
+</noscript>
+
 <div class="mt-20">
     {{#if camper_info.showing_consent_option}}
         {{#if camper_info.consent_completion}}
