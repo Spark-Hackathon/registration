@@ -312,4 +312,12 @@ client.post("/consent-and-release", async (req, res, next) => {
 	}
 });
 
+client.get("/pull-url/:id", (req, res) => {
+	connection.query("SELECT camper_unique_id FROM camper WHERE id=?", req.params.id, (err, unique_id) => {
+		if (err) return res.end(err);
+		if (!unique_id.length) return res.end("No camper with specified id");
+		return res.end(process.env.CURRENT_URL + "get-status?unique_id=" + unique_id[0].camper_unique_id);
+	});
+});
+
 module.exports = client;
