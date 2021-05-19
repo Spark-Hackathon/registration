@@ -316,7 +316,7 @@ client.get("/pull-url/:id", (req, res) => {
 	connection.query("SELECT camper_unique_id FROM camper WHERE id=?", req.params.id, (err, unique_id) => {
 		if (err) return res.end(err.toString());
 		if (!unique_id.length) return res.end("No camper with specified id");
-		return res.end(process.env.CURRENT_URL + "get-status?unique_id=" + unique_id[0].camper_unique_id);
+		return res.end("<a href='" + process.env.CURRENT_URL + "get-status?unique_id=" + unique_id[0].camper_unique_id + "'>Camper's UUID: " + unique_id[0].camper_unique_id + "</a>");
 	});
 });
 
