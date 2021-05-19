@@ -108,6 +108,13 @@ app.get("/consent-release", (req, res) => {
     });
 });
 
+app.get("/status-page", (req, res) => {
+    res.render("status_page", {
+        "title": `Status — Spark Camp ${getDate()}`,
+        "year": getDate()
+    });
+});
+
 app.use((error, req, res, next) => {
 	console.log("RUNNING ERROR");
 	console.error(error);
