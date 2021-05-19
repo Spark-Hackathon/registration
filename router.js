@@ -241,7 +241,7 @@ router.post("/camper-register-queueing", async (req, res, next) => {
 						}
 						let questions = [];
 						let question_position = 0;
-						if (weeks.length == 0) reject("no camper value");
+						if (weeks.length == 0) return reject(1);
 						try {
 							await new Promise(async (enrolling_resolve, enrolling_reject) => {
 								let all_kills = dead_weeks.map((item, index) => {
@@ -300,7 +300,10 @@ router.post("/camper-register-queueing", async (req, res, next) => {
 			});
 		});
 	} catch (error) {
-		error.message = "Looks like there was an error applying, try reloading?";
+		error = {
+                        mainload: error
+                };
+		error.message = error.mainload == 1 ? "You need to apply for at least one week. Press back and select weeks" : "Looks like there was an error applying, try reloading?";
 		next(error);
 	}
 });
