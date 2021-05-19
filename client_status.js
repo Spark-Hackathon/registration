@@ -314,10 +314,25 @@ client.post("/consent-and-release", async (req, res, next) => {
 
 client.get("/pull-url/:id", (req, res) => {
 	connection.query("SELECT camper_unique_id FROM camper WHERE id=?", req.params.id, (err, unique_id) => {
-		if (err) return res.end(err);
+		if (err) return res.end(err.toString());
 		if (!unique_id.length) return res.end("No camper with specified id");
 		return res.end(process.env.CURRENT_URL + "get-status?unique_id=" + unique_id[0].camper_unique_id);
 	});
+});
+
+client.post("/redirect-status-page", async (req, res, next) => {
+	try {
+		// using req.body.first_name, req.body.last_name, req.body.email
+		await new Promise((resolve, reject) => {
+			connection.query("SELLECT camper_unique_id FROM camper WHERE first_name=? AND last_name=? AND email=?", [req.body.first_name, req.body.last_name, req.body.email], (err, rows) => {
+				if (err) return reject(err);
+				if (!rows.length) return reject("No camper with specified information");
+				res.redirect("/get-status?unique_id=" + rows[0].camper_unique_id);
+			});
+		});
+	} catch (error) {
+		error.message = "Something went wrong signing in"
+	}
 });
 
 module.exports = client;
