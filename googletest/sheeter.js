@@ -44,8 +44,19 @@ async function sheet() {
 						//going through each week -- make registered, then applicants sheet, then roll from there
 						//select the campers for that week
 						setTimeout(async () => {
-							connection.query("SELECT * FROM camper INNER JOIN enrollment ON camper.id = enrollment.camper_id && enrollment.week_id=?", id, async (err, camper_meta) => {
+							connection.query("SELECT * FROM camper INNER JOIN enrollment ON camper.id=enrollment.camper_id && enrollment.week_id=?", id, async (err, camper_meta) => {
 								if (err) console.log(err);
+
+								let grab_confirmed = camper_meta.map((camper) => {
+									return new Promise((camper_resolve, camper_reject) => {
+										connection.query("SELECT SUM(camper.table_count) AS counter FROM (SELECT COUNT(*) AS table_count FROM consent_release WHERE consent_release.camper_id=? UNION ALL SELECT COUNT(*) AS table_count FROM medical_forms WHERE medical_forms.camper_id=?)camper", [camper.id, camper.id], (err, count) => {
+											if (err || !count.length) return camper_reject(err);
+											camper.confirmed = camper.person_loc == 1 ? count[0].counter == 2 ? 1 : 0 : count[0].counter;
+											camper_resolve();
+										});
+									});
+								});
+								await Promise.all(grab_confirmed);
 								const registered_sheet = await doc.addSheet({
 									title: id + " " + title + " Registered",
 									headerValues: Object.keys(camper_meta[0])
