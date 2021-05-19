@@ -933,7 +933,7 @@ router.post("/admin/send-mail", async (req, res, next) => { //ADMIN
 			week_value += ")"
 			week_value += req.body.applicants == 1 && req.body.registered == 0 ? " AND approved=0" : "";
 			week_value += req.body.registered == 1 && req.body.applicants == 0 ? " AND approved=1" : "";
-			week_value += req.body.person_loc ? req.body.person_loc == 1 ? " AND person_loc=1" : " AND person_loc=0" : "";
+			week_value += (req.body.person_loc == 1 || req.body.person_loc == 0) ? req.body.person_loc == 1 ? " AND person_loc=1" : " AND person_loc=0" : "";
 			connection.query("SELECT DISTINCT camper_unique_id, first_name, last_name, email, guardian_name, guardian_email FROM enrollment INNER JOIN camper ON enrollment.camper_id = camper.id" + week_value, req.body.weeks, async (err, enrolled_info) => {
 				if (err) return reject(err);
 				//now run through each of the prospects / campers
