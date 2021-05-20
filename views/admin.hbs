@@ -130,7 +130,7 @@
                     <option value="1">Yes</option>
                 </select>
 
-                <label for="person_loc" class="block"><span class="mt-2 text-red-500 inline-block">*</span> Filter by Camper attendence method.</label>
+                <label for="person_loc" class="block"><span class="mt-2 text-red-500 inline-block">*</span> Filter by Camper attendance method.</label>
                 <select name="person_loc" id="person_loc" required class="mt-1 block cursor-pointer border-2 px-4 py-2 rounded-lg outline-none">
                     <option value="1">Send to in-person Campers only</option>
                     <option value="0">Send to virtual Campers only</option>
@@ -577,6 +577,12 @@
                 });
         });
 
+        const loc_lookup = {
+            "0": 0,
+            "1": 1,
+            "undefined": undefined
+        }
+
         $("#send-mail").on("submit", event => {
             event.preventDefault();
 
@@ -584,7 +590,7 @@
             let prospects = $("#prospects").val();
             let applicants = $("#applicants").val();
             let registered = $("#registered").val();
-            let person_loc = $("#person_loc").val();
+            let person_loc = loc_lookup[$("#person_loc").val()];
             let subject = $("#subject").val();
             let message = $("#message").val();
 
