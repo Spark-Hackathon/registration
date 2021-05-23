@@ -924,7 +924,7 @@ router.post("/admin/send-mail", async (req, res, next) => { //ADMIN
 			let all_campers;
 			if (req.body.weeks.length == 0) return reject("Missing the weeks value?");
 			let week_value = " WHERE (enrollment.week_id=?";
-			if (req.body.weeks.length > 1) {
+			if (req.body.weeks.length >= 1) {
 				req.body.weeks.forEach((item, index) => {
 					req.body.weeks[index] = week_meta.get(item).id;
 					week_value += index < req.body.weeks.length - 1 ? " OR enrollment.week_id=?" : "";
