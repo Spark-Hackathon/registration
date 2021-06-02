@@ -69,6 +69,7 @@ function pull_camper_info(unique_id) {
 		connection.query("SELECT id, first_name, last_name, COUNT(medical_forms.camper_id) AS med, COUNT(consent_release.camper_id) AS consent FROM camper " +
 			"LEFT JOIN medical_forms ON camper.id = medical_forms.camper_id LEFT JOIN consent_release ON camper.id = consent_release.camper_id WHERE camper.camper_unique_id=?", unique_id, (err, camper_info) => {
 				if (err) {
+					if (err.errno == 1064) return resolve('no_unique_id');
 					console.log(err);
 					return reject(err);
 				}
@@ -127,6 +128,9 @@ client.get("/get-status", async (req, res, next) => {
 	try {
 		let camper_info = await pull_camper_info(req.query.unique_id);
 		console.log(camper_info);
+		if (camper_info == 'no_unique_id') {
+			return res.redirect('/status-page');
+		}
 		res.render("status", {
 			title: `Status — Summer ${getDate()}`,
 			year: getDate(),
