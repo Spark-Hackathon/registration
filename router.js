@@ -387,7 +387,7 @@ router.post("/unsubscribe", (req, res, next) => {
 					});
 				} else {
 					res.render("error", {
-						error: "Uh oh... That email didn't exist",
+						error: "Uh oh... That email didn't exist - if you are a registered camper or a camper's parent/guardian, you cannot unsubscribe from our emails",
 						show_apply: true
 					});
 				}
@@ -945,7 +945,7 @@ router.post("/admin/send-mail", async (req, res, next) => { //ADMIN
 							email: item.email,
 							first_name: item.first_name,
 							last_name: item.last_name,
-							url: "Check out your week statuses here: " + process.env.CURRENT_URL + "reg-status?camper_id=" + item.camper_unique_id
+							url: "Check out your week statuses here: " + process.env.CURRENT_URL + "get-status?unique_id=" + item.camper_unique_id
 						});
 					});
 				}
@@ -957,7 +957,7 @@ router.post("/admin/send-mail", async (req, res, next) => { //ADMIN
 							email: item.guardian.email,
 							first_name: split_name,
 							last_name: latter_name,
-							url: "Check out your week statuses here: " + process.env.CURRENT_URL + "reg-status?camper_id=" + item.camper_unique_id
+							url: "Check out your week statuses here: " + process.env.CURRENT_URL + "get-status?unique_id=" + item.camper_unique_id
 						});
 					});
 				}
