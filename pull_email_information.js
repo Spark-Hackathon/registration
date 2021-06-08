@@ -49,4 +49,6 @@ function make_emails(camperORparent) {
 
 make_emails(1).then((result) => {
 	console.log(result);
+	connection.close();
+	process.exit();
 });
