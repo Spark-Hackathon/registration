@@ -31,13 +31,15 @@ function make_emails(camperORparent) {
 					camper_unique_id: individual.camper_unique_id,
 					first_name: individual.first_name,
 					last_name: individual.last_name,
-					email: individual.email
+					email: individual.email,
+					camper_guardian: "campers"
 				});
 				new_guardian.push({
 					camper_unique_id: individual.camper_unique_id,
 					first_name: individual.first_name,
 					last_name: individual.last_name,
-					email: individual.guardian_email
+					email: individual.guardian_email,
+					camper_guardian: "parents/guardians"
 				});
 			});
 			resolve(ConvertToCSV([...new_camper, ...new_guardian]));
