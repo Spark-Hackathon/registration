@@ -3,7 +3,8 @@ require('dotenv').config({
 });
 const mysql = require('mysql2');
 const {
-	ConvertToCSV
+	ConvertToCSV,
+
 } = require("./utils.js");
 
 const connection = mysql.createConnection({
@@ -18,9 +19,11 @@ connection.connect((err) => {
 	if (err) throw (err);
 });
 
+const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+
 function make_emails(camperORparent) {
 	return new Promise((resolve, reject) => {
-		connection.query("SELECT camper_unique_id, first_name, last_name, email, guardian_email FROM camper", (err, camper) => {
+		connection.query("SELECT camper_unique_id, first_name, last_name, email, guardian_email, week.title, week.start_date, week.end_date FROM camper LEFT JOIN enrollment ON enrollment.camper_id=camper.id LEFT JOIN week ON week.id=enrollment.week_id WHERE week.id=1", (err, camper) => {
 			if (err) reject(err);
 
 			let new_camper = [];
@@ -32,6 +35,8 @@ function make_emails(camperORparent) {
 					first_name: individual.first_name,
 					last_name: individual.last_name,
 					email: individual.email,
+					week: individual.title,
+					dates: months[new Date(individual.start_date).getMonth()] + " " + new Date(individual.start_date).getDate() + "-" + months[new Date(individual.end_date).getMonth()] + " " + new Date(individual.end_date).getDate(),
 					camper_guardian: "campers"
 				});
 				new_guardian.push({
@@ -39,6 +44,8 @@ function make_emails(camperORparent) {
 					first_name: individual.first_name,
 					last_name: individual.last_name,
 					email: individual.guardian_email,
+					week: individual.title,
+					dates: months[new Date(individual.start_date).getMonth()] + " " + new Date(individual.start_date).getDate() + "-" + months[new Date(individual.end_date).getMonth()] + " " + new Date(individual.end_date).getDate(),
 					camper_guardian: "parents/guardians"
 				});
 			});
