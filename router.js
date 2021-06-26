@@ -1,3 +1,6 @@
+require('dotenv').config({
+        path: __dirname + "/.env"
+});
 const bodyParser = require("body-parser");
 const nodemail = require("nodemailer");
 const sendmail = require("sendmail");
@@ -37,22 +40,27 @@ let transporter = nodemail.createTransport({
 });
 
 let week_meta;
-connection.query("SELECT * FROM week", (err, row) => {
-	if (err) console.log(err);
-	let pre_week = new Map();
-	for (row_number in row) {
-		pre_week.set(row[row_number].title, {
-			id: row[row_number].id,
-			inclass_available: row[row_number].inClass_available,
-			virtual_available: row[row_number].virtual_available,
-			cb_code: row[row_number].cd_code,
-			start_date: row[row_number].start_date,
-			end_date: row[row_number].end_date,
-			description: row[row_number].description,
-		});
-	}
-	week_meta = pre_week;
-});
+function make_week_obj() {
+	connection.query("SELECT * FROM week", (err, row) => {
+		if (err) console.log(err);
+		let pre_week = new Map();
+		for (row_number in row) {
+			if (new Date(row[row_number].start_date).getTime() - new Date().getTime()  > 100000) {
+				pre_week.set(row[row_number].title, {
+					id: row[row_number].id,
+					inclass_available: row[row_number].inClass_available,
+					virtual_available: row[row_number].virtual_available,
+					cb_code: row[row_number].cd_code,
+					start_date: row[row_number].start_date,
+					end_date: row[row_number].end_date,
+					description: row[row_number].description,
+				});
+			}
+		}
+		week_meta = pre_week;
+	});
+}
+make_week_obj();
 
 router.use(bodyParser.urlencoded({
 	extended: false
@@ -63,6 +71,7 @@ function admin_validate(code) {
 	return new Promise((resolve, reject) => {
 		connection.query("SELECT value_str FROM system_settings WHERE name='admin_code'", (err, admin_code) => {
 			if (err) reject(err);
+			console.log(code, admin_code[0].value_str);
 			if (code != admin_code[0].value_str) reject("Authentication failure");
 			resolve(true);
 		});
@@ -140,6 +149,12 @@ const camper_schema = Joi.object({
 		}
 	}).required(),
 	participated: Joi.number().max(1).required(),
+});
+
+router.get("/update-week-meta/:code", (req, res) => {
+	if (req.params.code != process.env.UPDATE_WEEK_META_CODE) return res.redirect("/");
+
+	make_week_obj();
 });
 
 const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
