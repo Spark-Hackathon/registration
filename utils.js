@@ -5,7 +5,7 @@ require("dotenv").config({
 const express = require("express");
 const mysql = require("mysql2");
 //connect to db
-const connection = mysql.createConnection({
+let connection = mysql.createConnection({
 	host: process.env.HOST,
 	database: process.env.DATABASE,
 	password: process.env.PASSWORD,
@@ -19,7 +19,7 @@ connection.connect((err) => {
 
 const getDate = () => `'${new Date().getFullYear().toString().substr(-2)}`;
 
-const ConvertToCSV = function (objArray) {
+const ConvertToCSV = function(objArray) {
 	let array = typeof objArray != 'object' ? JSON.parse(objArray) : objArray;
 	let str = '';
 	for (var i = 0; i < array.length; i++) {
@@ -46,26 +46,26 @@ const utilities = express.Router();
 
 utilities.post("/isDatabaseConnected", (req, res, next) => {
 	if (req.body.code == process.env.DATABASE_CHECK_CODE) {
-		console.log("System received database check");
+		console.log(new Date(), "System received database check");
 		connection.query("SELECT value_str FROM system_settings", function(err, value) {
-	    		if (!err) {
-	      			res.end("No error :)");
-	    		}
+			if (!err) {
+				res.end("No error :)");
+			}
 			if (err) {
 				connection = mysql.createConnection({
-				        host: process.env.HOST,
-				        database: process.env.DATABASE,
-				        password: process.env.PASSWORD,
-				        user: process.env.DB_USER,
-				        insecureAuth: true
+					host: process.env.HOST,
+					database: process.env.DATABASE,
+					password: process.env.PASSWORD,
+					user: process.env.DB_USER,
+					insecureAuth: true
 				});
 				connection.connect((err) => {
-	        			if (err) throw err;
+					if (err) throw err;
 					console.log("No restart error");
 					res.end("Mysql rebooted ;)");
 				});
 			}
-  		});
+		});
 	} else {
 		res.end("Incorrect code");
 	}
@@ -74,6 +74,6 @@ utilities.post("/isDatabaseConnected", (req, res, next) => {
 module.exports = {
 	connection,
 	utilities,
-    	getDate,
+	getDate,
 	ConvertToCSV
 }

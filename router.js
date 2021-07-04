@@ -150,12 +150,6 @@ const camper_schema = Joi.object({
 	participated: Joi.number().max(1).required(),
 });
 
-router.get("/update-week-meta/:code", (req, res) => {
-	if (req.params.code != process.env.UPDATE_WEEK_META_CODE) return res.redirect("/");
-
-	make_week_obj();
-});
-
 const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
