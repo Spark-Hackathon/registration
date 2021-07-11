@@ -1,5 +1,5 @@
 require('dotenv').config({
-        path: __dirname + "/.env"
+	path: __dirname + "/.env"
 });
 const bodyParser = require("body-parser");
 const nodemail = require("nodemailer");
@@ -40,22 +40,21 @@ let transporter = nodemail.createTransport({
 });
 
 let week_meta;
+
 function make_week_obj() {
 	connection.query("SELECT * FROM week", (err, row) => {
 		if (err) console.log(err);
 		let pre_week = new Map();
 		for (row_number in row) {
-			if (new Date(row[row_number].start_date).getTime() - new Date().getTime()  > 100000) {
-				pre_week.set(row[row_number].title, {
-					id: row[row_number].id,
-					inclass_available: row[row_number].inClass_available,
-					virtual_available: row[row_number].virtual_available,
-					cb_code: row[row_number].cd_code,
-					start_date: row[row_number].start_date,
-					end_date: row[row_number].end_date,
-					description: row[row_number].description,
-				});
-			}
+			pre_week.set(row[row_number].title, {
+				id: row[row_number].id,
+				inclass_available: row[row_number].inClass_available,
+				virtual_available: row[row_number].virtual_available,
+				cb_code: row[row_number].cd_code,
+				start_date: row[row_number].start_date,
+				end_date: row[row_number].end_date,
+				description: row[row_number].description,
+			});
 		}
 		week_meta = pre_week;
 	});
@@ -79,7 +78,7 @@ function admin_validate(code) {
 }
 
 function full_sendmail(to, subject, text, replacement) {
-	if (!/^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)*$/.test(to)) return false; 
+	if (!/^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)*$/.test(to)) return false;
 	console.log("send mail", to, subject, text, replacement);
 	Object.keys(replacement).forEach((item, index) => {
 		let string = "{{" + item.toUpperCase() + "}}";
@@ -151,27 +150,23 @@ const camper_schema = Joi.object({
 	participated: Joi.number().max(1).required(),
 });
 
-router.get("/update-week-meta/:code", (req, res) => {
-	if (req.params.code != process.env.UPDATE_WEEK_META_CODE) return res.redirect("/");
-
-	make_week_obj();
-});
-
 const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
 router.get("/open-weeks", (req, res) => {
 	let week_data = [];
 	for (let [key, value] of week_meta) {
-		let inner = {};
-		inner.id = value.id;
-		inner.title = key;
-		inner.start_date = months[parseInt(new Date(value.start_date).toLocaleDateString('en-US').split("/")[0], 10) - 1] + " " + new Date(value.start_date).toLocaleDateString('en-US').split("/")[1];
-		inner.end_date = months[parseInt(new Date(value.end_date).toLocaleDateString('en-US').split("/")[0], 10) - 1] + " " + new Date(value.end_date).toLocaleDateString('en-US').split("/")[1];
-		inner.inclass_available = value.inclass_available;
-		inner.virtual_available = value.inclass_available;
-		inner.description = value.description;
-		week_data.push(inner);
+		if (new Date(value.start_date).getTime() - new Date().getTime() > 180000) {
+			let inner = {};
+			inner.id = value.id;
+			inner.title = key;
+			inner.start_date = months[parseInt(new Date(value.start_date).toLocaleDateString('en-US').split("/")[0], 10) - 1] + " " + new Date(value.start_date).toLocaleDateString('en-US').split("/")[1];
+			inner.end_date = months[parseInt(new Date(value.end_date).toLocaleDateString('en-US').split("/")[0], 10) - 1] + " " + new Date(value.end_date).toLocaleDateString('en-US').split("/")[1];
+			inner.inclass_available = value.inclass_available;
+			inner.virtual_available = value.inclass_available;
+			inner.description = value.description;
+			week_data.push(inner);
+		}
 	};
 	res.json(week_data);
 });
@@ -200,7 +195,7 @@ router.post("/camper-register-queueing", async (req, res, next) => {
 				item.guardian_number = item.guardian_number.length == 0 ? "0" : item.guardian_number;
 				item.guardian_number = parseInt(item.guardian_number, 10);
 				item.dob = new Date(item.dob);
-				item.dob.setTime(item.dob.getTime() + (item.dob.getHours()*60*60*1000));
+				item.dob.setTime(item.dob.getTime() + (item.dob.getHours() * 60 * 60 * 1000));
 				item.dob = [item.dob.getFullYear(), item.dob.getMonth() + 1, item.dob.getDate()].join("-");
 				extra_camper_info.push(item.first_name, item.last_name, item.email, item.dob, item.school, item.grade, item.gender, item.type, item.race_ethnicity,
 					item.hopes, item.tshirt_size, item.borrow_laptop, item.guardian_name, item.guardian_email, item.guardian_number, item.participated);
@@ -243,7 +238,7 @@ router.post("/camper-register-queueing", async (req, res, next) => {
 									if (err) return enroll_reject(err);
 									let approved_value = camper_enroll_value && camper_enroll_value.length && camper_enroll_value[0].approved == 1 ? 1 : 0;
 									connection.query("INSERT INTO enrollment (camper_id, week_id, signup_time, person_loc, approved) VALUES " +
-										"(?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE signup_time=?, person_loc=?, approved=?", [camper_id[0].id, week[0], new Date(), loc  - 1, 0, new Date(), week[1] - 1, approved_value], (err) => {
+										"(?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE signup_time=?, person_loc=?, approved=?", [camper_id[0].id, week[0], new Date(), loc - 1, 0, new Date(), week[1] - 1, approved_value], (err) => {
 											if (err) return enroll_reject(err);
 											connection.query("SELECT id, question_text FROM question_meta WHERE week_id=?", week[0], (err, questions) => {
 												if (err) return enroll_reject(err);
@@ -316,8 +311,8 @@ router.post("/camper-register-queueing", async (req, res, next) => {
 		});
 	} catch (error) {
 		error = {
-                        mainload: error
-                };
+			mainload: error
+		};
 		error.message = error.mainload == 1 ? "You need to apply for at least one week. Press back and select weeks" : "Looks like there was an error applying, try reloading?";
 		next(error);
 	}
@@ -700,7 +695,9 @@ router.post("/admin/pull-current-campers", async (req, res, next) => { //ADMIN
 	try {
 		await admin_validate(req.body.code);
 		//throw all currently pending campers - run through and see which ones are still waiting in enrollment
-		let camper_obj = { campers: [] };
+		let camper_obj = {
+			campers: []
+		};
 		await new Promise(async (resolve, reject) => {
 			connection.query("SELECT camper_id, week_id, person_loc FROM enrollment WHERE approved=?", req.body['applicants-or-registered'], async (err, camper_initial) => {
 				if (err || !camper_initial) return reject(err);
@@ -810,8 +807,8 @@ function application_accept(id, week) {
 					let apply_camper_file = fs.readFileSync(path.join(__dirname, "emailTemplates", "accepting_camper_app")).toString();
 					let start_date = new Date(week_meta.get(week).start_date);
 					let end_date = new Date(week_meta.get(week).end_date);
-					start_date = days[start_date.getDay()] + ", " +  months[parseInt(start_date.toLocaleDateString('en-US').split("/")[0], 10) - 1] + " " + start_date.toLocaleDateString('en-US').split("/")[1];
-                			end_date = days[end_date.getDay()] + ", " + months[parseInt(end_date.toLocaleDateString('en-US').split("/")[0], 10) - 1] + " " + end_date.toLocaleDateString('en-US').split("/")[1];
+					start_date = days[start_date.getDay()] + ", " + months[parseInt(start_date.toLocaleDateString('en-US').split("/")[0], 10) - 1] + " " + start_date.toLocaleDateString('en-US').split("/")[1];
+					end_date = days[end_date.getDay()] + ", " + months[parseInt(end_date.toLocaleDateString('en-US').split("/")[0], 10) - 1] + " " + end_date.toLocaleDateString('en-US').split("/")[1];
 					let email_obj = {
 						first_name: email_info[0].first_name,
 						last_name: email_info[0].last_name,

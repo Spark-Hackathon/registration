@@ -23,13 +23,14 @@ const months = ["January", "February", "March", "April", "May", "June", "July", 
 
 function make_emails(camperORparent) {
 	return new Promise((resolve, reject) => {
-		connection.query("SELECT camper_unique_id, first_name, last_name, email, guardian_email, week.title, week.start_date, week.end_date FROM camper LEFT JOIN enrollment ON enrollment.camper_id=camper.id LEFT JOIN week ON week.id=enrollment.week_id WHERE week.id=1", (err, camper) => {
+		connection.query("SELECT camper_unique_id, first_name, last_name, email, guardian_email FROM camper", (err, camper) => {
 			if (err) reject(err);
 
 			let new_camper = [];
 			let new_guardian = [];
-			//resolve(ConvertToCSV(camper));
-			camper.forEach((individual) => {
+
+			resolve(ConvertToCSV(camper));
+			/*camper.forEach((individual) => {
 				new_camper.push({
 					camper_unique_id: individual.camper_unique_id,
 					first_name: individual.first_name,
@@ -50,6 +51,7 @@ function make_emails(camperORparent) {
 				});
 			});
 			resolve(ConvertToCSV([...new_camper, ...new_guardian]));
+			*/
 		});
 	});
 }

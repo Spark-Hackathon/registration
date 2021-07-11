@@ -51,7 +51,7 @@ async function sheet() {
 									return new Promise((camper_resolve, camper_reject) => {
 										connection.query("SELECT SUM(camper.table_count) AS counter FROM (SELECT COUNT(*) AS table_count FROM consent_release WHERE consent_release.camper_id=? UNION ALL SELECT COUNT(*) AS table_count FROM medical_forms WHERE medical_forms.camper_id=?)camper", [camper.id, camper.id], (err, count) => {
 											if (err || !count.length) return camper_reject(err);
-											camper.confirmed = camper.person_loc == 1 ? count[0].counter == 2 ? 1 : 0 : count[0].counter;
+											camper.confirmed = camper.person_loc == 1 ? count[0].counter >= 2 ? 1 : 0 : count[0].counter >= 1 ? 1 : 0;
 											camper_resolve();
 										});
 									});
